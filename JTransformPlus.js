@@ -1,3 +1,11 @@
+(function(Scratch) {
+    'use strict';
+
+    if (!Scratch.extensions.unsandboxed) {
+        throw new Error(
+            "Transform Extension requires unsandboxed mode"
+        );
+    }
 class TransformExtension {
 
     getInfo() {
@@ -173,3 +181,5 @@ class TransformExtension {
 Scratch.extensions.register(
     new TransformExtension()
 );
+
+})(Scratch);
