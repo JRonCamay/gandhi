@@ -1,13 +1,24 @@
-Composer.generator.generate = function (text) {
+(function () {
 
-    const ast = Composer.parser.parse(text);
+    Composer.generator.generate = function (text) {
 
-    console.clear();
+        const ast = Composer.parser.parse(text);
 
-    console.log("===== AST =====");
+        console.clear();
 
-    console.table(ast);
+        console.table(ast);
 
-    Composer.ui.status(ast.length + " command(s)");
+        if (!ast.length)
+            return;
 
-};
+        const first = ast[0];
+
+        if (first.type === "move") {
+
+            Composer.blockly.create("motion_movesteps");
+
+        }
+
+    };
+
+})();
