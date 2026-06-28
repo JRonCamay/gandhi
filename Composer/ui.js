@@ -24,18 +24,15 @@ panel.innerHTML = `
    <button id="composer-close">✕</button>
 </div>
 
-<textarea id="composer-editor" spellcheck="false"
-placeholder="Type commands here...
+<input
+    id="composer-editor"
+    type="text"
+    spellcheck="false"
+    autocomplete="off"
+    placeholder="Type a command..."
+>
 
-move 20
-wait 1
-say Hello"></textarea>
-
-<div id="composer-toolbar">
-   <button id="composer-generate">Generate</button>
-   <button id="composer-clear">Clear</button>
-   <button id="composer-example">Example</button>
-</div>
+<div id="composer-preview"></div>
 
 <div id="composer-status">
 Ready
