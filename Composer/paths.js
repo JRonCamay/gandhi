@@ -290,9 +290,10 @@ Shape.draw=function(ctx,type,x,y,w,h,fill,stroke){
     ctx.fillStyle=fill||"#4C97FF";
     ctx.fill();
 
-    ctx.lineWidth=1;
-
-    ctx.strokeStyle=stroke||"rgba(0,0,0,.25)";
+    ctx.lineWidth = 1;
+    
+    ctx.strokeStyle = stroke || "#2F6DBA";
+    
     ctx.stroke();
 
 };
