@@ -52,26 +52,61 @@ Renderer.draw=function(block){
 
    ctx.font = "bold 15px Segoe UI";
 
-    const padding=16;
+   const pieces = [];
 
-    let width=padding;
-
-    const pieces=[];
-
-    pieces.push({
-        type:"text",
-        value:block.preview
-    });
-
-    for(const p of pieces){
-
-        width+=ctx.measureText(
-            p.value
-        ).width;
-
+    const parts = block.preview.split("()");
+    
+    for(let i=0;i<parts.length;i++){
+    
+        if(parts[i].length){
+    
+            pieces.push({
+    
+                type:"text",
+    
+                value:parts[i]
+    
+            });
+    
+        }
+    
+        if(i < block.params.length){
+    
+            pieces.push({
+    
+                type:block.params[i].type,
+    
+                value:block.params[i].name
+    
+            });
+    
+        }
+    
     }
-
-    width+=padding;
+    
+    let width = 20;
+    
+    for(const piece of pieces){
+    
+        if(piece.type==="text"){
+    
+            width += ctx.measureText(piece.value).width;
+    
+        }else{
+    
+           width += Math.max(
+        
+                24,
+        
+                ctx.measureText(piece.value).width + 18
+        
+            ) + 4;
+    
+        }
+    
+    }
+    
+    width += 20;
 
     Composer.paths.draw(
 
@@ -91,25 +126,175 @@ Renderer.draw=function(block){
 
     );
 
-    ctx.fillStyle="white";
+    ctx.fillStyle = "white";
+    ctx.textBaseline = "middle";
+    
+    let px = x + 12;
+    
+    for(const piece of pieces){
+    
+        if(piece.type === "text"){
+    
+            ctx.fillText(
+    
+                piece.value,
+    
+                px,
+    
+                y + h / 2
+    
+            );
+    
+            px += ctx.measureText(piece.value).width;
+    
+        }
+    
+        else{
+    
+            drawSocket(
+    
+                piece.type,
+    
+                piece.value,
+    
+                px,
+    
+                y + 5
+    
+            );
+    
+            const socketWidth = Math.max(
 
-    ctx.textBaseline="middle";
-
-    ctx.fillText(
-
-        block.preview,
-
-        x+12,
-
-        y+h/2
-
-    );
+                24,
+            
+                ctx.measureText(piece.value).width + 18
+            
+            );
+            
+            px += socketWidth + 4;
+    
+        }
+    
+    }
 
 };
 /*=========================================
     PREVIEW
 =========================================*/
+function drawSocket(type,value,x,y){
 
+   const padding = 18;
+
+    const w = Math.max(
+    
+        24,
+    
+        ctx.measureText(value).width + padding
+    
+    );
+    const h = 24;
+
+    switch(type){
+
+        case "number":
+
+        case "string":
+
+        case "reporter":
+
+            Composer.paths.draw(
+
+                ctx,
+
+                "reporter",
+
+                x,
+
+                y,
+
+                w,
+
+                h,
+
+                "#FFFFFF",
+
+                "#B0B0B0"
+
+            );
+
+        break;
+
+        case "boolean":
+
+            Composer.paths.draw(
+
+                ctx,
+
+                "boolean",
+
+                x,
+
+                y,
+
+                w,
+
+                h,
+
+                "#FFFFFF",
+
+                "#B0B0B0"
+
+            );
+
+        break;
+
+        default:
+
+            Composer.paths.draw(
+
+                ctx,
+
+                "reporter",
+
+                x,
+
+                y,
+
+                w,
+
+                h,
+
+                "#FFFFFF",
+
+                "#B0B0B0"
+
+            );
+
+    }
+
+    ctx.fillStyle = "#666";
+
+    ctx.font = "11px Segoe UI";
+
+    ctx.textAlign = "center";
+
+    ctx.textBaseline = "middle";
+
+    ctx.fillText(
+
+        value,
+
+        x + w/2,
+
+        y + h/2
+
+    );
+
+    ctx.textAlign = "left";
+
+    ctx.font = "bold 15px Segoe UI";
+
+}
 Renderer.preview=function(command){
 
     if(!command){
