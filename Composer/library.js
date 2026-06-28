@@ -1,3 +1,1 @@
-window.ComposerLibrary = {};
-
-console.log("library loaded");
+console.log("library.js running");
