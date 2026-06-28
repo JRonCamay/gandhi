@@ -1,76 +1,61 @@
-// generator.js
+(function(){
 
-(function () {
+const input=document.getElementById("composer-input");
+const preview=document.getElementById("composer-preview");
 
-    function workspace() {
-        return (window.Blockly || window.ScratchBlocks).getMainWorkspace();
-    }
+function renderPreview(entry){
 
-    function createBlock(type, x = 200, y = 150) {
+    preview.innerHTML="";
 
-        const ws = workspace();
+    if(!entry)return;
 
-        if (!ws) {
-            console.error("Workspace not found");
-            return null;
-        }
+    const card=document.createElement("div");
 
-        const block = ws.newBlock(type);
+    card.textContent=entry.label;
+
+    card.style.cssText=`
+        background:#4C97FF;
+        color:white;
+        padding:8px 12px;
+        border-radius:6px;
+        display:inline-block;
+        font-weight:bold;
+        cursor:pointer;
+    `;
+
+    card.onclick=()=>{
+
+        const ws=(window.Blockly||window.ScratchBlocks).getMainWorkspace();
+
+        const block=ws.newBlock(entry.block);
 
         block.initSvg();
         block.render();
 
-        block.moveBy(x, y);
-
-        return block;
-    }
-
-    Composer.generator.generate = function (text) {
-
-        const lines = text
-            .split("\n")
-            .map(l => l.trim())
-            .filter(Boolean);
-
-        let x = 200;
-        let y = 120;
-
-        for (const line of lines) {
-
-            const cmd = line.toLowerCase();
-
-            let block = null;
-
-            if (cmd.startsWith("move")) {
-                block = createBlock("motion_movesteps", x, y);
-            }
-
-            else if (cmd.startsWith("wait")) {
-                block = createBlock("control_wait", x, y);
-            }
-
-            else if (cmd.startsWith("say")) {
-                block = createBlock("looks_say", x, y);
-            }
-
-            else if (cmd.startsWith("turn")) {
-                block = createBlock("motion_turnright", x, y);
-            }
-
-            else if (cmd === "hide") {
-                block = createBlock("looks_hide", x, y);
-            }
-
-            else if (cmd === "show") {
-                block = createBlock("looks_show", x, y);
-            }
-
-            if (block) {
-                y += 80;
-            }
-
-        }
+        block.moveBy(250,150);
 
     };
+
+    preview.append(card);
+
+}
+
+input.addEventListener("input",()=>{
+
+    const text=input.value.trim().toLowerCase();
+
+    if(!text){
+
+        renderPreview(null);
+
+        return;
+
+    }
+
+    const found=Composer.library.find(x=>x.keyword.startsWith(text));
+
+    renderPreview(found);
+
+});
 
 })();
