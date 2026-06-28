@@ -89,19 +89,6 @@ fontSize: "14px",
 boxSizing: "border-box"
 });
 
-const toolbar = panel.querySelector("#composer-toolbar");
-
-Object.assign(toolbar.style, {
-padding: "0 10px"
-});
-
-toolbar.querySelectorAll("button").forEach(btn => {
-
-btn.style.marginRight = "8px";
-btn.style.padding = "6px 14px";
-btn.style.cursor = "pointer";
-
-});
 
 Object.assign(status.style, {
 position: "absolute",
@@ -116,35 +103,6 @@ fontSize: "12px"
 
 panel.querySelector("#composer-close").onclick = ui.hide;
 
-panel.querySelector("#composer-clear").onclick = () => {
-
-editor.value = "";
-ui.status("Cleared");
-
-};
-
-panel.querySelector("#composer-example").onclick = () => {
-
-editor.value =
-`move 20
-wait 1
-say Hello`;
-
-ui.status("Example Loaded");
-
-};
-
-panel.querySelector("#composer-generate").onclick = () => {
-
-ui.status("Generating...");
-
-if (Composer.generator.generate) {
-
-Composer.generator.generate(editor.value);
-
-}
-
-};
 
 header.addEventListener("mousedown", e => {
 
@@ -233,7 +191,7 @@ document.addEventListener("keydown", e => {
 
         if (panel.style.display !== "none") {
 
-            panel.querySelector("#composer-generate").click();
+          
 
         }
 
