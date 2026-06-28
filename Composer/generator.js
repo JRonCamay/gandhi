@@ -21,38 +21,47 @@ function normalizePattern(text){
         .replace(/:\s+\[\]/g,": []");
 
 }
-function makePreview(text){
 
-    return `
-<div style="
-background:#4C97FF;
-color:white;
-padding:8px 12px;
-border-radius:6px;
-display:inline-block;
-font-weight:bold;
-font-family:Segoe UI;
-">
-${text}
-</div>
-`;
+gen.preview = function(input){
 
-}
+    input = normalize(input);
 
-gen.preview=function(input){
+    console.log("INPUT:", input);
 
-    input=normalize(input);
-
-    Composer.renderer.clear();
+    if(
+        Composer.renderer &&
+        Composer.renderer.clear
+    ){
+        Composer.renderer.clear();
+    }
 
     if(!input.length)
         return;
 
     for(const cmd of Composer.library){
 
-       if(normalizePattern(input) === normalizePattern(cmd.pattern)){
+        const ok =
+            normalizePattern(input) ===
+            normalizePattern(cmd.pattern);
 
-            Composer.renderer.preview(cmd);
+        console.log(
+            cmd.pattern,
+            ok
+        );
+
+        if(ok){
+
+            console.log(
+                "MATCH",
+                cmd
+            );
+
+            if(
+                Composer.renderer &&
+                Composer.renderer.preview
+            ){
+                Composer.renderer.preview(cmd);
+            }
 
             return;
 
@@ -60,8 +69,11 @@ gen.preview=function(input){
 
     }
 
+    console.log("NO MATCH");
+
 };
-gen.generate = function () {
+
+gen.generate = function(){
 
     // Block creation comes later.
 
