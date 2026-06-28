@@ -1,58 +1,22 @@
 // paths.js
-(function () {
+(function(){
 
 const Shape = {};
 
 Composer.paths = Shape;
 
 /*=========================================
-    STACK BLOCK
+    Helpers
 =========================================*/
 
-Shape.stack = function (ctx,x,y,w,h) {
-
-    const r = 4;
-
-    const notchWidth = 14;
-    const notchDepth = 4;
-    const notchX = 18;
-
-    const notchW = 16;
-    const notchH = 4;
+function roundRect(ctx,x,y,w,h,r){
 
     ctx.beginPath();
 
-    // top left
     ctx.moveTo(x+r,y);
 
-    // top
-    ctx.lineTo(x+18,y);
-
-    // notch
-   // Scratch notch
-
-    ctx.lineTo(
-        x + notchX,
-        y
-    );
-    
-    ctx.lineTo(
-        x + notchX,
-        y + notchDepth
-    );
-    
-    ctx.lineTo(
-        x + notchX + notchWidth,
-        y + notchDepth
-    );
-    
-    ctx.lineTo(
-        x + notchX + notchWidth,
-        y
-    );
     ctx.lineTo(x+w-r,y);
 
-    // top right
     ctx.quadraticCurveTo(
         x+w,
         y,
@@ -60,13 +24,11 @@ Shape.stack = function (ctx,x,y,w,h) {
         y+r
     );
 
-    // right
     ctx.lineTo(
         x+w,
         y+h-r
     );
 
-    // bottom right
     ctx.quadraticCurveTo(
         x+w,
         y+h,
@@ -74,18 +36,11 @@ Shape.stack = function (ctx,x,y,w,h) {
         y+h
     );
 
-    // bottom notch
-    ctx.lineTo(x+18+notchW,y+h);
+    ctx.lineTo(
+        x+r,
+        y+h
+    );
 
-    ctx.lineTo(x+18+notchW,y+h+notchH);
-
-    ctx.lineTo(x+18,y+h+notchH);
-
-    ctx.lineTo(x+18,y+h);
-
-    ctx.lineTo(x+r,y+h);
-
-    // bottom left
     ctx.quadraticCurveTo(
         x,
         y+h,
@@ -93,13 +48,102 @@ Shape.stack = function (ctx,x,y,w,h) {
         y+h-r
     );
 
-    // left
     ctx.lineTo(
         x,
         y+r
     );
 
-    // top left
+    ctx.quadraticCurveTo(
+        x,
+        y,
+        x+r,
+        y
+    );
+
+}
+
+/*=========================================
+    Stack Block
+=========================================*/
+
+Shape.stack=function(ctx,x,y,w,h){
+
+    const r = 4;
+
+    const nx = 18;
+    const nw = 14;
+    const nd = 4;
+
+    ctx.beginPath();
+
+    ctx.moveTo(x+r,y);
+
+    ctx.lineTo(x+nx,y);
+
+    ctx.lineTo(x+nx,y+nd);
+
+    ctx.lineTo(x+nx+nw,y+nd);
+
+    ctx.lineTo(x+nx+nw,y);
+
+    ctx.lineTo(x+w-r,y);
+
+    ctx.quadraticCurveTo(
+        x+w,
+        y,
+        x+w,
+        y+r
+    );
+
+    ctx.lineTo(
+        x+w,
+        y+h-r
+    );
+
+    ctx.quadraticCurveTo(
+        x+w,
+        y+h,
+        x+w-r,
+        y+h
+    );
+
+    ctx.lineTo(
+        x+nx+nw,
+        y+h
+    );
+
+    ctx.lineTo(
+        x+nx+nw,
+        y+h+nd
+    );
+
+    ctx.lineTo(
+        x+nx,
+        y+h+nd
+    );
+
+    ctx.lineTo(
+        x+nx,
+        y+h
+    );
+
+    ctx.lineTo(
+        x+r,
+        y+h
+    );
+
+    ctx.quadraticCurveTo(
+        x,
+        y+h,
+        x,
+        y+h-r
+    );
+
+    ctx.lineTo(
+        x,
+        y+r
+    );
+
     ctx.quadraticCurveTo(
         x,
         y,
@@ -111,12 +155,12 @@ Shape.stack = function (ctx,x,y,w,h) {
 
 };
 /*=========================================
-    REPORTER BLOCK
+    Reporter
 =========================================*/
 
-Shape.reporter = function (ctx,x,y,w,h){
+Shape.reporter = function(ctx,x,y,w,h){
 
-    const r = h/2;
+    const r = h / 2;
 
     ctx.beginPath();
 
@@ -129,8 +173,7 @@ Shape.reporter = function (ctx,x,y,w,h){
         y+r,
         r,
         -Math.PI/2,
-        Math.PI/2,
-        false
+        Math.PI/2
     );
 
     ctx.lineTo(x+r,y+h);
@@ -140,8 +183,7 @@ Shape.reporter = function (ctx,x,y,w,h){
         y+r,
         r,
         Math.PI/2,
-        -Math.PI/2,
-        false
+        -Math.PI/2
     );
 
     ctx.closePath();
@@ -149,7 +191,7 @@ Shape.reporter = function (ctx,x,y,w,h){
 };
 
 /*=========================================
-    BOOLEAN BLOCK
+    Boolean
 =========================================*/
 
 Shape.boolean = function(ctx,x,y,w,h){
@@ -175,60 +217,12 @@ Shape.boolean = function(ctx,x,y,w,h){
 };
 
 /*=========================================
-    CAP BLOCK
-=========================================*/
-
-Shape.cap = function(ctx,x,y,w,h){
-
-    const r = 6;
-
-    ctx.beginPath();
-
-    ctx.moveTo(x+r,y);
-
-    ctx.lineTo(x+w-r,y);
-
-    ctx.quadraticCurveTo(
-        x+w,
-        y,
-        x+w,
-        y+r
-    );
-
-    ctx.lineTo(
-        x+w,
-        y+h-12
-    );
-
-    ctx.quadraticCurveTo(
-        x+w/2,
-        y+h+10,
-        x,
-        y+h-12
-    );
-
-    ctx.lineTo(
-        x,
-        y+r
-    );
-
-    ctx.quadraticCurveTo(
-        x,
-        y,
-        x+r,
-        y
-    );
-
-    ctx.closePath();
-
-};
-/*=========================================
-    HAT BLOCK
+    Hat
 =========================================*/
 
 Shape.hat = function(ctx,x,y,w,h){
 
-    const r = 6;
+    const r = 4;
 
     ctx.beginPath();
 
@@ -263,37 +257,91 @@ Shape.hat = function(ctx,x,y,w,h){
         y+h
     );
 
-    ctx.lineTo(x+34,y+h);
-
-    ctx.lineTo(x+34,y+h+4);
-
-    ctx.lineTo(x+18,y+h+4);
-
-    ctx.lineTo(x+18,y+h);
-
     ctx.lineTo(x,y+h);
+
+    ctx.closePath();
+
+};
+/*=========================================
+    Cap
+=========================================*/
+
+Shape.cap = function(ctx,x,y,w,h){
+
+    const r = 4;
+
+    ctx.beginPath();
+
+    ctx.moveTo(x+r,y);
+
+    ctx.lineTo(x+w-r,y);
+
+    ctx.quadraticCurveTo(
+        x+w,
+        y,
+        x+w,
+        y+r
+    );
+
+    ctx.lineTo(
+        x+w,
+        y+h-10
+    );
+
+    ctx.quadraticCurveTo(
+        x+w/2,
+        y+h+10,
+        x,
+        y+h-10
+    );
+
+    ctx.lineTo(
+        x,
+        y+r
+    );
+
+    ctx.quadraticCurveTo(
+        x,
+        y,
+        x+r,
+        y
+    );
 
     ctx.closePath();
 
 };
 
 /*=========================================
-    DRAW HELPER
+    Draw Helper
 =========================================*/
 
-Shape.draw=function(ctx,type,x,y,w,h,fill,stroke){
+Shape.draw = function(
+    ctx,
+    type,
+    x,
+    y,
+    w,
+    h,
+    fill,
+    stroke
+){
 
     if(!Shape[type]) return;
 
-    Shape[type](ctx,x,y,w,h);
+    Shape[type](
+        ctx,
+        x,
+        y,
+        w,
+        h
+    );
 
-    ctx.fillStyle=fill||"#4C97FF";
+    ctx.fillStyle = fill || "#4C97FF";
     ctx.fill();
 
     ctx.lineWidth = 1;
-    
-    ctx.strokeStyle = stroke || "#2F6DBA";
-    
+
+    ctx.strokeStyle = stroke || "#3373CC";
     ctx.stroke();
 
 };
