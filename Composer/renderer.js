@@ -1,32 +1,35 @@
 // renderer.js
 (function(){
 
-const Renderer={};
+const Renderer = {};
 
-Composer.renderer=Renderer;
+Composer.renderer = Renderer;
 
 let canvas;
 let ctx;
 
-Renderer.init=function(container){
+Renderer.init = function(container){
 
-    canvas=document.createElement("canvas");
+    canvas = document.createElement("canvas");
 
     canvas.width = container.clientWidth;
     canvas.height = container.clientHeight;
-      canvas.style.width = "100%";
+
+    canvas.style.width = "100%";
     canvas.style.height = "100%";
     canvas.style.display = "block";
 
-    container.innerHTML="";
+    container.innerHTML = "";
 
     container.appendChild(canvas);
 
-    ctx=canvas.getContext("2d");
+    ctx = canvas.getContext("2d");
+
+    ctx.textBaseline = "middle";
 
 };
 
-Renderer.clear=function(){
+Renderer.clear = function(){
 
     if(!ctx) return;
 
@@ -39,248 +42,280 @@ Renderer.clear=function(){
 
 };
 
-Renderer.draw=function(block){
+Renderer.preview = function(block){
 
-    if(!ctx) return;
+    if(!block){
+
+        Renderer.clear();
+
+        return;
+
+    }
+
+    Renderer.draw(block);
+
+};
+
+Renderer.draw = function(block){
 
     Renderer.clear();
 
-    const x=15;
-    const y=20;
+    const components = [];
 
-    const h=34;
+    buildComponents(
+        block,
+        components
+    );
 
-   ctx.font = "bold 15px Segoe UI";
+    ctx.font = "bold 15px Segoe UI";
 
-   const pieces = [];
+    let width = 24;
 
-    const parts = block.preview.split("()");
-    
-    for(let i=0;i<parts.length;i++){
-    
-        if(parts[i].length){
-    
-            pieces.push({
-    
-                type:"text",
-    
-                value:parts[i]
-    
-            });
-    
+    for(const c of components){
+
+        switch(c.type){
+
+            case "text":
+
+                width += ctx.measureText(
+                    c.value
+                ).width;
+
+            break;
+
+            case "number":
+            case "string":
+            case "menu":
+            case "reporter":
+
+                width += socketWidth(
+                    c.value
+                );
+
+            break;
+
+            case "boolean":
+
+                width += 44;
+
+            break;
+
         }
-    
-        if(i < block.params.length){
-    
-            pieces.push({
-    
-                type:block.params[i].type,
-    
-                value:block.params[i].name
-    
-            });
-    
-        }
-    
+
+        width += 4;
+
     }
-    
-    let width = 20;
-    
-    for(const piece of pieces){
-    
-        if(piece.type==="text"){
-    
-            width += ctx.measureText(piece.value).width;
-    
-        }else{
-    
-           width += Math.max(
-        
-                24,
-        
-                ctx.measureText(piece.value).width + 18
-        
-            ) + 4;
-    
-        }
-    
-    }
-    
-    width += 20;
+
+    const x = 12;
+    const y = 16;
+    const h = 34;
 
     Composer.paths.draw(
 
         ctx,
-    
+
         "stack",
-    
+
         x,
-    
+
         y,
-    
+
         width,
-    
+
         h,
-    
+
         "#4C97FF",
-    
+
         "#3373CC"
-    
+
     );
 
-    ctx.fillStyle = "white";
-    ctx.textBaseline = "middle";
-    
     let px = x + 12;
-    
-    for(const piece of pieces){
-    
-        if(piece.type === "text"){
-    
-            ctx.fillText(
-    
-                piece.value,
-    
-                px,
-    
-                y + h / 2
-    
-            );
-    
-            px += ctx.measureText(piece.value).width;
-    
-        }
-    
-        else{
-    
-            drawSocket(
-    
-                piece.type,
-    
-                piece.value,
-    
-                px,
-    
-                y + 5
-    
-            );
-    
-            const socketWidth = Math.max(
+        for(const c of components){
 
-                24,
-            
-                ctx.measureText(piece.value).width + 18
-            
-            );
-            
-            px += socketWidth + 4;
-    
+        switch(c.type){
+
+            case "text":
+
+                ctx.fillStyle = "white";
+
+                ctx.font = "bold 15px Segoe UI";
+
+                ctx.fillText(
+
+                    c.value,
+
+                    px,
+
+                    y + h / 2
+
+                );
+
+                px += ctx.measureText(
+                    c.value
+                ).width;
+
+            break;
+
+            case "number":
+
+                px += drawReporterSocket(
+
+                    c.value,
+
+                    px,
+
+                    y + 7
+
+                );
+
+            break;
+
+            case "string":
+
+                px += drawStringSocket(
+
+                    c.value,
+
+                    px,
+
+                    y + 7
+
+                );
+
+            break;
+
+            case "menu":
+
+                px += drawMenuSocket(
+
+                    c.value,
+
+                    px,
+
+                    y + 7
+
+                );
+
+            break;
+
+            case "reporter":
+
+                px += drawReporterSocket(
+
+                    c.value,
+
+                    px,
+
+                    y + 7
+
+                );
+
+            break;
+
+            case "boolean":
+
+                px += drawBooleanSocket(
+
+                    c.value,
+
+                    px,
+
+                    y + 7
+
+                );
+
+            break;
+
         }
-    
+
+        px += 4;
+
     }
 
 };
-/*=========================================
-    PREVIEW
-=========================================*/
-function drawSocket(type,value,x,y){
+function buildComponents(block,out){
 
-   const padding = 18;
+    const parts = block.preview.split("()");
 
-    const w = Math.max(
-    
-        24,
-    
-        ctx.measureText(value).width + padding
-    
-    );
-    const h = 24;
+    for(let i=0;i<parts.length;i++){
 
-    switch(type){
+        if(parts[i].length){
 
-        case "number":
+            out.push({
 
-        case "string":
+                type:"text",
 
-        case "reporter":
+                value:parts[i]
 
-            Composer.paths.draw(
+            });
 
-                ctx,
+        }
 
-                "reporter",
+        if(i < block.params.length){
 
-                x,
+            out.push({
 
-                y,
+                type:block.params[i].type,
 
-                w,
+                value:block.params[i].name
 
-                h,
+            });
 
-                "#FFFFFF",
-
-                "#B0B0B0"
-
-            );
-
-        break;
-
-        case "boolean":
-
-            Composer.paths.draw(
-
-                ctx,
-
-                "boolean",
-
-                x,
-
-                y,
-
-                w,
-
-                h,
-
-                "#FFFFFF",
-
-                "#B0B0B0"
-
-            );
-
-        break;
-
-        default:
-
-            Composer.paths.draw(
-
-                ctx,
-
-                "reporter",
-
-                x,
-
-                y,
-
-                w,
-
-                h,
-
-                "#FFFFFF",
-
-                "#B0B0B0"
-
-            );
+        }
 
     }
+
+}
+function socketWidth(value){
+
+    ctx.font = "11px Segoe UI";
+
+    const w = Math.max(
+
+        24,
+
+        ctx.measureText(value).width + 18
+
+    );
+
+    ctx.font = "bold 15px Segoe UI";
+
+    return w;
+
+}
+
+function drawReporterSocket(value,x,y){
+
+    const w = socketWidth(value);
+
+    const h = 20;
+
+    Composer.paths.draw(
+
+        ctx,
+
+        "reporter",
+
+        x,
+
+        y,
+
+        w,
+
+        h,
+
+        "#FFFFFF",
+
+        "#C8C8C8"
+
+    );
 
     ctx.fillStyle = "#666";
 
     ctx.font = "11px Segoe UI";
 
     ctx.textAlign = "center";
-
-    ctx.textBaseline = "middle";
 
     ctx.fillText(
 
@@ -296,20 +331,126 @@ function drawSocket(type,value,x,y){
 
     ctx.font = "bold 15px Segoe UI";
 
+    return w;
+
 }
-Renderer.preview=function(command){
 
-    if(!command){
+function drawStringSocket(value,x,y){
 
-        Renderer.clear();
+    return drawReporterSocket(
 
-        return;
+        value,
 
-    }
+        x,
 
-    Renderer.draw(command);
+        y
 
-};
+    );
+
+}
+function drawMenuSocket(value,x,y){
+
+    const w = socketWidth(value) + 12;
+
+    const h = 20;
+
+    Composer.paths.draw(
+
+        ctx,
+
+        "reporter",
+
+        x,
+
+        y,
+
+        w,
+
+        h,
+
+        "#FFFFFF",
+
+        "#C8C8C8"
+
+    );
+
+    ctx.fillStyle = "#666";
+
+    ctx.font = "11px Segoe UI";
+
+    ctx.textAlign = "center";
+
+    ctx.fillText(
+
+        value + " ▼",
+
+        x + w/2,
+
+        y + h/2
+
+    );
+
+    ctx.textAlign = "left";
+
+    ctx.font = "bold 15px Segoe UI";
+
+    return w;
+
+}
+function drawBooleanSocket(value,x,y){
+
+    const w = Math.max(
+
+        42,
+
+        socketWidth(value)
+
+    );
+
+    const h = 20;
+
+    Composer.paths.draw(
+
+        ctx,
+
+        "boolean",
+
+        x,
+
+        y,
+
+        w,
+
+        h,
+
+        "#FFFFFF",
+
+        "#C8C8C8"
+
+    );
+
+    ctx.fillStyle = "#666";
+
+    ctx.font = "11px Segoe UI";
+
+    ctx.textAlign = "center";
+
+    ctx.fillText(
+
+        value,
+
+        x + w/2,
+
+        y + h/2
+
+    );
+
+    ctx.textAlign = "left";
+
+    ctx.font = "bold 15px Segoe UI";
+
+    return w;
+
+}
 
 })();
-
