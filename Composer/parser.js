@@ -1,3 +1,1 @@
-window.ComposerParser = {};
-
-console.log("parser loaded");
+console.log("parser.js running");
