@@ -11,7 +11,11 @@ Composer.paths = Shape;
 
 Shape.stack = function (ctx,x,y,w,h) {
 
-    const r = 6;
+    const r = 4;
+
+    const notchWidth = 14;
+    const notchDepth = 4;
+    const notchX = 18;
 
     const notchW = 16;
     const notchH = 4;
@@ -25,9 +29,27 @@ Shape.stack = function (ctx,x,y,w,h) {
     ctx.lineTo(x+18,y);
 
     // notch
-    ctx.lineTo(x+18,y+notchH);
-    ctx.lineTo(x+18+notchW,y+notchH);
-    ctx.lineTo(x+18+notchW,y);
+   // Scratch notch
+
+    ctx.lineTo(
+        x + notchX,
+        y
+    );
+    
+    ctx.lineTo(
+        x + notchX,
+        y + notchDepth
+    );
+    
+    ctx.lineTo(
+        x + notchX + notchWidth,
+        y + notchDepth
+    );
+    
+    ctx.lineTo(
+        x + notchX + notchWidth,
+        y
+    );
     ctx.lineTo(x+w-r,y);
 
     // top right
