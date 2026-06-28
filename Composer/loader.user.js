@@ -11,15 +11,15 @@
 
     const BASE = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/Composer/";
 
-     const MODULES = [
-        "ui.js",
+    const MODULES = [
         "parser.js",
         "library.js",
         "paths.js",
         "sockets.js",
         "renderer.js",
         "blockly.js",
-        "generator.js"
+        "generator.js",
+        "ui.js"
     ];
     window.Composer = {
         version: "0.1",
