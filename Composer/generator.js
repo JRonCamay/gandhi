@@ -14,15 +14,18 @@ function normalize(text){
 
 function patternToRegex(pattern){
 
-    let p = normalize(pattern);
+    pattern = normalize(pattern);
 
-    p = p.replace(/[-\/\\^$*+?.()|[\]{}]/g,"\\$&");
+    // Escape regex characters EXCEPT square brackets
+    pattern = pattern.replace(/[.*+?^${}()|\\]/g, "\\$&");
 
-    p = p.replace(/\\\[\\\]/g,"\\s+\\[\\]");
+    // [] placeholder = one or more spaces + []
+    pattern = pattern.replace(/\[\]/g, "\\s+\\[\\]");
 
-    p = p.replace(/ /g,"\\s+");
+    // Every normal space = one or more spaces
+    pattern = pattern.replace(/ /g, "\\s+");
 
-    return new RegExp("^"+p+"$","i");
+    return new RegExp("^" + pattern + "$", "i");
 
 }
 
