@@ -52,6 +52,7 @@ Ready
     header = panel.querySelector("#composer-header");
     input = panel.querySelector("#composer-editor");
     preview = panel.querySelector("#composer-preview");
+    Composer.renderer.init(preview);
     status = panel.querySelector("#composer-status");
 
     Object.assign(panel.style,{
