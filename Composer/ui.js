@@ -1,10 +1,10 @@
-
+window.ComposerUI = {};
+  
+  console.log("ui loaded");
 // ui.js
 
 (function () {
-  window.ComposerUI = {};
   
-  console.log("ui loaded");
     const ui = Composer.ui;
 
     let panel;
