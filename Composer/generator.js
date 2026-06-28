@@ -16,22 +16,17 @@ function patternToRegex(pattern){
 
     pattern = normalize(pattern);
 
-    // Escape regex characters except [] and :
-    pattern = pattern.replace(/[.*+?^${}()|\\]/g, "\\$&");
+    pattern = pattern.replace(/[.*+?^${}()|\\]/g,"\\$&");
 
-    // Replace [] with a regex placeholder
-    pattern = pattern.replace(/\[\]/g, "___PARAM___");
+    pattern = pattern.replace(/\[\]/g,"\\[\\]");
 
-    // Allow one or more spaces between words
-    pattern = pattern.replace(/ /g, "\\s+");
+    pattern = pattern.replace(/ /g,"\\s+");
 
-    // Replace placeholder back
-    pattern = pattern.replace(/___PARAM___/g, "\\s+\\[\\]");
+    pattern = pattern.replace(/:\\s+\\[\\]/g,":\\s+\\[\\]");
 
-    return new RegExp("^" + pattern + "$", "i");
+    return new RegExp("^"+pattern+"$","i");
 
 }
-
 function makePreview(text){
 
     return `
