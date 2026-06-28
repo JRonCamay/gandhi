@@ -1,11 +1,9 @@
 // ==UserScript==
 // @name         Gandhi Composer Loader
 // @namespace    GandhiComposer
-// @version      0.1
-// @description  Gandhi Composer
+// @version      0.2
 // @match        https://www.cocrea.world/*
-// @grant        GM_xmlhttpRequest
-// @connect      raw.githubusercontent.com
+// @grant        none
 // ==/UserScript==
 
 (function () {
@@ -17,6 +15,7 @@
         "ui.js",
         "parser.js",
         "library.js",
+        "blockly.js",
         "generator.js"
     ];
 
@@ -24,51 +23,37 @@
         version: "0.1",
         ui: {},
         parser: {},
-        generator: {},
         library: {},
+        generator: {},
         cache: {}
     };
 
-    function loadModule(file) {
-        return new Promise((resolve, reject) => {
-
-            GM_xmlhttpRequest({
-                method: "GET",
-                url: BASE + file + "?v=" + Date.now(),
-
-                onload(res) {
-
-                    try {
-                        new Function(res.responseText)();
-                        console.log("[Composer] Loaded:", file);
-                        resolve();
-                    } catch (e) {
-                        console.error("[Composer] Error inside", file, e);
-                        reject(e);
-                    }
-
-                },
-
-                onerror(err) {
-                    console.error("[Composer] Failed:", file, err);
-                    reject(err);
-                }
-
+    function load(file) {
+        return fetch(BASE + file + "?v=" + Date.now())
+            .then(r => {
+                if (!r.ok) throw new Error(file + " : " + r.status);
+                return r.text();
+            })
+            .then(code => {
+                console.log("[Composer] Executing", file);
+                eval(code);
+                console.log("[Composer] Loaded", file);
             });
-
-        });
     }
 
     async function boot() {
-
         console.log("[Composer] Booting...");
 
-        for (const file of MODULES) {
-            await loadModule(file);
+        try {
+            for (const file of MODULES) {
+                await load(file);
+            }
+
+            console.log("[Composer] Ready.");
         }
-
-        console.log("[Composer] Ready.");
-
+        catch (e) {
+            console.error("[Composer] FAILED", e);
+        }
     }
 
     boot();
