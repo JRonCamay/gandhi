@@ -38,7 +38,21 @@
     // =====================================================
 
     function loadScript(file) {
-
+        window.Composer = {
+        
+            version: "0.1",
+        
+            ui: {},
+        
+            parser: {},
+        
+            generator: {},
+        
+            library: {},
+        
+            cache: {}
+        
+        };
         return new Promise((resolve, reject) => {
 
             const script = document.createElement("script");
