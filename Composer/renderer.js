@@ -12,13 +12,11 @@ Renderer.init=function(container){
 
     canvas=document.createElement("canvas");
 
-    canvas.width=470;
-
-    canvas.height=120;
-
-    canvas.style.width="100%";
-
-    canvas.style.height="120px";
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+      canvas.style.width = "100%";
+    canvas.style.height = "100%";
+    canvas.style.display = "block";
 
     container.innerHTML="";
 
@@ -52,7 +50,7 @@ Renderer.draw=function(block){
 
     const h=34;
 
-    ctx.font="15px Segoe UI";
+   ctx.font = "bold 15px Segoe UI";
 
     const padding=16;
 
@@ -128,4 +126,3 @@ Renderer.preview=function(command){
 
 })();
 
-})();
