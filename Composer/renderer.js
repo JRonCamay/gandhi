@@ -1,14 +1,18 @@
 // renderer.js
-(function(){
+(function () {
 
 const Renderer = {};
 
 Composer.renderer = Renderer;
 
-let canvas;
-let ctx;
+let canvas = null;
+let ctx = null;
 
-Renderer.init = function(container){
+/*=========================================
+    INIT
+=========================================*/
+
+Renderer.init = function (container) {
 
     canvas = document.createElement("canvas");
 
@@ -28,6 +32,10 @@ Renderer.init = function(container){
 
 };
 
+/*=========================================
+    CLEAR
+=========================================*/
+
 Renderer.clear = function(){
 
     if(!ctx) return;
@@ -41,11 +49,16 @@ Renderer.clear = function(){
 
 };
 
+/*=========================================
+    PREVIEW
+=========================================*/
+
 Renderer.preview = function(block){
 
     if(!block){
 
         Renderer.clear();
+
         return;
 
     }
@@ -54,21 +67,21 @@ Renderer.preview = function(block){
 
 };
 
+/*=========================================
+    DRAW
+=========================================*/
+
 Renderer.draw = function(block){
 
     Renderer.clear();
 
-    ctx.font = "bold 15px Segoe UI";
-
     const components = buildComponents(block);
 
-    const width = measureBlock(
-        components
-    );
+    const width = measureComponents(components);
 
-    const x = 12;
-    const y = 18;
-    const h = 34;
+    const blockX = 12;
+    const blockY = 16;
+    const blockH = 34;
 
     Composer.paths.draw(
 
@@ -76,13 +89,13 @@ Renderer.draw = function(block){
 
         "stack",
 
-        x,
+        blockX,
 
-        y,
+        blockY,
 
         width,
 
-        h,
+        blockH,
 
         "#4C97FF",
 
@@ -90,137 +103,35 @@ Renderer.draw = function(block){
 
     );
 
-    let px = x + 12;
-        for(const c of components){
+    ctx.font = "bold 15px Segoe UI";
 
-        switch(c.type){
+    let x = blockX + 12;
 
-            case "text":
+    for(const component of components){
 
-                ctx.fillStyle = "white";
-                ctx.font = "bold 15px Segoe UI";
+        const used = drawComponent(
 
-                ctx.fillText(
+            component,
 
-                    c.value,
+            x,
 
-                    px,
+            blockY + blockH/2
 
-                    y + h / 2
+        );
 
-                );
-
-                px += ctx.measureText(
-                    c.value
-                ).width;
-
-            break;
-
-            case "number":
-
-                px += Composer.sockets.number(
-
-                    ctx,
-
-                    c.value,
-
-                    px,
-
-                    y + 7
-
-                );
-
-            break;
-
-            case "string":
-
-                px += Composer.sockets.string(
-
-                    ctx,
-
-                    c.value,
-
-                    px,
-
-                    y + 7
-
-                );
-
-            break;
-
-            case "reporter":
-
-                px += Composer.sockets.reporter(
-
-                    ctx,
-
-                    c.value,
-
-                    px,
-
-                    y + 7
-
-                );
-
-            break;
-
-            case "menu":
-
-                px += Composer.sockets.menu(
-
-                    ctx,
-
-                    c.value,
-
-                    px,
-
-                    y + 7
-
-                );
-
-            break;
-
-            case "boolean":
-
-                px += Composer.sockets.boolean(
-
-                    ctx,
-
-                    c.value,
-
-                    px,
-
-                    y + 7
-
-                );
-
-            break;
-
-            case "color":
-
-                px += Composer.sockets.color(
-
-                    ctx,
-
-                    px,
-
-                    y + 7
-
-                );
-
-            break;
-
-        }
-
-        px += 4;
+        x += used + 4;
 
     }
 
 };
 
+/*=========================================
+    BUILD COMPONENTS
+=========================================*/
+
 function buildComponents(block){
 
-    const components = [];
+    const result = [];
 
     const parts = block.preview.split("()");
 
@@ -228,7 +139,7 @@ function buildComponents(block){
 
         if(parts[i].length){
 
-            components.push({
+            result.push({
 
                 type:"text",
 
@@ -240,7 +151,7 @@ function buildComponents(block){
 
         if(i < block.params.length){
 
-            components.push({
+            result.push({
 
                 type:block.params[i].type,
 
@@ -252,50 +163,42 @@ function buildComponents(block){
 
     }
 
-    return components;
+    return result;
 
 }
-function measureBlock(components){
+/*=========================================
+    MEASURE
+=========================================*/
 
-    let width = 24;
+function measureComponents(components){
 
     ctx.font = "bold 15px Segoe UI";
 
-    for(const c of components){
+    let width = 24;
 
-        switch(c.type){
+    for(const component of components){
+
+        switch(component.type){
 
             case "text":
 
                 width += ctx.measureText(
-                    c.value
+                    component.value
                 ).width;
 
             break;
 
-            case "number":
-
-            case "string":
-
-            case "reporter":
-
-            case "menu":
-
-            case "boolean":
-
-            case "color":
+            default:
 
                 width += Composer.sockets.measure(
 
                     ctx,
 
-                    c.type,
+                    component.type,
 
-                    c.value || ""
+                    component.value || ""
 
                 );
-
-            break;
 
         }
 
@@ -307,13 +210,17 @@ function measureBlock(components){
 
 }
 
-function drawComponent(component,x,y){
+/*=========================================
+    DRAW COMPONENT
+=========================================*/
+
+function drawComponent(component,x,centerY){
 
     switch(component.type){
 
         case "text":
 
-            ctx.fillStyle = "white";
+            ctx.fillStyle = "#FFFFFF";
 
             ctx.font = "bold 15px Segoe UI";
 
@@ -323,7 +230,7 @@ function drawComponent(component,x,y){
 
                 x,
 
-                y
+                centerY
 
             );
 
@@ -334,54 +241,83 @@ function drawComponent(component,x,y){
         case "number":
 
             return Composer.sockets.number(
+
                 ctx,
+
                 component.value,
+
                 x,
-                y-10
+
+                centerY-10
+
             );
 
         case "string":
 
             return Composer.sockets.string(
+
                 ctx,
+
                 component.value,
+
                 x,
-                y-10
+
+                centerY-10
+
             );
 
         case "reporter":
 
             return Composer.sockets.reporter(
+
                 ctx,
+
                 component.value,
+
                 x,
-                y-10
+
+                centerY-10
+
             );
 
         case "menu":
 
             return Composer.sockets.menu(
+
                 ctx,
+
                 component.value,
+
                 x,
-                y-10
+
+                centerY-10
+
             );
 
         case "boolean":
 
             return Composer.sockets.boolean(
+
                 ctx,
+
                 component.value,
+
                 x,
-                y-10
+
+                centerY-10
+
             );
 
         case "color":
 
             return Composer.sockets.color(
+
                 ctx,
+
                 x,
-                y-10
+
+                centerY-10
+
             );
 
     }
@@ -389,7 +325,117 @@ function drawComponent(component,x,y){
     return 0;
 
 }
-    // End of Renderer.draw()
-    // (This function is already closed in Part 2)
+/*=========================================
+    INLINE BLOCK SUPPORT
+=========================================*/
+
+function drawInline(block,x,y){
+
+    const components = buildComponents(block);
+
+    let px = x;
+
+    for(const component of components){
+
+        px += drawComponent(
+
+            component,
+
+            px,
+
+            y
+
+        );
+
+        px += 4;
+
+    }
+
+    return px - x;
+
+}
+
+function measureInline(block){
+
+    const components = buildComponents(block);
+
+    return measureComponents(components);
+
+}
+
+/*=========================================
+    FUTURE API
+=========================================*/
+
+Renderer.measure = function(block){
+
+    return measureInline(block);
+
+};
+
+Renderer.drawInline = function(
+
+    block,
+
+    x,
+
+    y
+
+){
+
+    return drawInline(
+
+        block,
+
+        x,
+
+        y
+
+    );
+
+};
+
+/*=========================================
+    DEBUG
+=========================================*/
+
+Renderer.debug = false;
+
+Renderer.setDebug = function(value){
+
+    Renderer.debug = value;
+
+};
+/*=========================================
+    RESIZE
+=========================================*/
+
+Renderer.resize = function(){
+
+    if(!canvas) return;
+
+    const parent = canvas.parentElement;
+
+    if(!parent) return;
+
+    canvas.width = parent.clientWidth;
+    canvas.height = parent.clientHeight;
+
+};
+
+window.addEventListener(
+    "resize",
+    Renderer.resize
+);
+
+/*=========================================
+    READY
+=========================================*/
+
+Renderer.ready = function(){
+
+    return !!ctx;
+
+};
 
 })();
