@@ -1,61 +1,79 @@
-(function(){
+// generator.js
+(function () {
 
-const input=document.getElementById("composer-input");
-const preview=document.getElementById("composer-preview");
+const gen = Composer.generator;
 
-function renderPreview(entry){
+function normalize(text){
 
-    preview.innerHTML="";
-
-    if(!entry)return;
-
-    const card=document.createElement("div");
-
-    card.textContent=entry.label;
-
-    card.style.cssText=`
-        background:#4C97FF;
-        color:white;
-        padding:8px 12px;
-        border-radius:6px;
-        display:inline-block;
-        font-weight:bold;
-        cursor:pointer;
-    `;
-
-    card.onclick=()=>{
-
-        const ws=(window.Blockly||window.ScratchBlocks).getMainWorkspace();
-
-        const block=ws.newBlock(entry.block);
-
-        block.initSvg();
-        block.render();
-
-        block.moveBy(250,150);
-
-    };
-
-    preview.append(card);
+    return text
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g," ");
 
 }
 
-input.addEventListener("input",()=>{
+function patternToRegex(pattern){
 
-    const text=input.value.trim().toLowerCase();
+    let p = normalize(pattern);
 
-    if(!text){
+    p = p.replace(/[-\/\\^$*+?.()|[\]{}]/g,"\\$&");
 
-        renderPreview(null);
+    p = p.replace(/\\\[\\\]/g,"\\s+\\[\\]");
 
+    p = p.replace(/ /g,"\\s+");
+
+    return new RegExp("^"+p+"$","i");
+
+}
+
+function makePreview(text){
+
+    return `
+<div style="
+background:#4C97FF;
+color:white;
+padding:8px 12px;
+border-radius:6px;
+display:inline-block;
+font-weight:bold;
+font-family:Segoe UI;
+">
+${text}
+</div>
+`;
+
+}
+
+gen.preview=function(input){
+
+    input=normalize(input);
+
+    Composer.ui.setPreview("");
+
+    if(!input.length)
         return;
+
+    for(const cmd of Composer.library){
+
+        const regex=patternToRegex(cmd.pattern);
+
+        if(regex.test(input)){
+
+            Composer.ui.setPreview(
+                makePreview(cmd.preview)
+            );
+
+            return;
+
+        }
 
     }
 
-    const found=Composer.library.find(x=>x.keyword.startsWith(text));
+};
+gen.generate = function () {
 
-    renderPreview(found);
+    // Block creation comes later.
 
-});
+};
 
 })();
