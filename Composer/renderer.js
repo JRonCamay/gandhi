@@ -421,6 +421,8 @@ Renderer.resize = function(){
     canvas.width = parent.clientWidth;
     canvas.height = parent.clientHeight;
 
+    ctx.textBaseline = "middle";
+
 };
 
 window.addEventListener(
