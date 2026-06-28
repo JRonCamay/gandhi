@@ -2,32 +2,17 @@
 // @name         Gandhi Composer Loader
 // @namespace    GandhiComposer
 // @version      0.1
-// @description  Loads Gandhi Composer modules
+// @description  Gandhi Composer
 // @match        https://www.cocrea.world/*
-// @grant        none
+// @grant        GM_xmlhttpRequest
+// @connect      raw.githubusercontent.com
 // ==/UserScript==
 
 (function () {
     'use strict';
 
-    // =====================================================
-    // CONFIG
-    // =====================================================
-    window.Composer = window.Composer || {
+    const BASE = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/Composer/";
 
-        version: "0.1",
-
-        ui: {},
-
-        parser: {},
-
-        generator: {},
-
-        library: {},
-
-        cache: {}
-
-    };
     const MODULES = [
         "ui.js",
         "parser.js",
@@ -35,44 +20,43 @@
         "generator.js"
     ];
 
-    // Change this to wherever you keep the files.
-    //
-    // Example:
-    //
-    // http://localhost:5500/Composer/
-    //
-    // or
-    //
-    // https://raw.githubusercontent.com/USERNAME/gandhi/main/Composer/
-    //
+    window.Composer = {
+        version: "0.1",
+        ui: {},
+        parser: {},
+        generator: {},
+        library: {},
+        cache: {}
+    };
 
-    const BASE =
-        "https://raw.githubusercontent.com/JRonCamay/gandhi/main/Composer/";
-
-    // =====================================================
-
-    function loadScript(file) {
-
+    function loadModule(file) {
         return new Promise((resolve, reject) => {
 
-            const script = document.createElement("script");
+            GM_xmlhttpRequest({
+                method: "GET",
+                url: BASE + file + "?v=" + Date.now(),
 
-            script.src = BASE + file;
+                onload(res) {
 
-            script.onload = () => {
-                console.log("[Composer] Loaded", file);
-                resolve();
-            };
+                    try {
+                        new Function(res.responseText)();
+                        console.log("[Composer] Loaded:", file);
+                        resolve();
+                    } catch (e) {
+                        console.error("[Composer] Error inside", file, e);
+                        reject(e);
+                    }
 
-            script.onerror = () => {
-                console.error("[Composer] Failed", file);
-                reject(file);
-            };
+                },
 
-            document.head.appendChild(script);
+                onerror(err) {
+                    console.error("[Composer] Failed:", file, err);
+                    reject(err);
+                }
+
+            });
 
         });
-
     }
 
     async function boot() {
@@ -80,9 +64,7 @@
         console.log("[Composer] Booting...");
 
         for (const file of MODULES) {
-
-            await loadScript(file);
-
+            await loadModule(file);
         }
 
         console.log("[Composer] Ready.");
