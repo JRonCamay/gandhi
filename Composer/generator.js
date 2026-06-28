@@ -43,7 +43,7 @@ gen.preview=function(input){
 
     input=normalize(input);
 
-    Composer.ui.setPreview("");
+    Composer.renderer.clear();
 
     if(!input.length)
         return;
@@ -52,9 +52,7 @@ gen.preview=function(input){
 
        if(normalizePattern(input) === normalizePattern(cmd.pattern)){
 
-            Composer.ui.setPreview(
-                makePreview(cmd.preview)
-            );
+            Composer.renderer.preview(cmd);
 
             return;
 
