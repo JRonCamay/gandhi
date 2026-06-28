@@ -1,11 +1,13 @@
 Composer.generator.generate = function (text) {
 
+    const ast = Composer.parser.parse(text);
+
     console.clear();
 
-    console.log("===== Gandhi Composer =====");
+    console.log("===== AST =====");
 
-    console.log(text);
+    console.table(ast);
 
-    Composer.ui.status("Generated (console only)");
+    Composer.ui.status(ast.length + " command(s)");
 
 };
