@@ -51,7 +51,13 @@ Ready
 
     header = panel.querySelector("#composer-header");
     input = panel.querySelector("#composer-editor");
-    preview = panel.querySelector("#composer-preview");
+   preview = panel.querySelector("#composer-preview");
+
+    preview.style.padding = "0";
+    preview.style.background = "#202020";
+    preview.style.border = "0";
+    preview.style.overflow = "hidden";
+ 
     Composer.renderer.init(preview);
     status = panel.querySelector("#composer-status");
 
