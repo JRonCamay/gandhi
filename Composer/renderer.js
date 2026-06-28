@@ -111,19 +111,21 @@ Renderer.draw=function(block){
     Composer.paths.draw(
 
         ctx,
-
+    
         "stack",
-
+    
         x,
-
+    
         y,
-
+    
         width,
-
+    
         h,
-
-        "#4C97FF"
-
+    
+        "#4C97FF",
+    
+        "#3373CC"
+    
     );
 
     ctx.fillStyle = "white";
