@@ -212,7 +212,7 @@ say Hello`;
 
     document.addEventListener("keydown", e => {
 
-        if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "p") {
+        if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "v") {
 
             e.preventDefault();
             ui.toggle();
