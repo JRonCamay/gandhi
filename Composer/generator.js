@@ -61,8 +61,13 @@ gen.preview=function(input){
 
     for(const cmd of Composer.library){
 
-        const regex=patternToRegex(cmd.pattern);
+        const regex = patternToRegex(cmd.pattern);
 
+        console.log("PATTERN:", cmd.pattern);
+        console.log("REGEX:", regex);
+        console.log("INPUT:", input);
+        console.log("MATCH:", regex.test(input));
+        
         if(regex.test(input)){
 
             Composer.ui.setPreview(
