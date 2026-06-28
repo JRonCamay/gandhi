@@ -12,19 +12,13 @@ function normalize(text){
 
 }
 
-function patternToRegex(pattern){
+function normalizePattern(text){
 
-    pattern = normalize(pattern);
-
-    pattern = pattern.replace(/[.*+?^${}()|\\]/g,"\\$&");
-
-    pattern = pattern.replace(/\[\]/g,"\\[\\]");
-
-    pattern = pattern.replace(/ /g,"\\s+");
-
-    pattern = pattern.replace(/:\\s+\\[\\]/g,":\\s+\\[\\]");
-
-    return new RegExp("^"+pattern+"$","i");
+    return text
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g," ")
+        .replace(/:\s+\[\]/g,": []");
 
 }
 function makePreview(text){
@@ -56,14 +50,7 @@ gen.preview=function(input){
 
     for(const cmd of Composer.library){
 
-        const regex = patternToRegex(cmd.pattern);
-
-        console.log("PATTERN:", cmd.pattern);
-        console.log("REGEX:", regex);
-        console.log("INPUT:", input);
-        console.log("MATCH:", regex.test(input));
-        
-        if(regex.test(input)){
+       if(normalizePattern(input) === normalizePattern(cmd.pattern)){
 
             Composer.ui.setPreview(
                 makePreview(cmd.preview)
