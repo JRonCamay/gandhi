@@ -6,7 +6,7 @@
 // @match        https://www.cocrea.world/*
 // @grant        none
 // ==/UserScript==
-sdd
+
 (function () {
     'use strict';
 
