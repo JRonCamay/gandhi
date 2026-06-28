@@ -225,14 +225,16 @@ Ready
 
     });
 
-    input.addEventListener("input",()=>{
+   input.addEventListener("input",()=>{
 
+        console.log("UI:",input.value);
+    
         if(Composer.generator.preview){
-
+    
             Composer.generator.preview(input.value);
-
+    
         }
-
+    
     });
 
 };
