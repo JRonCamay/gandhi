@@ -242,6 +242,12 @@ ui.show=function(){
 
     panel.style.display="block";
 
+    requestAnimationFrame(()=>{
+
+        Composer.renderer.resize();
+
+    });
+
     input.focus();
 
 };
