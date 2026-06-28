@@ -6,42 +6,62 @@ const Sockets = {};
 Composer.sockets = Sockets;
 
 /*=========================================
-    Helpers
+    Measure
 =========================================*/
 
-function measure(ctx,text){
+Sockets.measure=function(ctx,type,text){
 
     ctx.save();
 
-    ctx.font = "11px Segoe UI";
+    ctx.font="11px Segoe UI";
 
-    const w = Math.max(
+    let w=Math.max(
+
         24,
-        ctx.measureText(text).width + 18
+
+        ctx.measureText(text).width+18
+
     );
+
+    if(type==="menu")
+        w+=12;
+
+    if(type==="boolean")
+        w=Math.max(42,w);
+
+    if(type==="color")
+        w=22;
 
     ctx.restore();
 
     return w;
 
-}
+};
 
-function drawLabel(ctx,text,x,y,w,h){
+/*=========================================
+    Label
+=========================================*/
+
+function label(ctx,text,x,y,w,h){
 
     ctx.save();
 
-    ctx.fillStyle = "#666";
+    ctx.fillStyle="#666";
 
-    ctx.font = "11px Segoe UI";
+    ctx.font="11px Segoe UI";
 
-    ctx.textAlign = "center";
+    ctx.textAlign="center";
 
-    ctx.textBaseline = "middle";
+    ctx.textBaseline="middle";
 
     ctx.fillText(
+
         text,
-        x + w/2,
-        y + h/2
+
+        x+w/2,
+
+        y+h/2
+
     );
 
     ctx.restore();
@@ -54,59 +74,86 @@ function drawLabel(ctx,text,x,y,w,h){
 
 Sockets.reporter=function(ctx,text,x,y){
 
-    const w = measure(ctx,text);
-    const h = 20;
+    const w=Sockets.measure(
 
-    Composer.paths.draw(
         ctx,
+
         "reporter",
-        x,
-        y,
-        w,
-        h,
-        "#FFFFFF",
-        "#C8C8C8"
+
+        text
+
     );
 
-    drawLabel(
+    const h=20;
+
+    Composer.paths.draw(
+
         ctx,
-        text,
+
+        "reporter",
+
         x,
+
         y,
+
         w,
+
+        h,
+
+        "#FFFFFF",
+
+        "#C8C8C8"
+
+    );
+
+    label(
+
+        ctx,
+
+        text,
+
+        x,
+
+        y,
+
+        w,
+
         h
+
     );
 
     return w;
 
 };
 
-/*=========================================
-    Number
-=========================================*/
-
 Sockets.number=function(ctx,text,x,y){
 
     return Sockets.reporter(
+
         ctx,
+
         text,
+
         x,
+
         y
+
     );
 
 };
 
-/*=========================================
-    String
-=========================================*/
-
 Sockets.string=function(ctx,text,x,y){
 
     return Sockets.reporter(
+
         ctx,
+
         text,
+
         x,
+
         y
+
     );
 
 };
@@ -116,7 +163,12 @@ Sockets.string=function(ctx,text,x,y){
 
 Sockets.menu = function(ctx,text,x,y){
 
-    const w = measure(ctx,text) + 12;
+    const w = Sockets.measure(
+        ctx,
+        "menu",
+        text
+    );
+
     const h = 20;
 
     Composer.paths.draw(
@@ -130,7 +182,7 @@ Sockets.menu = function(ctx,text,x,y){
         "#C8C8C8"
     );
 
-    drawLabel(
+    label(
         ctx,
         text + " ▼",
         x,
@@ -149,9 +201,10 @@ Sockets.menu = function(ctx,text,x,y){
 
 Sockets.boolean = function(ctx,text,x,y){
 
-    const w = Math.max(
-        42,
-        measure(ctx,text)
+    const w = Sockets.measure(
+        ctx,
+        "boolean",
+        text
     );
 
     const h = 20;
@@ -167,7 +220,7 @@ Sockets.boolean = function(ctx,text,x,y){
         "#C8C8C8"
     );
 
-    drawLabel(
+    label(
         ctx,
         text,
         x,
@@ -186,7 +239,12 @@ Sockets.boolean = function(ctx,text,x,y){
 
 Sockets.color = function(ctx,x,y){
 
-    const w = 22;
+    const w = Sockets.measure(
+        ctx,
+        "color",
+        ""
+    );
+
     const h = 20;
 
     Composer.paths.draw(
@@ -201,33 +259,6 @@ Sockets.color = function(ctx,x,y){
     );
 
     return w;
-
-};
-
-/*=========================================
-    Measure Width
-=========================================*/
-
-Sockets.width = function(type,text){
-
-    switch(type){
-
-        case "menu":
-            return measure(null,text) + 12;
-
-        case "boolean":
-            return Math.max(
-                42,
-                measure(null,text)
-            );
-
-        case "color":
-            return 22;
-
-        default:
-            return measure(null,text);
-
-    }
 
 };
 
