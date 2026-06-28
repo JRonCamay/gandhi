@@ -58,7 +58,12 @@ Ready
     preview.style.border = "0";
     preview.style.overflow = "hidden";
  
-    Composer.renderer.init(preview);
+       if(
+        Composer.renderer &&
+        Composer.renderer.init
+    ){
+        Composer.renderer.init(preview);
+    }
     status = panel.querySelector("#composer-status");
 
     Object.assign(panel.style,{
