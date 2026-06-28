@@ -60,6 +60,8 @@ Renderer.draw = function(block){
 
     Renderer.clear();
 
+    ctx.font = "bold 15px Segoe UI";
+
     const components = [];
 
     buildComponents(
@@ -67,44 +69,9 @@ Renderer.draw = function(block){
         components
     );
 
-    ctx.font = "bold 15px Segoe UI";
-
-    let width = 24;
-
-    for(const c of components){
-
-        switch(c.type){
-
-            case "text":
-
-                width += ctx.measureText(
-                    c.value
-                ).width;
-
-            break;
-
-            case "number":
-            case "string":
-            case "menu":
-            case "reporter":
-
-                width += socketWidth(
-                    c.value
-                );
-
-            break;
-
-            case "boolean":
-
-                width += 44;
-
-            break;
-
-        }
-
-        width += 4;
-
-    }
+    const width = measureWidth(
+        components
+    );
 
     const x = 12;
     const y = 16;
@@ -138,7 +105,6 @@ Renderer.draw = function(block){
             case "text":
 
                 ctx.fillStyle = "white";
-
                 ctx.font = "bold 15px Segoe UI";
 
                 ctx.fillText(
@@ -159,7 +125,9 @@ Renderer.draw = function(block){
 
             case "number":
 
-                px += drawReporterSocket(
+                px += Composer.sockets.number(
+
+                    ctx,
 
                     c.value,
 
@@ -173,7 +141,9 @@ Renderer.draw = function(block){
 
             case "string":
 
-                px += drawStringSocket(
+                px += Composer.sockets.string(
+
+                    ctx,
 
                     c.value,
 
@@ -187,7 +157,9 @@ Renderer.draw = function(block){
 
             case "menu":
 
-                px += drawMenuSocket(
+                px += Composer.sockets.menu(
+
+                    ctx,
 
                     c.value,
 
@@ -201,7 +173,9 @@ Renderer.draw = function(block){
 
             case "reporter":
 
-                px += drawReporterSocket(
+                px += Composer.sockets.reporter(
+
+                    ctx,
 
                     c.value,
 
@@ -215,9 +189,25 @@ Renderer.draw = function(block){
 
             case "boolean":
 
-                px += drawBooleanSocket(
+                px += Composer.sockets.boolean(
+
+                    ctx,
 
                     c.value,
+
+                    px,
+
+                    y + 7
+
+                );
+
+            break;
+
+            case "color":
+
+                px += Composer.sockets.color(
+
+                    ctx,
 
                     px,
 
@@ -234,6 +224,7 @@ Renderer.draw = function(block){
     }
 
 };
+
 function buildComponents(block,out){
 
     const parts = block.preview.split("()");
@@ -267,189 +258,84 @@ function buildComponents(block,out){
     }
 
 }
-function socketWidth(value){
-
-    ctx.font = "11px Segoe UI";
-
-    const w = Math.max(
-
-        24,
-
-        ctx.measureText(value).width + 18
-
-    );
+function measureWidth(components){
 
     ctx.font = "bold 15px Segoe UI";
 
-    return w;
+    let width = 24;
 
-}
+    for(const c of components){
 
-function drawReporterSocket(value,x,y){
+        switch(c.type){
 
-    const w = socketWidth(value);
+            case "text":
 
-    const h = 20;
+                width += ctx.measureText(
+                    c.value
+                ).width;
 
-    Composer.paths.draw(
+            break;
 
-        ctx,
+            case "number":
+            case "string":
+            case "reporter":
 
-        "reporter",
+                ctx.save();
 
-        x,
+                ctx.font = "11px Segoe UI";
 
-        y,
+                width += Math.max(
+                    24,
+                    ctx.measureText(c.value).width + 18
+                );
 
-        w,
+                ctx.restore();
 
-        h,
+            break;
 
-        "#FFFFFF",
+            case "menu":
 
-        "#C8C8C8"
+                ctx.save();
 
-    );
+                ctx.font = "11px Segoe UI";
 
-    ctx.fillStyle = "#666";
+                width += Math.max(
+                    24,
+                    ctx.measureText(c.value).width + 30
+                );
 
-    ctx.font = "11px Segoe UI";
+                ctx.restore();
 
-    ctx.textAlign = "center";
+            break;
 
-    ctx.fillText(
+            case "boolean":
 
-        value,
+                ctx.save();
 
-        x + w/2,
+                ctx.font = "11px Segoe UI";
 
-        y + h/2
+                width += Math.max(
+                    42,
+                    ctx.measureText(c.value).width + 18
+                );
 
-    );
+                ctx.restore();
 
-    ctx.textAlign = "left";
+            break;
 
-    ctx.font = "bold 15px Segoe UI";
+            case "color":
 
-    return w;
+                width += 22;
 
-}
+            break;
 
-function drawStringSocket(value,x,y){
+        }
 
-    return drawReporterSocket(
+        width += 4;
 
-        value,
+    }
 
-        x,
-
-        y
-
-    );
-
-}
-function drawMenuSocket(value,x,y){
-
-    const w = socketWidth(value) + 12;
-
-    const h = 20;
-
-    Composer.paths.draw(
-
-        ctx,
-
-        "reporter",
-
-        x,
-
-        y,
-
-        w,
-
-        h,
-
-        "#FFFFFF",
-
-        "#C8C8C8"
-
-    );
-
-    ctx.fillStyle = "#666";
-
-    ctx.font = "11px Segoe UI";
-
-    ctx.textAlign = "center";
-
-    ctx.fillText(
-
-        value + " ▼",
-
-        x + w/2,
-
-        y + h/2
-
-    );
-
-    ctx.textAlign = "left";
-
-    ctx.font = "bold 15px Segoe UI";
-
-    return w;
-
-}
-function drawBooleanSocket(value,x,y){
-
-    const w = Math.max(
-
-        42,
-
-        socketWidth(value)
-
-    );
-
-    const h = 20;
-
-    Composer.paths.draw(
-
-        ctx,
-
-        "boolean",
-
-        x,
-
-        y,
-
-        w,
-
-        h,
-
-        "#FFFFFF",
-
-        "#C8C8C8"
-
-    );
-
-    ctx.fillStyle = "#666";
-
-    ctx.font = "11px Segoe UI";
-
-    ctx.textAlign = "center";
-
-    ctx.fillText(
-
-        value,
-
-        x + w/2,
-
-        y + h/2
-
-    );
-
-    ctx.textAlign = "left";
-
-    ctx.font = "bold 15px Segoe UI";
-
-    return w;
+    return width + 20;
 
 }
 
