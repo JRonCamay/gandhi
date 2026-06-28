@@ -290,7 +290,7 @@ document.addEventListener("keydown",e=>{
     if(
         e.ctrlKey &&
         e.shiftKey &&
-        e.key.toLowerCase()==="k"
+        e.key.toLowerCase()==="x"
     ){
 
         e.preventDefault();
