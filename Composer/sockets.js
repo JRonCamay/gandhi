@@ -5,7 +5,11 @@ const Sockets = {};
 
 Composer.sockets = Sockets;
 
-function socketWidth(ctx,text){
+/*=========================================
+    Helpers
+=========================================*/
+
+function measure(ctx,text){
 
     ctx.save();
 
@@ -22,102 +26,132 @@ function socketWidth(ctx,text){
 
 }
 
-Sockets.number = function(ctx,value,x,y){
-
-    const w = socketWidth(ctx,value);
-    const h = 20;
-
-    Composer.paths.draw(
-        ctx,
-        "reporter",
-        x,
-        y,
-        w,
-        h,
-        "#FFFFFF",
-        "#C8C8C8"
-    );
+function drawLabel(ctx,text,x,y,w,h){
 
     ctx.save();
 
     ctx.fillStyle = "#666";
+
     ctx.font = "11px Segoe UI";
+
     ctx.textAlign = "center";
+
     ctx.textBaseline = "middle";
 
     ctx.fillText(
-        value,
-        x+w/2,
-        y+h/2
-    );
-
-    ctx.restore();
-
-    return w;
-
-};
-
-Sockets.string = function(ctx,value,x,y){
-
-    return Sockets.number(
-        ctx,
-        value,
-        x,
-        y
-    );
-
-};
-
-Sockets.reporter = function(ctx,value,x,y){
-
-    return Sockets.number(
-        ctx,
-        value,
-        x,
-        y
-    );
-
-};
-Sockets.menu = function(ctx,value,x,y){
-
-    const w = socketWidth(ctx,value) + 12;
-    const h = 20;
-
-    Composer.paths.draw(
-        ctx,
-        "reporter",
-        x,
-        y,
-        w,
-        h,
-        "#FFFFFF",
-        "#C8C8C8"
-    );
-
-    ctx.save();
-
-    ctx.fillStyle = "#666";
-    ctx.font = "11px Segoe UI";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-
-    ctx.fillText(
-        value + " ▼",
+        text,
         x + w/2,
         y + h/2
     );
 
     ctx.restore();
 
+}
+
+/*=========================================
+    Reporter
+=========================================*/
+
+Sockets.reporter=function(ctx,text,x,y){
+
+    const w = measure(ctx,text);
+    const h = 20;
+
+    Composer.paths.draw(
+        ctx,
+        "reporter",
+        x,
+        y,
+        w,
+        h,
+        "#FFFFFF",
+        "#C8C8C8"
+    );
+
+    drawLabel(
+        ctx,
+        text,
+        x,
+        y,
+        w,
+        h
+    );
+
     return w;
 
 };
 
-Sockets.boolean = function(ctx,value,x,y){
+/*=========================================
+    Number
+=========================================*/
+
+Sockets.number=function(ctx,text,x,y){
+
+    return Sockets.reporter(
+        ctx,
+        text,
+        x,
+        y
+    );
+
+};
+
+/*=========================================
+    String
+=========================================*/
+
+Sockets.string=function(ctx,text,x,y){
+
+    return Sockets.reporter(
+        ctx,
+        text,
+        x,
+        y
+    );
+
+};
+/*=========================================
+    Menu
+=========================================*/
+
+Sockets.menu = function(ctx,text,x,y){
+
+    const w = measure(ctx,text) + 12;
+    const h = 20;
+
+    Composer.paths.draw(
+        ctx,
+        "reporter",
+        x,
+        y,
+        w,
+        h,
+        "#FFFFFF",
+        "#C8C8C8"
+    );
+
+    drawLabel(
+        ctx,
+        text + " ▼",
+        x,
+        y,
+        w,
+        h
+    );
+
+    return w;
+
+};
+
+/*=========================================
+    Boolean
+=========================================*/
+
+Sockets.boolean = function(ctx,text,x,y){
 
     const w = Math.max(
         42,
-        socketWidth(ctx,value)
+        measure(ctx,text)
     );
 
     const h = 20;
@@ -133,24 +167,22 @@ Sockets.boolean = function(ctx,value,x,y){
         "#C8C8C8"
     );
 
-    ctx.save();
-
-    ctx.fillStyle = "#666";
-    ctx.font = "11px Segoe UI";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-
-    ctx.fillText(
-        value,
-        x + w/2,
-        y + h/2
+    drawLabel(
+        ctx,
+        text,
+        x,
+        y,
+        w,
+        h
     );
-
-    ctx.restore();
 
     return w;
 
 };
+
+/*=========================================
+    Color
+=========================================*/
 
 Sockets.color = function(ctx,x,y){
 
@@ -169,6 +201,33 @@ Sockets.color = function(ctx,x,y){
     );
 
     return w;
+
+};
+
+/*=========================================
+    Measure Width
+=========================================*/
+
+Sockets.width = function(type,text){
+
+    switch(type){
+
+        case "menu":
+            return measure(null,text) + 12;
+
+        case "boolean":
+            return Math.max(
+                42,
+                measure(null,text)
+            );
+
+        case "color":
+            return 22;
+
+        default:
+            return measure(null,text);
+
+    }
 
 };
 
