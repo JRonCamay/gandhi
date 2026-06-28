@@ -20,7 +20,6 @@ Renderer.init = function(container){
     canvas.style.display = "block";
 
     container.innerHTML = "";
-
     container.appendChild(canvas);
 
     ctx = canvas.getContext("2d");
@@ -47,7 +46,6 @@ Renderer.preview = function(block){
     if(!block){
 
         Renderer.clear();
-
         return;
 
     }
@@ -62,19 +60,14 @@ Renderer.draw = function(block){
 
     ctx.font = "bold 15px Segoe UI";
 
-    const components = [];
+    const components = buildComponents(block);
 
-    buildComponents(
-        block,
-        components
-    );
-
-    const width = measureWidth(
+    const width = measureBlock(
         components
     );
 
     const x = 12;
-    const y = 16;
+    const y = 18;
     const h = 34;
 
     Composer.paths.draw(
@@ -155,9 +148,9 @@ Renderer.draw = function(block){
 
             break;
 
-            case "menu":
+            case "reporter":
 
-                px += Composer.sockets.menu(
+                px += Composer.sockets.reporter(
 
                     ctx,
 
@@ -171,9 +164,9 @@ Renderer.draw = function(block){
 
             break;
 
-            case "reporter":
+            case "menu":
 
-                px += Composer.sockets.reporter(
+                px += Composer.sockets.menu(
 
                     ctx,
 
@@ -225,7 +218,9 @@ Renderer.draw = function(block){
 
 };
 
-function buildComponents(block,out){
+function buildComponents(block){
+
+    const components = [];
 
     const parts = block.preview.split("()");
 
@@ -233,7 +228,7 @@ function buildComponents(block,out){
 
         if(parts[i].length){
 
-            out.push({
+            components.push({
 
                 type:"text",
 
@@ -245,7 +240,7 @@ function buildComponents(block,out){
 
         if(i < block.params.length){
 
-            out.push({
+            components.push({
 
                 type:block.params[i].type,
 
@@ -257,12 +252,14 @@ function buildComponents(block,out){
 
     }
 
-}
-function measureWidth(components){
+    return components;
 
-    ctx.font = "bold 15px Segoe UI";
+}
+function measureBlock(components){
 
     let width = 24;
+
+    ctx.font = "bold 15px Segoe UI";
 
     for(const c of components){
 
@@ -277,55 +274,26 @@ function measureWidth(components){
             break;
 
             case "number":
+
             case "string":
+
             case "reporter":
-
-                ctx.save();
-
-                ctx.font = "11px Segoe UI";
-
-                width += Math.max(
-                    24,
-                    ctx.measureText(c.value).width + 18
-                );
-
-                ctx.restore();
-
-            break;
 
             case "menu":
 
-                ctx.save();
-
-                ctx.font = "11px Segoe UI";
-
-                width += Math.max(
-                    24,
-                    ctx.measureText(c.value).width + 30
-                );
-
-                ctx.restore();
-
-            break;
-
             case "boolean":
-
-                ctx.save();
-
-                ctx.font = "11px Segoe UI";
-
-                width += Math.max(
-                    42,
-                    ctx.measureText(c.value).width + 18
-                );
-
-                ctx.restore();
-
-            break;
 
             case "color":
 
-                width += 22;
+                width += Composer.sockets.measure(
+
+                    ctx,
+
+                    c.type,
+
+                    c.value || ""
+
+                );
 
             break;
 
@@ -338,5 +306,90 @@ function measureWidth(components){
     return width + 20;
 
 }
+
+function drawComponent(component,x,y){
+
+    switch(component.type){
+
+        case "text":
+
+            ctx.fillStyle = "white";
+
+            ctx.font = "bold 15px Segoe UI";
+
+            ctx.fillText(
+
+                component.value,
+
+                x,
+
+                y
+
+            );
+
+            return ctx.measureText(
+                component.value
+            ).width;
+
+        case "number":
+
+            return Composer.sockets.number(
+                ctx,
+                component.value,
+                x,
+                y-10
+            );
+
+        case "string":
+
+            return Composer.sockets.string(
+                ctx,
+                component.value,
+                x,
+                y-10
+            );
+
+        case "reporter":
+
+            return Composer.sockets.reporter(
+                ctx,
+                component.value,
+                x,
+                y-10
+            );
+
+        case "menu":
+
+            return Composer.sockets.menu(
+                ctx,
+                component.value,
+                x,
+                y-10
+            );
+
+        case "boolean":
+
+            return Composer.sockets.boolean(
+                ctx,
+                component.value,
+                x,
+                y-10
+            );
+
+        case "color":
+
+            return Composer.sockets.color(
+                ctx,
+                x,
+                y-10
+            );
+
+    }
+
+    return 0;
+
+}
+    // End of Renderer.draw()
+    // (This function is already closed in Part 2)
 
 })();
