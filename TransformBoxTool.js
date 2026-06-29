@@ -1263,21 +1263,15 @@ function installShearHook(drawable) {
             const c = m[4];
             const d = m[5];
 
-            let shearX =
-                this.__gandhiShearX || 0;
-
-            let shearY =
-                this.__gandhiShearY || 0;
+            let shearX = 0;
+            let shearY = 0;
 
             if (
                 activeShearBridge &&
                 activeShearBridge.drawable === this
             ) {
-                shearX =
-                    activeShearBridge.shearX || 0;
-
-                shearY =
-                    activeShearBridge.shearY || 0;
+                shearX = activeShearBridge.shearX || 0;
+                shearY = activeShearBridge.shearY || 0;
             }
 
             m[0] =
@@ -1352,12 +1346,6 @@ function createSkewSession(e) {
         },
 
         onUp() {
-            this.drawable.__gandhiShearX =
-                activeShearBridge ? activeShearBridge.shearX : this.startShearX;
-
-            this.drawable.__gandhiShearY =
-                activeShearBridge ? activeShearBridge.shearY : this.startShearY;
-
             activeShearBridge = null;
             this.destroy();
             activeSkewSession = null;
