@@ -1139,11 +1139,18 @@ function normalizeDirection(deg) {
     return deg;
 }
 
-function flipDrawableX(drawable) {
-    drawable.updateScale([
-        -drawable.scale[0],
-        drawable.scale[1]
-    ]);
+function mirrorDrawableX(drawable) {
+    setTimeout(
+        () => {
+            drawable.updateScale([
+                -drawable.scale[0],
+                drawable.scale[1]
+            ]);
+
+            vm.runtime.requestRedraw();
+        },
+        0
+    );
 }
 
 flipHandle.addEventListener(
@@ -1161,21 +1168,18 @@ flipHandle.addEventListener(
         const oldDirection =
               target.direction;
 
-        // Horizontal screen-space flip:
         target.setDirection(
             normalizeDirection(
                 180 - oldDirection
             )
         );
 
-        flipDrawableX(
-            drawable
-        );
-        visualFlipX =
-            drawable.scale[0] < 0;
-
         target.emitVisualChange();
         vm.runtime.requestRedraw();
+
+        mirrorDrawableX(
+            drawable
+        );
 
         updateSelectionBox();
     }
@@ -1196,23 +1200,18 @@ flipVerticalHandle.addEventListener(
         const oldDirection =
               target.direction;
 
-        // Vertical screen-space flip:
-        // vertical should not toggle detail mirror.
-        // It only changes the logical/screen direction.
         target.setDirection(
             normalizeDirection(
                 -oldDirection
             )
         );
 
-        flipDrawableX(
-            drawable
-        );
-        visualFlipX =
-            drawable.scale[0] < 0;
-
         target.emitVisualChange();
         vm.runtime.requestRedraw();
+
+        mirrorDrawableX(
+            drawable
+        );
 
         updateSelectionBox();
     }
