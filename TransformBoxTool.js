@@ -175,6 +175,8 @@
            "mousedown",
            e => {
 
+               if (activeSkewSession) return;
+
                if (!transformMode)
                    return;
 
@@ -1520,6 +1522,7 @@ flipVerticalHandle.addEventListener(
             e => {
                 e.preventDefault();
                 e.stopPropagation();
+                if (activeSkewSession) return;
                 dragging = true;
                 dragStartX = e.clientX;
                 dragStartY = e.clientY;
@@ -1606,6 +1609,10 @@ flipVerticalHandle.addEventListener(
         window.addEventListener(
             "mousemove",
             e => {
+
+                if (activeSkewSession) {
+                    return;
+                }
 
                 if (
                     potentialStageDrag &&
