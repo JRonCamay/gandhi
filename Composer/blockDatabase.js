@@ -1065,10 +1065,7 @@ function buildPatternFromJson(json) {
 
                 case "field_image":
 
-                    replacement =
-                        arg.alt ||
-                        arg.text ||
-                        "green flag";
+                    replacement = "green flag";
                 
                     break;
             
