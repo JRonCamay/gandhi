@@ -1139,17 +1139,32 @@ function normalizeDirection(deg) {
     return deg;
 }
 
-function mirrorDrawableX(drawable) {
-    setTimeout(
-        () => {
-            drawable.updateScale([
-                -drawable.scale[0],
-                drawable.scale[1]
-            ]);
+function applyTargetVisualFlipX(target) {
+    if (!target) return;
 
-            vm.runtime.requestRedraw();
-        },
-        0
+    const drawable =
+          vm.runtime.renderer._allDrawables[
+              target.drawableID
+          ];
+    if (!drawable) return;
+
+    const absX =
+          Math.abs(
+              drawable.scale[0]
+          );
+
+    drawable.updateScale([
+        target.__gandhiVisualFlipX ? -absX : absX,
+        drawable.scale[1]
+    ]);
+}
+
+function toggleTargetVisualFlipX(target) {
+    target.__gandhiVisualFlipX =
+        !target.__gandhiVisualFlipX;
+
+    applyTargetVisualFlipX(
+        target
     );
 }
 
@@ -1158,12 +1173,6 @@ flipHandle.addEventListener(
     () => {
         const target = vm.editingTarget;
         if (!target) return;
-
-        const drawable =
-              vm.runtime.renderer._allDrawables[
-                  target.drawableID
-              ];
-        if (!drawable) return;
 
         const oldDirection =
               target.direction;
@@ -1174,12 +1183,12 @@ flipHandle.addEventListener(
             )
         );
 
+        toggleTargetVisualFlipX(
+            target
+        );
+
         target.emitVisualChange();
         vm.runtime.requestRedraw();
-
-        mirrorDrawableX(
-            drawable
-        );
 
         updateSelectionBox();
     }
@@ -1191,12 +1200,6 @@ flipVerticalHandle.addEventListener(
         const target = vm.editingTarget;
         if (!target) return;
 
-        const drawable =
-              vm.runtime.renderer._allDrawables[
-                  target.drawableID
-              ];
-        if (!drawable) return;
-
         const oldDirection =
               target.direction;
 
@@ -1206,12 +1209,12 @@ flipVerticalHandle.addEventListener(
             )
         );
 
+        toggleTargetVisualFlipX(
+            target
+        );
+
         target.emitVisualChange();
         vm.runtime.requestRedraw();
-
-        mirrorDrawableX(
-            drawable
-        );
 
         updateSelectionBox();
     }
@@ -1622,6 +1625,10 @@ flipVerticalHandle.addEventListener(
 
             const drawable = vm.runtime.renderer._allDrawables[target.drawableID];
             if (!drawable) return;
+
+            applyTargetVisualFlipX(
+                target
+            );
 
             const bounds = drawable.getAABB();
             const tl = scratchToScreen(bounds.left, bounds.top, canvas);
