@@ -1132,18 +1132,10 @@
             }
         );
 
-        function normalizeDirection(deg) {
+function normalizeDirection(deg) {
     while (deg > 180) deg -= 360;
     while (deg <= -180) deg += 360;
     return deg;
-}
-
-function flipDirectionHorizontal(direction) {
-    return normalizeDirection(-direction);
-}
-
-function flipDirectionVertical(direction) {
-    return normalizeDirection(180 - direction);
 }
 
 flipHandle.addEventListener(
@@ -1152,14 +1144,33 @@ flipHandle.addEventListener(
         const target = vm.editingTarget;
         if (!target) return;
 
-        const newDirection =
-              flipDirectionHorizontal(
-                  target.direction
-              );
+        const drawable =
+              vm.runtime.renderer._allDrawables[
+                  target.drawableID
+              ];
+        if (!drawable) return;
 
-        target.setDirection(newDirection);
+        const oldDirection =
+              target.direction;
+
+        // Horizontal screen-space flip:
+        // 1. flip X pixels first
+        // 2. then compensate direction
+        drawable.updateScale([
+            -drawable.scale[0],
+            drawable.scale[1]
+        ]);
+
+        target.setDirection(
+            normalizeDirection(
+                -oldDirection
+            )
+        );
+
         target.emitVisualChange();
         vm.runtime.requestRedraw();
+
+        updateSelectionBox();
     }
 );
 
@@ -1169,14 +1180,33 @@ flipVerticalHandle.addEventListener(
         const target = vm.editingTarget;
         if (!target) return;
 
-        const newDirection =
-              flipDirectionVertical(
-                  target.direction
-              );
+        const drawable =
+              vm.runtime.renderer._allDrawables[
+                  target.drawableID
+              ];
+        if (!drawable) return;
 
-        target.setDirection(newDirection);
+        const oldDirection =
+              target.direction;
+
+        // Vertical screen-space flip:
+        // 1. compensate direction first
+        // 2. then flip X pixels
+        target.setDirection(
+            normalizeDirection(
+                180 - oldDirection
+            )
+        );
+
+        drawable.updateScale([
+            -drawable.scale[0],
+            drawable.scale[1]
+        ]);
+
         target.emitVisualChange();
         vm.runtime.requestRedraw();
+
+        updateSelectionBox();
     }
 );
 
