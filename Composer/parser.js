@@ -47,33 +47,52 @@
 
     }
 
-    function parseLibraryBlock(text) {
+   function parseLibraryBlock(text) {
 
-        text = normalizeSpace(text);
+    text = normalizeSpace(text);
 
-        if (!text.length) {
-            return null;
-        }
+    if (!text.length) {
+        return null;
+    }
 
-        if (!Composer.library || !Array.isArray(Composer.library)) {
-            return null;
-        }
+    const commands =
+        Composer.blocks &&
+        typeof Composer.blocks.getAll === "function"
+            ? Composer.blocks.getAll()
+            : Composer.library || [];
 
-        const commands = getSortedLibrary();
+    if (!Array.isArray(commands)) {
+        return null;
+    }
 
-        for (const cmd of commands) {
+    const sorted = commands
+        .slice()
+        .sort((a, b) => {
 
-            const match = matchCommand(text, cmd);
+            const aSlots = countSlots(a.pattern);
+            const bSlots = countSlots(b.pattern);
 
-            if (match) {
-                return createBlockNode(cmd, match);
+            if (b.pattern.length !== a.pattern.length) {
+                return b.pattern.length - a.pattern.length;
             }
 
+            return bSlots - aSlots;
+
+        });
+
+    for (const cmd of sorted) {
+
+        const match = matchCommand(text, cmd);
+
+        if (match) {
+            return createBlockNode(cmd, match);
         }
 
-        return null;
-
     }
+
+    return null;
+
+}
 
     function getSortedLibrary() {
 
@@ -102,24 +121,25 @@
 
     }
 
-    function createBlockNode(cmd, values) {
+   function createBlockNode(cmd, values) {
 
-        return {
-            type: "block",
-            id: cmd.id,
-            block: cmd.block,
-            pattern: cmd.pattern,
-            preview: cmd.preview,
-            params: values.map((value, index) => {
-                const paramInfo = cmd.params && cmd.params[index]
-                    ? cmd.params[index]
-                    : {};
+    return {
+        type: "block",
+        id: cmd.id || cmd.opcode || cmd.block,
+        block: cmd.block || cmd.opcode || cmd.id,
+        opcode: cmd.opcode || cmd.block || cmd.id,
+        pattern: cmd.pattern,
+        preview: cmd.preview,
+        params: values.map((value, index) => {
+            const paramInfo = cmd.params && cmd.params[index]
+                ? cmd.params[index]
+                : {};
 
-                return parseParam(value, paramInfo);
-            })
-        };
+            return parseParam(value, paramInfo);
+        })
+    };
 
-    }
+}
 
     function parseParam(value, paramInfo) {
 
