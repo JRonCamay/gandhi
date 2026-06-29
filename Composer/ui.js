@@ -354,9 +354,15 @@ function findTextPosition(root, targetOffset){
 =========================================*/
 
 function updatePreview(){
-    if(Composer.generator.preview){
-        Composer.generator.preview(getEditorText());
+
+    const text = getEditorText();
+
+    if(!Composer.generator){
+        return;
     }
+
+    Composer.generator.preview(text);
+
 }
 
 /*=========================================
@@ -425,11 +431,26 @@ function getSmartTypingResult(value){
 =========================================*/
 
 function getTemplates(){
+
     const found = [];
 
-    collectTemplates(Composer.library, found);
+    if(
+        Composer.blocks &&
+        typeof Composer.blocks.getAll === "function"
+    ){
+        collectTemplates(
+            Composer.blocks.getAll(),
+            found
+        );
+    }else{
+        collectTemplates(
+            Composer.library,
+            found
+        );
+    }
 
     const fallback = [
+
         "move [] steps",
         "turn clockwise [] degrees",
         "turn counterclockwise [] degrees",
@@ -490,6 +511,7 @@ function getTemplates(){
         "x position",
         "y position",
         "direction"
+
     ];
 
     for(const item of fallback){
@@ -499,43 +521,44 @@ function getTemplates(){
     return unique(found)
         .map(normalizeTemplate)
         .filter(Boolean);
+
 }
 
 function collectTemplates(source, result){
+
     if(!source) return;
 
     if(Array.isArray(source)){
+
         for(const item of source){
-            collectTemplates(item, result);
+
+            if(item && item.pattern){
+                result.push(item.pattern);
+            }
+
+            if(item && item.preview){
+                result.push(item.preview);
+            }
+
         }
+
         return;
+
     }
 
     if(typeof source === "object"){
-        const keys = [
-            "pattern",
-            "template",
-            "syntax",
-            "text",
-            "label",
-            "preview",
-            "command"
-        ];
 
-        for(const key of keys){
-            if(typeof source[key] === "string"){
-                result.push(source[key]);
-            }
+        if(source.pattern){
+            result.push(source.pattern);
         }
 
-        for(const key in source){
-            if(typeof source[key] === "object" && source[key] !== null){
-                collectTemplates(source[key], result);
-            }
+        if(source.preview){
+            result.push(source.preview);
         }
+
     }
-}
 
+}
 function normalizeTemplate(template){
     if(!template || typeof template !== "string") return null;
 
