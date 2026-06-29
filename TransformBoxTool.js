@@ -1103,6 +1103,7 @@
         let shearX = 0;
         let shearY = 0;
         let activeSkewSession = null;
+        let activeShearBridge = null;
         let alphaDragging = false;
         let lastPosX = null;
         let lastPosY = null;
@@ -1269,14 +1270,14 @@ function installShearHook(drawable) {
                 this.__gandhiShearY || 0;
 
             if (
-                activeSkewSession &&
-                activeSkewSession.drawable === this
+                activeShearBridge &&
+                activeShearBridge.drawable === this
             ) {
                 shearX =
-                    activeSkewSession.liveShearX || 0;
+                    activeShearBridge.shearX || 0;
 
                 shearY =
-                    activeSkewSession.liveShearY || 0;
+                    activeShearBridge.shearY || 0;
             }
 
             m[0] =
@@ -1314,6 +1315,12 @@ function createSkewSession(e) {
 
     installShearHook(drawable);
 
+    activeShearBridge = {
+        drawable,
+        shearX: drawable.__gandhiShearX || 0,
+        shearY: drawable.__gandhiShearY || 0
+    };
+
     const session = {
         target,
         drawable,
@@ -1321,15 +1328,13 @@ function createSkewSession(e) {
         startMouseY: e.clientY,
         startShearX: drawable.__gandhiShearX || 0,
         startShearY: drawable.__gandhiShearY || 0,
-        liveShearX: drawable.__gandhiShearX || 0,
-        liveShearY: drawable.__gandhiShearY || 0,
 
         onMove(moveEvent) {
-            this.liveShearX =
+            activeShearBridge.shearX =
                 this.startShearX +
                 (moveEvent.clientX - this.startMouseX) / 200;
 
-            this.liveShearY =
+            activeShearBridge.shearY =
                 this.startShearY +
                 (moveEvent.clientY - this.startMouseY) / 200;
 
@@ -1348,17 +1353,25 @@ function createSkewSession(e) {
 
         onUp() {
             this.drawable.__gandhiShearX =
-                this.liveShearX;
+                activeShearBridge ? activeShearBridge.shearX : this.startShearX;
 
             this.drawable.__gandhiShearY =
-                this.liveShearY;
+                activeShearBridge ? activeShearBridge.shearY : this.startShearY;
 
+            activeShearBridge = null;
             this.destroy();
             activeSkewSession = null;
             updateSelectionBox();
         },
 
         destroy() {
+            if (
+                activeShearBridge &&
+                activeShearBridge.drawable === this.drawable
+            ) {
+                activeShearBridge = null;
+            }
+
             window.removeEventListener("mousemove", this.boundMove, true);
             window.removeEventListener("mouseup", this.boundUp, true);
         }
