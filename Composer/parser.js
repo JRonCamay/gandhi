@@ -379,12 +379,7 @@
             .replace(/\[\s*\]/g, "[]");
     
     }
-    function normalizePattern(text){
-        return normalize(text)
-            .replace(/:\s+\[\]/g,": []")
-            .replace(/\[\s*\]/g,"[]")
-            .replace(/\[\s+\]/g,"[]");
-    }
+  
     /*=========================================
         DEBUG
     =========================================*/
