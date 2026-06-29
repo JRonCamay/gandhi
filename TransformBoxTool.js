@@ -1154,18 +1154,19 @@ flipHandle.addEventListener(
               target.direction;
 
         // Horizontal screen-space flip:
-        // 1. flip X pixels first
-        // 2. then compensate direction
+        // Use the behavior that previously appeared as vertical.
+        // 1. compensate direction first
+        // 2. then flip X pixels
+        target.setDirection(
+            normalizeDirection(
+                180 - oldDirection
+            )
+        );
+
         drawable.updateScale([
             -drawable.scale[0],
             drawable.scale[1]
         ]);
-
-        target.setDirection(
-            normalizeDirection(
-                -oldDirection
-            )
-        );
 
         target.emitVisualChange();
         vm.runtime.requestRedraw();
@@ -1190,18 +1191,19 @@ flipVerticalHandle.addEventListener(
               target.direction;
 
         // Vertical screen-space flip:
-        // 1. compensate direction first
-        // 2. then flip X pixels
-        target.setDirection(
-            normalizeDirection(
-                180 - oldDirection
-            )
-        );
-
+        // Use the behavior that previously appeared as horizontal.
+        // 1. flip X pixels first
+        // 2. then compensate direction
         drawable.updateScale([
             -drawable.scale[0],
             drawable.scale[1]
         ]);
+
+        target.setDirection(
+            normalizeDirection(
+                -oldDirection
+            )
+        );
 
         target.emitVisualChange();
         vm.runtime.requestRedraw();
