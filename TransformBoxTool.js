@@ -998,6 +998,8 @@
                draggingSkew =
                    true;
 
+               skewMoved = false;
+
                startSkewRedrawLoop();
 
                startMouseX =
@@ -1100,6 +1102,7 @@
         let spriteStartY = 0;
         let rotating = false;
         let draggingSkew = false;
+        let skewMoved = false;
         let rotateCenterX = 0;
         let rotateCenterY = 0;
         let rotateScaleX = 0;
@@ -1496,6 +1499,7 @@ flipVerticalHandle.addEventListener(
                     draggingSkew;
 
               draggingSkew = false;
+              skewMoved = false;
 
               if (wasDraggingSkew) {
                   setTimeout(
@@ -1659,6 +1663,8 @@ flipVerticalHandle.addEventListener(
                    installShearHook(
                        drawable
                    );
+
+                   skewMoved = true;
 
                    drawable.__gandhiShearX =
                        (e.clientX - startMouseX)
@@ -1886,7 +1892,7 @@ flipVerticalHandle.addEventListener(
 
             let bounds;
 
-            if (draggingSkew) {
+            if (draggingSkew && skewMoved) {
 
                 const oldShearX =
                       drawable.__gandhiShearX || 0;
