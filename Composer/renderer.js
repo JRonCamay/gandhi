@@ -83,11 +83,17 @@ Renderer.draw = function(block){
     const blockY = 16;
     const blockH = 34;
 
+    const blockStyle = getBlockStyle(block);
+    const shape = getDrawableShape(
+        getBlockShape(blockStyle)
+    );
+    const color = blockStyle.color;
+
     Composer.paths.draw(
 
         ctx,
 
-        "stack",
+        shape,
 
         blockX,
 
@@ -97,9 +103,9 @@ Renderer.draw = function(block){
 
         blockH,
 
-        "#4C97FF",
+        color,
 
-        "#3373CC"
+        getStrokeColor(color)
 
     );
 
@@ -124,6 +130,86 @@ Renderer.draw = function(block){
     }
 
 };
+
+/*=========================================
+    STYLE
+=========================================*/
+
+function getBlockStyle(block){
+
+    if(
+        Composer.BlockStyle &&
+        typeof Composer.BlockStyle.getBlockStyle === "function" &&
+        block.block
+    ){
+        return Composer.BlockStyle.getBlockStyle(block.block);
+    }
+
+    return {
+        color:null,
+        shape:null,
+        previous:false,
+        next:false,
+        output:false,
+        inputs:[]
+    };
+
+}
+
+function getBlockShape(blockStyle){
+
+    if(
+        Composer.Shapes &&
+        typeof Composer.Shapes.getBlockShape === "function"
+    ){
+        return Composer.Shapes.getBlockShape(blockStyle);
+    }
+
+    return blockStyle.shape || "stack";
+
+}
+
+function getDrawableShape(shape){
+
+    if(Composer.paths && Composer.paths[shape]){
+        return shape;
+    }
+
+    // TODO: Draw c-block and end-block shapes when Composer.paths supports them.
+    return "stack";
+
+}
+
+function getStrokeColor(color){
+
+    if(!color || typeof color !== "string"){
+        return null;
+    }
+
+    const hex = color.replace("#", "");
+
+    if(!/^([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex)){
+        return null;
+    }
+
+    const fullHex = hex.length === 3
+        ? hex.split("").map(x => x + x).join("")
+        : hex;
+
+    const channels = [
+        fullHex.slice(0,2),
+        fullHex.slice(2,4),
+        fullHex.slice(4,6)
+    ].map(value => Math.max(
+        0,
+        Math.round(parseInt(value, 16) * 0.82)
+    ));
+
+    return "#" + channels
+        .map(value => value.toString(16).padStart(2,"0"))
+        .join("");
+
+}
 
 /*=========================================
     BUILD COMPONENTS
