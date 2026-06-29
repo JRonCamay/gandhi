@@ -1616,9 +1616,13 @@ flipVerticalHandle.addEventListener(
                        (e.clientY - startMouseY)
                        / 200;
 
+                   drawable.setTransformDirty();
+                   vm.editingTarget.emitVisualChange();
                    vm.runtime.requestRedraw();
 
                    updateSelectionBox();
+
+                   return;
                }
                if (alphaDragging) {
 
