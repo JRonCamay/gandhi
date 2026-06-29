@@ -4,9 +4,40 @@
 (function (global) {
     "use strict";
 
-    function emptyStyle() {
+    const CATEGORY_COLORS = {
+        motion: "#4C97FF",
+        looks: "#9966FF",
+        sound: "#CF63CF",
+        event: "#FFBF00",
+        events: "#FFBF00",
+        control: "#FFAB19",
+        sensing: "#5CB1D6",
+        operator: "#59C059",
+        operators: "#59C059",
+        data: "#FF8C1A",
+        variables: "#FF8C1A",
+        lists: "#FF661A",
+        procedures: "#FF6680",
+        myblocks: "#FF6680"
+    };
+
+    const OPCODE_CATEGORY = {
+        motion_: "motion",
+        looks_: "looks",
+        sound_: "sound",
+        event_: "events",
+        control_: "control",
+        sensing_: "sensing",
+        operator_: "operators",
+        data_: "variables",
+        procedures_: "myblocks"
+    };
+
+    function emptyStyle(blockType) {
         return {
-            color: null,
+            blockType: blockType || "",
+            category: getCategoryFromType(blockType),
+            color: getColorFromType(blockType),
             shape: null,
             previous: false,
             next: false,
@@ -16,26 +47,46 @@
     }
 
     function getBlockly() {
-        if (typeof global.Blockly === "undefined") {
-            return null;
+        return typeof global.Blockly === "undefined" ? null : global.Blockly;
+    }
+
+    function normalizeColor(color) {
+        if (!color) return null;
+        if (typeof color === "number") {
+            return "#" + color.toString(16).padStart(6, "0");
+        }
+        if (typeof color === "string" && color[0] !== "#") {
+            return "#" + color;
+        }
+        return color;
+    }
+
+    function getCategoryFromType(blockType) {
+        if (!blockType) return null;
+
+        const lower = String(blockType).toLowerCase();
+
+        for (const prefix in OPCODE_CATEGORY) {
+            if (lower.startsWith(prefix)) {
+                return OPCODE_CATEGORY[prefix];
+            }
         }
 
-        return global.Blockly;
+        return null;
+    }
+
+    function getColorFromType(blockType) {
+        const category = getCategoryFromType(blockType);
+        return category ? CATEGORY_COLORS[category] : null;
     }
 
     function createTemporaryWorkspace(Blockly) {
-        if (typeof Blockly.Workspace !== "function") {
-            return null;
-        }
-
+        if (typeof Blockly.Workspace !== "function") return null;
         return new Blockly.Workspace();
     }
 
     function getConnectionCheck(connection) {
-        if (!connection) {
-            return null;
-        }
-
+        if (!connection) return null;
         return connection.getCheck ? connection.getCheck() : connection.check_ || null;
     }
 
@@ -44,22 +95,14 @@
             return global.Shapes.getBlockShape(block);
         }
 
-        if (block.outputConnection) {
-            return "reporter";
-        }
+        if (block.outputConnection) return "reporter";
+        if (block.previousConnection || block.nextConnection) return "stack";
 
-        if (block.previousConnection || block.nextConnection) {
-            return "stack";
-        }
-
-        // TODO: Detect hat, cap, reporter, boolean, and custom Scratch shapes from Blockly metadata when available.
         return null;
     }
 
     function getInputs(block) {
-        if (!Array.isArray(block.inputList)) {
-            return [];
-        }
+        if (!Array.isArray(block.inputList)) return [];
 
         return block.inputList.map(input => ({
             name: input.name || "",
@@ -68,9 +111,15 @@
         }));
     }
 
-    function readBlockStyleFromInstance(block) {
+    function readBlockStyleFromInstance(block, blockType) {
+        const category = getCategoryFromType(blockType);
+        const blockColor = normalizeColor(block.getColour ? block.getColour() : block.colour_);
+        const fallbackColor = getColorFromType(blockType);
+
         return {
-            color: block.getColour ? block.getColour() : block.colour_ || null,
+            blockType,
+            category,
+            color: blockColor || fallbackColor,
             shape: getBlockShape(block),
             previous: !!block.previousConnection,
             next: !!block.nextConnection,
@@ -83,46 +132,41 @@
         const Blockly = getBlockly();
 
         if (!Blockly || !Blockly.Blocks || !Blockly.Blocks[blockType]) {
-            // TODO: Return richer diagnostics when Composer has a shared error/reporting API.
-            return emptyStyle();
+            return emptyStyle(blockType);
         }
 
         const workspace = createTemporaryWorkspace(Blockly);
 
         if (!workspace || typeof workspace.newBlock !== "function") {
-            // TODO: Read directly from JSON block definitions if Blockly cannot create temporary blocks.
-            return emptyStyle();
+            return emptyStyle(blockType);
         }
 
         let block = null;
 
         try {
             block = workspace.newBlock(blockType);
-            return readBlockStyleFromInstance(block);
+            return readBlockStyleFromInstance(block, blockType);
         } catch (error) {
-            // TODO: Surface unknown or malformed block definitions through Composer diagnostics.
-            return emptyStyle();
+            return emptyStyle(blockType);
         } finally {
             if (block && typeof block.dispose === "function") {
                 block.dispose(false);
             }
 
-            if (typeof workspace.dispose === "function") {
+            if (workspace && typeof workspace.dispose === "function") {
                 workspace.dispose();
             }
         }
     }
 
     const BlockStyle = {
-        getBlockStyle
+        getBlockStyle,
+        getCategoryFromType,
+        getColorFromType
     };
 
     if (global.Composer) {
         global.Composer.BlockStyle = BlockStyle;
-    }
-
-    if (typeof global.module !== "undefined" && global.module.exports) {
-        global.module.exports = BlockStyle;
     }
 
     global.BlockStyle = BlockStyle;
