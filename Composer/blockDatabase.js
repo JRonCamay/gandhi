@@ -812,109 +812,148 @@ function buildPatternFromJson(json) {
 
     const params = [];
 
-    const previewParams = [];
-
     let pattern = "";
 
-    let index = 1;
+    let messageIndex = 0;
 
-    while (json["message" + (index - 1)] !== undefined) {
+    while (true) {
 
-        const message =
-            String(json["message" + (index - 1)] || "");
+        const message = json["message" + messageIndex];
 
-        const args =
-            json["args" + (index - 1)] || [];
+        if (message === undefined) {
+            break;
+        }
 
-        pattern += message;
+        const args = json["args" + messageIndex] || [];
+
+        let line = String(message);
 
         for (let i = 0; i < args.length; i++) {
 
             const arg = args[i];
 
-            const placeholder = "%" + (i + 1);
+            const token = "%" + (i + 1);
 
             let replacement = "[]";
 
             switch (arg.type) {
 
-                case "field_dropdown":
-
-                    replacement = "[]";
-
-                    params.push({
-                        name: arg.name || "",
-                        type: "menu"
-                    });
-
-                    previewParams.push("()");
-
-                    break;
-
-                case "field_variable":
-
-                    replacement = "[]";
-
-                    params.push({
-                        name: arg.name || "",
-                        type: "variable"
-                    });
-
-                    previewParams.push("()");
-
-                    break;
-
-                case "input_statement":
-
-                    replacement = "{}";
-
-                    params.push({
-                        name: arg.name || "",
-                        type: "stack"
-                    });
-
-                    previewParams.push("{}");
-
-                    break;
-
                 case "input_value":
-
-                    replacement = "[]";
 
                     params.push({
                         name: arg.name || "",
                         type: "reporter"
                     });
 
-                    previewParams.push("()");
+                    replacement = "[]";
+                    break;
 
+                case "input_statement":
+
+                    params.push({
+                        name: arg.name || "",
+                        type: "stack"
+                    });
+
+                    replacement = "{}";
+                    break;
+
+                case "field_dropdown":
+
+                    params.push({
+                        name: arg.name || "",
+                        type: "menu"
+                    });
+
+                    replacement = "[]";
+                    break;
+
+                case "field_variable":
+
+                    params.push({
+                        name: arg.name || "",
+                        type: "variable"
+                    });
+
+                    replacement = "[]";
+                    break;
+
+                case "field_number":
+
+                    params.push({
+                        name: arg.name || "",
+                        type: "number"
+                    });
+
+                    replacement = "[]";
+                    break;
+
+                case "field_angle":
+
+                    params.push({
+                        name: arg.name || "",
+                        type: "angle"
+                    });
+
+                    replacement = "[]";
+                    break;
+
+                case "field_colour":
+
+                    params.push({
+                        name: arg.name || "",
+                        type: "color"
+                    });
+
+                    replacement = "[]";
+                    break;
+
+                case "field_image":
+
+                    replacement = "";
+                    break;
+
+                case "field_label":
+
+                    replacement = arg.text || "";
+                    break;
+
+                case "field_input":
+
+                    params.push({
+                        name: arg.name || "",
+                        type: "text"
+                    });
+
+                    replacement = "[]";
                     break;
 
                 default:
 
-                    replacement = "[]";
+                    if (String(arg.type).startsWith("field_")) {
 
-                    params.push({
-                        name: arg.name || "",
-                        type: arg.type || "unknown"
-                    });
+                        replacement = arg.text || "";
 
-                    previewParams.push("()");
+                    } else {
 
-                    break;
+                        params.push({
+                            name: arg.name || "",
+                            type: arg.type || "unknown"
+                        });
+
+                        replacement = "[]";
+
+                    }
 
             }
 
-            pattern = pattern.replace(
-                placeholder,
-                replacement
-            );
+            line = line.replace(token, replacement);
 
         }
 
-        pattern += " ";
+        pattern += " " + line;
 
-        index++;
+        messageIndex++;
 
     }
 
