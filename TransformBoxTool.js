@@ -1259,6 +1259,13 @@ function installShearHook(drawable) {
             const m =
                 uniforms.u_modelMatrix;
 
+            if (
+                !this.__gandhiShearActive &&
+                !this.__gandhiShearCommitted
+            ) {
+                return uniforms;
+            }
+
             const a = m[0];
             const b = m[1];
             const c = m[4];
@@ -1304,6 +1311,8 @@ function createSkewSession(e) {
     if (!drawable) return null;
 
     installShearHook(drawable);
+    drawable.__gandhiShearActive = true;
+    drawable.__gandhiShearCommitted = false;
 
     const session = {
         target,
@@ -1336,12 +1345,15 @@ function createSkewSession(e) {
         },
 
         onUp() {
+            this.drawable.__gandhiShearActive = false;
+            this.drawable.__gandhiShearCommitted = true;
             this.destroy();
             activeSkewSession = null;
             updateSelectionBox();
         },
 
         destroy() {
+            this.drawable.__gandhiShearActive = false;
             window.removeEventListener("mousemove", this.boundMove, true);
             window.removeEventListener("mouseup", this.boundUp, true);
         }
