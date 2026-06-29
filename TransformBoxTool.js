@@ -1676,10 +1676,13 @@ flipVerticalHandle.addEventListener(
 
                    drawable.setTransformDirty();
 
+                   vm.editingTarget.setXY(
+                       vm.editingTarget.x,
+                       vm.editingTarget.y
+                   );
+
                    vm.editingTarget.emitVisualChange();
                    vm.runtime.requestRedraw();
-
-                   updateSelectionBox();
 
                    return;
                }
