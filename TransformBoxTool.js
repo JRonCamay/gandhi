@@ -15,8 +15,6 @@
           new Map();
     const runtimeGhostMap =
           new Map();
-    const shearData =
-        Object.create(null);
 
     let runtimePaused =
         false;
@@ -168,39 +166,6 @@
         const ghost = window.vm.editingTarget.effects.ghost || 0;
         return 100 - ghost;
     }
-
-    function getShear(targetId) {
-
-        return (
-            shearData[targetId] || {
-                x: 0,
-                y: 0
-            }
-        );
-
-    }
-
-    function setShear(
-        targetId,
-        x,
-        y
-    ) {
-
-        shearData[targetId] = {
-            x,
-            y
-        };
-
-    }
-
-    function clearShear(
-        targetId
-    ) {
-
-        delete shearData[targetId];
-
-    }
-
 
     function init() {
         const canvas = getStageCanvas();
@@ -818,10 +783,6 @@
                         target
                     );
 
-                    clearShear(
-                        target.id
-                    );
-
                 }
 
                 target.setDirection(90);
@@ -1286,9 +1247,6 @@ function installShearHook(drawable, target) {
             target.id;
     }
 
-    drawable.__lastAppliedShearX = 0;
-    drawable.__lastAppliedShearY = 0;
-
     const oldGetUniforms =
         drawable.getUniforms.bind(drawable);
 
@@ -1317,42 +1275,10 @@ function installShearHook(drawable, target) {
                 shearY = activeShearBridge.shearY || 0;
             }
 
-            const lastShearX =
-                this.__lastAppliedShearX || 0;
-
-            const lastShearY =
-                this.__lastAppliedShearY || 0;
-
-            const inverseDenominator =
-                1 - lastShearX * lastShearY;
-
-            let a = m[0];
-            let b = m[1];
-            let c = m[4];
-            let d = m[5];
-
-            if (inverseDenominator) {
-                const baseA =
-                    (a - lastShearY * c) /
-                    inverseDenominator;
-
-                const baseB =
-                    (b - lastShearY * d) /
-                    inverseDenominator;
-
-                const baseC =
-                    (c - lastShearX * a) /
-                    inverseDenominator;
-
-                const baseD =
-                    (d - lastShearX * b) /
-                    inverseDenominator;
-
-                a = baseA;
-                b = baseB;
-                c = baseC;
-                d = baseD;
-            }
+            const a = m[0];
+            const b = m[1];
+            const c = m[4];
+            const d = m[5];
 
             m[0] =
                 a + c * shearY;
@@ -1365,12 +1291,6 @@ function installShearHook(drawable, target) {
 
             m[5] =
                 d + b * shearX;
-
-            this.__lastAppliedShearX =
-                shearX;
-
-            this.__lastAppliedShearY =
-                shearY;
 
             uniforms.u_modelMatrix = m;
 
@@ -1402,22 +1322,17 @@ function createSkewSession(e) {
 
     activeShearBridge = {
         drawable,
-        shearX: getShear(target.id).x,
-        shearY: getShear(target.id).y
+        shearX: 0,
+        shearY: 0
     };
-
-    const startShear =
-        getShear(
-            target.id
-        );
 
     const session = {
         target,
         drawable,
         startMouseX: e.clientX,
         startMouseY: e.clientY,
-        startShearX: startShear.x,
-        startShearY: startShear.y,
+        startShearX: 0,
+        startShearY: 0,
 
         onMove(moveEvent) {
             activeShearBridge.shearX =
@@ -1977,22 +1892,16 @@ flipVerticalHandle.addEventListener(
             bounds,
             drawable
         ) {
-            const targetId =
-                  drawable.__gandhiTargetId;
+            let shearX = 0;
+            let shearY = 0;
 
-            const shear =
-                  targetId
-                  ? getShear(targetId)
-                  : {
-                      x: 0,
-                      y: 0
-                  };
-
-            const shearX =
-                  shear.x;
-
-            const shearY =
-                  shear.y;
+            if (
+                activeShearBridge &&
+                activeShearBridge.drawable === drawable
+            ) {
+                shearX = activeShearBridge.shearX || 0;
+                shearY = activeShearBridge.shearY || 0;
+            }
 
             if (
                 !shearX &&
