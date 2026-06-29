@@ -585,6 +585,44 @@
             }
         );
         const resizeButton = document.createElement("div");
+        const skewHandle =
+              document.createElement("div");
+
+        Object.assign(
+            skewHandle.style,
+            {
+                position: "absolute",
+
+                width: "20px",
+                height: "20px",
+
+                right: "-27px",
+                bottom: "66px",
+
+                background: "#00A2FF",
+
+                color: "white",
+
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+
+                cursor: "pointer",
+
+                borderRadius: "4px",
+
+                border: "1px solid white",
+
+                pointerEvents: "auto"
+            }
+        );
+
+        skewHandle.innerHTML =
+            "▱";
+
+        overlay.appendChild(
+            skewHandle
+        );
         const widthHandle =
               document.createElement("div");
 
@@ -919,6 +957,10 @@
             "Opacity"
         );
         attachTooltip(
+            skewHandle,
+            "Skew"
+        );
+        attachTooltip(
             widthHandle,
             "Width Scale"
         );
@@ -930,6 +972,12 @@
         let resizing = false;
         let resizeMode =
             "uniform";
+       skewHandle.addEventListener(
+           "click",
+           () => {
+               console.log("Skew");
+           }
+       );
        widthHandle.addEventListener(
            "mousedown",
            e => {
