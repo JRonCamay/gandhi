@@ -123,9 +123,14 @@ db.rebuild = function (force) {
 
     clear();
 
-    addManualLibrary();
+    // Registry is the primary source.
     addRegistryBlocks(workspace, registry);
+
+    // Procedures are generated at runtime.
     addProcedureBlocks(procedures);
+
+    // Manual library only fills missing blocks.
+    addManualLibrary();
 
     buildIndexes();
 
@@ -1195,7 +1200,5 @@ setTimeout(() => {
     db.rebuild(false);
 
 }, 1000);
-db.rebuild = function (force) {
-    ...
-};
+
 })();
