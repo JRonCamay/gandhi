@@ -90,15 +90,42 @@ function patternContainsInput(input, pattern){
 }
 
 function scoreCandidate(input, cmd){
-    const pattern = cmd.pattern || "";
-    const cleanInput = normalizePattern(input);
-    const cleanPattern = normalizePattern(pattern);
 
-    if(cleanInput === cleanPattern) return 1000;
-    if(cleanPattern.startsWith(cleanInput)) return 800;
-    if(cleanPattern.includes(cleanInput)) return 500;
+    if(!cmd) return 0;
 
-    return 0;
+    const query = normalize(input);
+
+    const fields = [
+
+        cmd.pattern,
+        cmd.preview,
+        cmd.opcode,
+        cmd.block,
+        cmd.category
+
+    ];
+
+    let best = 0;
+
+    for(const field of fields){
+
+        const text = normalize(field || "");
+
+        if(!text) continue;
+
+        if(text === query)
+            best = Math.max(best,1000);
+
+        else if(text.startsWith(query))
+            best = Math.max(best,800);
+
+        else if(text.includes(query))
+            best = Math.max(best,500);
+
+    }
+
+    return best;
+
 }
 
 function getCandidates(input){
