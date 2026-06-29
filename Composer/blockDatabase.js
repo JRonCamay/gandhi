@@ -1195,5 +1195,7 @@ setTimeout(() => {
     db.rebuild(false);
 
 }, 1000);
-
+db.rebuild = function (force) {
+    ...
+};
 })();
