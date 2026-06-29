@@ -14,6 +14,8 @@
         END_BLOCK: "end-block"
     };
 
+    const SUPPORTED_SHAPES = Object.keys(SHAPES).map(key => SHAPES[key]);
+
     function hasValue(value) {
         return value !== undefined && value !== null && value !== false;
     }
@@ -27,11 +29,15 @@
     }
 
     function hasPreviousStatement(blockDefinition) {
-        return hasValue(blockDefinition.previousStatement) || !!blockDefinition.previousConnection;
+        return blockDefinition.previous === true ||
+            hasValue(blockDefinition.previousStatement) ||
+            !!blockDefinition.previousConnection;
     }
 
     function hasNextStatement(blockDefinition) {
-        return hasValue(blockDefinition.nextStatement) || !!blockDefinition.nextConnection;
+        return blockDefinition.next === true ||
+            hasValue(blockDefinition.nextStatement) ||
+            !!blockDefinition.nextConnection;
     }
 
     function getOutputChecks(blockDefinition) {
@@ -47,7 +53,9 @@
     }
 
     function hasOutput(blockDefinition) {
-        return hasValue(blockDefinition.output) || !!blockDefinition.outputConnection;
+        return blockDefinition.output === true ||
+            hasValue(blockDefinition.output) ||
+            !!blockDefinition.outputConnection;
     }
 
     function isBooleanOutput(blockDefinition) {
@@ -63,6 +71,10 @@
             return blockDefinition.inputList;
         }
 
+        if (Array.isArray(blockDefinition.inputs)) {
+            return blockDefinition.inputs;
+        }
+
         return [];
     }
 
@@ -71,7 +83,9 @@
             const type = String(input.type || "").toLowerCase();
             const name = String(input.name || "").toLowerCase();
 
-            return type === "input_statement" || type === "statement" || name.includes("substack");
+            return type === "input_statement" ||
+                type === "statement" ||
+                name.includes("substack");
         });
     }
 
@@ -87,6 +101,10 @@
         if (!blockDefinition) {
             // TODO: Add Composer diagnostics for missing block definitions.
             return SHAPES.STACK;
+        }
+
+        if (SUPPORTED_SHAPES.includes(blockDefinition.shape)) {
+            return blockDefinition.shape;
         }
 
         if (hasOutput(blockDefinition)) {
