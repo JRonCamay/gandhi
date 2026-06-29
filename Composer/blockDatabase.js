@@ -503,6 +503,29 @@ function addBlock(block) {
         normalize(block.pattern)
     ] = block;
 
+    // also search by preview
+    if (block.preview) {
+
+        db.byPattern[
+            normalize(block.preview)
+        ] = block;
+
+    }
+
+    // search by opcode
+    db.byPattern[
+        normalize(opcode)
+    ] = block;
+
+    // search by block id
+    if (block.block) {
+
+        db.byPattern[
+            normalize(block.block)
+        ] = block;
+
+    }
+
 }
 
 function buildIndexes() {
