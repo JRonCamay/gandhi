@@ -300,48 +300,49 @@ function createBlockEntryFromRegistry(workspace, opcode, definition) {
         definition.init.call({
 
             jsonInit(data) {
-
                 json = data;
-
             }
 
         });
 
-    } catch (e) {}
+    } catch (e) {
 
-    const parsed = json
-        ? buildPatternFromJson(json)
-        : null;
+        return null;
 
-    const pattern =
-        (fallback && fallback.pattern) ||
-        (parsed && parsed.pattern) ||
-        patternFromOpcode(opcode);
+    }
 
-    const preview =
-        (fallback && fallback.preview) ||
-        (parsed && parsed.preview) ||
-        pattern.replace(/\[\]/g, "()");
+    if (!json) {
+        return null;
+    }
 
-    const params =
-        (fallback && fallback.params) ||
-        (parsed && parsed.params) ||
-        [];
+    const parsed = buildPatternFromJson(json);
 
     return {
 
         id: opcode,
         block: opcode,
-        opcode,
+        opcode: opcode,
 
-        category:
-            getCategoryFromOpcode(opcode),
+        category: json.category ||
+                  getCategoryFromOpcode(opcode),
 
-        pattern,
-        preview,
-        params,
+        pattern:
+            fallback?.pattern ||
+            parsed.pattern,
 
-        color: null,
+        preview:
+            fallback?.preview ||
+            parsed.preview,
+
+        params:
+            fallback?.params ||
+            parsed.params,
+
+        color:
+            json.colour ||
+            json.color ||
+            null,
+
         shape: null,
 
         previous: false,
