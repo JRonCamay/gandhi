@@ -96,13 +96,11 @@ function scoreCandidate(input, cmd){
     const query = normalize(input);
 
     const fields = [
-
         cmd.pattern,
         cmd.preview,
         cmd.opcode,
         cmd.block,
         cmd.category
-
     ];
 
     let best = 0;
@@ -127,7 +125,6 @@ function scoreCandidate(input, cmd){
     return best;
 
 }
-
 function getCandidates(input){
     const candidates = [];
 
