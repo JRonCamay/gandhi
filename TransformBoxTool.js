@@ -814,7 +814,8 @@
                 if (drawable) {
 
                     installShearHook(
-                        drawable
+                        drawable,
+                        target
                     );
 
                     clearShear(
@@ -1037,9 +1038,7 @@
        );
        skewHandle.addEventListener(
            "click",
-           () => {
-               console.log("Skew");
-           }
+           () => {}
        );
        widthHandle.addEventListener(
            "mousedown",
@@ -1054,7 +1053,8 @@
                    vm.editingTarget.drawableID
                ];
                installShearHook(
-                   drawable
+                   drawable,
+                   vm.editingTarget
                );
                startScaleX =
                    drawable.scale[0];
@@ -1091,7 +1091,8 @@
                    vm.editingTarget.drawableID
                ];
                installShearHook(
-                   drawable
+                   drawable,
+                   vm.editingTarget
                );
                startScaleX =
                    drawable.scale[0];
@@ -1223,7 +1224,8 @@
 
                 const drawable = vm.runtime.renderer._allDrawables[vm.editingTarget.drawableID];
                 installShearHook(
-                    drawable
+                    drawable,
+                    vm.editingTarget
                 );
                 startSize = Math.abs(drawable.scale[0]);
             }
@@ -1240,7 +1242,8 @@
                 startX = e.clientX;
                 const drawable = vm.runtime.renderer._allDrawables[vm.editingTarget.drawableID];
                 installShearHook(
-                    drawable
+                    drawable,
+                    vm.editingTarget
                 );
                 startScaleX =
                     drawable.scale[0];
@@ -1268,7 +1271,7 @@ function normalizeDirection(deg) {
     return deg;
 }
 
-function installShearHook(drawable) {
+function installShearHook(drawable, target) {
 
     if (!drawable) return;
 
@@ -1278,8 +1281,10 @@ function installShearHook(drawable) {
     drawable.__gandhiShearInstalled =
         true;
 
-    drawable.__gandhiTargetId =
-        vm.editingTarget.id;
+    if (target) {
+        drawable.__gandhiTargetId =
+            target.id;
+    }
 
     const oldGetUniforms =
         drawable.getUniforms.bind(drawable);
@@ -1368,7 +1373,10 @@ function createSkewSession(e) {
           ];
     if (!drawable) return null;
 
-    installShearHook(drawable);
+    installShearHook(
+        drawable,
+        target
+    );
 
     activeShearBridge = {
         drawable,
@@ -1459,7 +1467,8 @@ function applyTargetVisualFlipX(target) {
               target.drawableID
           ];
     installShearHook(
-        drawable
+        drawable,
+        target
     );
     if (!drawable) return;
 
@@ -1543,7 +1552,8 @@ flipVerticalHandle.addEventListener(
 
                 const drawable = vm.runtime.renderer._allDrawables[vm.editingTarget.drawableID];
                 installShearHook(
-                    drawable
+                    drawable,
+                    vm.editingTarget
                 );
                 rotateScaleX = drawable.scale[0];
                 rotateScaleY = drawable.scale[1];
@@ -1829,7 +1839,8 @@ flipVerticalHandle.addEventListener(
                         vm.editingTarget.drawableID
                     ];
                     installShearHook(
-                        drawable
+                        drawable,
+                        vm.editingTarget
                     );
 
                     const signX =
@@ -1904,7 +1915,8 @@ flipVerticalHandle.addEventListener(
 
                     const drawable = vm.runtime.renderer._allDrawables[vm.editingTarget.drawableID];
                     installShearHook(
-                        drawable
+                        drawable,
+                        vm.editingTarget
                     );
                     drawable.updateScale([
                         rotateScaleX,
@@ -2044,7 +2056,8 @@ flipVerticalHandle.addEventListener(
 
             const drawable = vm.runtime.renderer._allDrawables[target.drawableID];
             installShearHook(
-                drawable
+                drawable,
+                target
             );
             if (!drawable) return;
 
@@ -2153,10 +2166,6 @@ flipVerticalHandle.addEventListener(
                 wasRunning &&
                 !running
             ) {
-
-                console.log(
-                    "RUNTIME FINISHED"
-                );
 
                 restoreEditorAlphas();
             }
