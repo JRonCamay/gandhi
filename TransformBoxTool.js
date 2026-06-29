@@ -1890,36 +1890,8 @@ flipVerticalHandle.addEventListener(
                 target
             );
 
-            let bounds;
-
-            if (draggingSkew && skewMoved) {
-
-                const oldShearX =
-                      drawable.__gandhiShearX || 0;
-
-                const oldShearY =
-                      drawable.__gandhiShearY || 0;
-
-                drawable.__gandhiShearX = 0;
-                drawable.__gandhiShearY = 0;
-                drawable.setTransformDirty();
-
-                bounds =
-                    drawable.getAABB();
-
-                drawable.__gandhiShearX =
-                    oldShearX;
-
-                drawable.__gandhiShearY =
-                    oldShearY;
-
-                drawable.setTransformDirty();
-
-            } else {
-
-                bounds =
-                    drawable.getAABB();
-            }
+            const bounds =
+                  drawable.getAABB();
             const tl = scratchToScreen(bounds.left, bounds.top, canvas);
             const br = scratchToScreen(bounds.right, bounds.bottom, canvas);
 
