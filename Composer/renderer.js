@@ -67,6 +67,12 @@ Renderer.preview = function(block){
 
 };
 
+Renderer.previewNode = function(node){
+
+    Renderer.preview(node);
+
+};
+
 /*=========================================
     DRAW
 =========================================*/
@@ -75,46 +81,11 @@ Renderer.draw = function(block){
 
     Renderer.clear();
 
-    const components = buildComponents(block);
-
-    const width = measureComponents(components);
-
-    const blockX = 12;
-    const blockY = 16;
-
-    const blockStyle = getBlockStyle(block);
-    const shape = getBlockShape(blockStyle);
-    const color = blockStyle.color || "#4C97FF";
-    const strokeColor = getStrokeColor(color);
-
-    const blockH = getBlockHeight(shape);
-
-    drawBlockShape(
-        ctx,
-        shape,
-        blockX,
-        blockY,
-        width,
-        blockH,
-        color,
-        strokeColor
+    drawBlockAt(
+        block,
+        12,
+        16
     );
-
-    ctx.font = "bold 15px Segoe UI";
-
-    let x = blockX + getTextLeftPadding(shape);
-
-    for(const component of components){
-
-        const used = drawComponent(
-            component,
-            x,
-            blockY + 17
-        );
-
-        x += used + 4;
-
-    }
 
 };
 
@@ -200,6 +171,74 @@ function getTextLeftPadding(shape){
             return 12;
 
     }
+
+}
+
+function getTextCenterY(shape, y, h){
+
+    switch(shape){
+
+        case "c-block":
+        case "end-block":
+            return y + 17;
+
+        default:
+            return y + h / 2;
+
+    }
+
+}
+
+function drawBlockAt(block, x, y){
+
+    const components = buildComponents(block);
+
+    const width = measureComponents(components);
+
+    const blockStyle = getBlockStyle(block);
+    const shape = getBlockShape(blockStyle);
+    const color = blockStyle.color || "#4C97FF";
+    const strokeColor = getStrokeColor(color);
+
+    const blockH = getBlockHeight(shape);
+
+    drawBlockShape(
+        ctx,
+        shape,
+        x,
+        y,
+        width,
+        blockH,
+        color,
+        strokeColor
+    );
+
+    ctx.font = "bold 15px Segoe UI";
+
+    let px = x + getTextLeftPadding(shape);
+    const centerY = getTextCenterY(shape, y, blockH);
+
+    for(const component of components){
+
+        const used = drawComponent(
+            component,
+            px,
+            centerY
+        );
+
+        px += used + 4;
+
+    }
+
+    return width;
+
+}
+
+function measureBlock(block){
+
+    const components = buildComponents(block);
+
+    return measureComponents(components);
 
 }
 
@@ -433,6 +472,18 @@ function getStrokeColor(color){
 
 function buildComponents(block){
 
+    if(isModelBlock(block)){
+
+        return buildModelComponents(block);
+
+    }
+
+    return buildLegacyComponents(block);
+
+}
+
+function buildLegacyComponents(block){
+
     const result = [];
 
     const parts = block.preview.split("()");
@@ -463,6 +514,127 @@ function buildComponents(block){
 
 }
 
+function buildModelComponents(node){
+
+    const result = [];
+    const pattern = node.pattern || "";
+    const parts = pattern.split("[]");
+
+    for(let i=0;i<parts.length;i++){
+
+        if(parts[i].length){
+
+            result.push({
+                type:"text",
+                value:parts[i]
+            });
+
+        }
+
+        if(i < node.params.length){
+
+            result.push(
+                createComponentFromModelParam(
+                    node.params[i]
+                )
+            );
+
+        }
+
+    }
+
+    return result;
+
+}
+
+function createComponentFromModelParam(param){
+
+    if(!param){
+
+        return {
+            type:"string",
+            value:""
+        };
+
+    }
+
+    if(param.type === "slot"){
+
+        return createComponentFromSlot(param);
+
+    }
+
+    if(param.type === "block"){
+
+        return {
+            type:"block",
+            value:param
+        };
+
+    }
+
+    if(param.type === "value"){
+
+        return {
+            type:param.paramType || "string",
+            value:param.value || ""
+        };
+
+    }
+
+    return {
+        type:"string",
+        value:String(param.value || param.name || "")
+    };
+
+}
+
+function createComponentFromSlot(slot){
+
+    const value = slot.value;
+
+    if(value && value.type === "block"){
+
+        return {
+            type:"block",
+            value:value
+        };
+
+    }
+
+    if(value && value.type === "value"){
+
+        return {
+            type:slot.paramType || value.paramType || "string",
+            value:value.value || ""
+        };
+
+    }
+
+    if(typeof value === "string"){
+
+        return {
+            type:slot.paramType || "string",
+            value:value
+        };
+
+    }
+
+    return {
+        type:slot.paramType || "string",
+        value:slot.name || ""
+    };
+
+}
+
+function isModelBlock(block){
+
+    return block &&
+        block.type === "block" &&
+        Array.isArray(block.params);
+
+}
+
 /*=========================================
     MEASURE
 =========================================*/
@@ -481,6 +653,12 @@ function measureComponents(components){
                 width += ctx.measureText(
                     component.value
                 ).width;
+            break;
+
+            case "block":
+                width += measureBlock(
+                    component.value
+                );
             break;
 
             default:
@@ -523,6 +701,14 @@ function drawComponent(component,x,centerY){
             return ctx.measureText(
                 component.value
             ).width;
+
+        case "block":
+
+            return drawInline(
+                component.value,
+                x,
+                centerY
+            );
 
         case "number":
 
@@ -587,33 +773,23 @@ function drawComponent(component,x,centerY){
     INLINE BLOCK SUPPORT
 =========================================*/
 
-function drawInline(block,x,y){
+function drawInline(block,x,centerY){
 
-    const components = buildComponents(block);
+    const blockStyle = getBlockStyle(block);
+    const shape = getBlockShape(blockStyle);
+    const h = getBlockHeight(shape);
 
-    let px = x;
-
-    for(const component of components){
-
-        px += drawComponent(
-            component,
-            px,
-            y
-        );
-
-        px += 4;
-
-    }
-
-    return px - x;
+    return drawBlockAt(
+        block,
+        x,
+        centerY - h / 2
+    );
 
 }
 
 function measureInline(block){
 
-    const components = buildComponents(block);
-
-    return measureComponents(components);
+    return measureBlock(block);
 
 }
 
