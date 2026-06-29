@@ -998,6 +998,8 @@
                draggingSkew =
                    true;
 
+               startSkewRedrawLoop();
+
                startMouseX =
                    e.clientX;
 
@@ -1108,6 +1110,7 @@
         let startMouseY = 0;
         let shearX = 0;
         let shearY = 0;
+        let skewAnimationFrame = null;
         let alphaDragging = false;
         let lastPosX = null;
         let lastPosY = null;
@@ -1294,6 +1297,37 @@ function installShearHook(drawable) {
 
 }
 
+function startSkewRedrawLoop() {
+    if (skewAnimationFrame) return;
+
+    const tick = () => {
+        if (!draggingSkew) {
+            skewAnimationFrame = null;
+            return;
+        }
+
+        const target = vm.editingTarget;
+        if (target) {
+            const drawable =
+                  vm.runtime.renderer._allDrawables[
+                      target.drawableID
+                  ];
+
+            if (drawable) {
+                drawable.setTransformDirty();
+                target.emitVisualChange();
+                vm.runtime.requestRedraw();
+            }
+        }
+
+        skewAnimationFrame =
+            requestAnimationFrame(tick);
+    };
+
+    skewAnimationFrame =
+        requestAnimationFrame(tick);
+}
+
 function applyTargetVisualFlipX(target) {
     if (!target) return;
 
@@ -1459,6 +1493,10 @@ flipVerticalHandle.addEventListener(
               dragging = false;
               rotating = false;
               draggingSkew = false;
+              if (skewAnimationFrame) {
+                  cancelAnimationFrame(skewAnimationFrame);
+                  skewAnimationFrame = null;
+              }
 
               alphaDragging =
                   false;
@@ -1621,9 +1659,6 @@ flipVerticalHandle.addEventListener(
                        / 200;
 
                    drawable.setTransformDirty();
-                   drawable.updateMatrix();
-                   vm.editingTarget.emitVisualChange();
-                   vm.runtime.renderer.draw();
                    vm.runtime.requestRedraw();
 
                    updateSelectionBox();
