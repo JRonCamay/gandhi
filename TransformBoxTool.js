@@ -973,6 +973,22 @@
         let resizeMode =
             "uniform";
        skewHandle.addEventListener(
+           "mousedown",
+           e => {
+               e.preventDefault();
+               e.stopPropagation();
+
+               draggingSkew =
+                   true;
+
+               startMouseX =
+                   e.clientX;
+
+               startMouseY =
+                   e.clientY;
+           }
+       );
+       skewHandle.addEventListener(
            "click",
            () => {
                console.log("Skew");
@@ -1058,12 +1074,15 @@
         let spriteStartX = 0;
         let spriteStartY = 0;
         let rotating = false;
+        let draggingSkew = false;
         let rotateCenterX = 0;
         let rotateCenterY = 0;
         let rotateScaleX = 0;
         let rotateScaleY = 0;
         let startDirection = 0;
         let startAngle = 0;
+        let startMouseX = 0;
+        let startMouseY = 0;
         let alphaDragging = false;
         let lastPosX = null;
         let lastPosY = null;
@@ -1345,6 +1364,7 @@ flipVerticalHandle.addEventListener(
               resizing = false;
               dragging = false;
               rotating = false;
+              draggingSkew = false;
 
               alphaDragging =
                   false;
@@ -1453,6 +1473,7 @@ flipVerticalHandle.addEventListener(
                    !dragging &&
                    !resizing &&
                    !rotating &&
+                   !draggingSkew &&
                    !alphaDragging
                ) {
 
@@ -1480,11 +1501,26 @@ flipVerticalHandle.addEventListener(
                     dragging ||
                     resizing ||
                     rotating ||
+                    draggingSkew ||
                     alphaDragging
                 ) {
 
                     hideTooltip();
                 }
+               if (draggingSkew) {
+
+                   const dx =
+                       e.clientX - startMouseX;
+
+                   const dy =
+                       e.clientY - startMouseY;
+
+                   console.log(
+                       "Skew",
+                       dx,
+                       dy
+                   );
+               }
                if (alphaDragging) {
 
                    const delta =
