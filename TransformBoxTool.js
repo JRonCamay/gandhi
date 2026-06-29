@@ -1256,33 +1256,37 @@ function installShearHook(drawable) {
     drawable.getUniforms =
         function () {
 
+            // Force Scratch/Gandhi to rebuild the clean matrix first.
+            this.setTransformDirty();
+
             const uniforms =
                 oldGetUniforms();
 
             const m =
                 uniforms.u_modelMatrix;
 
-            if (this.__gandhiShearX) {
+            const a = m[0];
+            const b = m[1];
+            const c = m[4];
+            const d = m[5];
 
-                m[4] +=
-                    m[0] *
-                    this.__gandhiShearX;
+            const shearX =
+                this.__gandhiShearX || 0;
 
-                m[5] +=
-                    m[1] *
-                    this.__gandhiShearX;
-            }
+            const shearY =
+                this.__gandhiShearY || 0;
 
-            if (this.__gandhiShearY) {
+            m[0] =
+                a + c * shearY;
 
-                m[0] +=
-                    m[4] *
-                    this.__gandhiShearY;
+            m[1] =
+                b + d * shearY;
 
-                m[1] +=
-                    m[5] *
-                    this.__gandhiShearY;
-            }
+            m[4] =
+                c + a * shearX;
+
+            m[5] =
+                d + b * shearX;
 
             return uniforms;
 
