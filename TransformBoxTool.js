@@ -64,6 +64,65 @@
                     window.vm = props.vm;
                     clearInterval(interval);
 
+                    (function () {
+
+                        const drawable =
+                            vm.runtime.renderer._allDrawables[
+                                vm.editingTarget.drawableID
+                            ];
+
+                        if (!drawable) return;
+
+                        const proto =
+                            Object.getPrototypeOf(drawable);
+
+                        if (proto.__gandhiShearInstalled)
+                            return;
+
+                        proto.__gandhiShearInstalled =
+                            true;
+
+                        const oldCalculate =
+                            proto._calculateTransform;
+
+                        proto._calculateTransform =
+                            function () {
+
+                                oldCalculate.call(this);
+
+                                const g =
+                                    this._uniforms.u_modelMatrix;
+
+                                if (
+                                    this.__gandhiShearX
+                                ) {
+
+                                    g[4] +=
+                                        g[0] *
+                                        this.__gandhiShearX;
+
+                                    g[5] +=
+                                        g[1] *
+                                        this.__gandhiShearX;
+                                }
+
+                                if (
+                                    this.__gandhiShearY
+                                ) {
+
+                                    g[0] +=
+                                        g[4] *
+                                        this.__gandhiShearY;
+
+                                    g[1] +=
+                                        g[5] *
+                                        this.__gandhiShearY;
+                                }
+
+                            };
+
+                    })();
+
                     init();
                     return;
                 }
@@ -1083,6 +1142,8 @@
         let startAngle = 0;
         let startMouseX = 0;
         let startMouseY = 0;
+        let shearX = 0;
+        let shearY = 0;
         let alphaDragging = false;
         let lastPosX = null;
         let lastPosY = null;
@@ -1509,17 +1570,25 @@ flipVerticalHandle.addEventListener(
                 }
                if (draggingSkew) {
 
-                   const dx =
-                       e.clientX - startMouseX;
+                   const drawable =
+                       vm.runtime.renderer
+                       ._allDrawables[
+                           vm.editingTarget.drawableID
+                       ];
 
-                   const dy =
-                       e.clientY - startMouseY;
+                   drawable.__gandhiShearX =
+                       (e.clientX - startMouseX)
+                       / 200;
 
-                   console.log(
-                       "Skew",
-                       dx,
-                       dy
-                   );
+                   drawable.__gandhiShearY =
+                       (e.clientY - startMouseY)
+                       / 200;
+
+                   drawable.setTransformDirty();
+
+                   vm.runtime.requestRedraw();
+
+                   updateSelectionBox();
                }
                if (alphaDragging) {
 
