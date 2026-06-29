@@ -1132,27 +1132,53 @@
             }
         );
 
-        flipHandle.addEventListener(
-            "click",
-            () => {
-                const drawable = vm.runtime.renderer._allDrawables[vm.editingTarget.drawableID];
-                drawable.updateScale([
-                    -drawable.scale[0],
-                    drawable.scale[1]
-                ]);
-            }
-        );
+        function normalizeDirection(deg) {
+    while (deg > 180) deg -= 360;
+    while (deg <= -180) deg += 360;
+    return deg;
+}
 
-        flipVerticalHandle.addEventListener(
-            "click",
-            () => {
-                const drawable = vm.runtime.renderer._allDrawables[vm.editingTarget.drawableID];
-                drawable.updateScale([
-                    drawable.scale[0],
-                    -drawable.scale[1]
-                ]);
-            }
-        );
+function flipDirectionHorizontal(direction) {
+    return normalizeDirection(-direction);
+}
+
+function flipDirectionVertical(direction) {
+    return normalizeDirection(180 - direction);
+}
+
+flipHandle.addEventListener(
+    "click",
+    () => {
+        const target = vm.editingTarget;
+        if (!target) return;
+
+        const newDirection =
+              flipDirectionHorizontal(
+                  target.direction
+              );
+
+        target.setDirection(newDirection);
+        target.emitVisualChange();
+        vm.runtime.requestRedraw();
+    }
+);
+
+flipVerticalHandle.addEventListener(
+    "click",
+    () => {
+        const target = vm.editingTarget;
+        if (!target) return;
+
+        const newDirection =
+              flipDirectionVertical(
+                  target.direction
+              );
+
+        target.setDirection(newDirection);
+        target.emitVisualChange();
+        vm.runtime.requestRedraw();
+    }
+);
 
         rotateHandle.addEventListener(
             "mousedown",
