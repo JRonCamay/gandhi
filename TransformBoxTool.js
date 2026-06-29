@@ -1492,7 +1492,17 @@ flipVerticalHandle.addEventListener(
               resizing = false;
               dragging = false;
               rotating = false;
+              const wasDraggingSkew =
+                    draggingSkew;
+
               draggingSkew = false;
+
+              if (wasDraggingSkew) {
+                  setTimeout(
+                      updateSelectionBox,
+                      0
+                  );
+              }
               if (skewAnimationFrame) {
                   cancelAnimationFrame(skewAnimationFrame);
                   skewAnimationFrame = null;
