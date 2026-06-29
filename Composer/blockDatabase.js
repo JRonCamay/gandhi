@@ -1068,9 +1068,16 @@ function buildPatternFromJson(json) {
                     replacement = "";
                     break;
 
-                case "field_label":
+               case "field_image":
 
-                    replacement = arg.text || "";
+                    if (arg.alt) {
+                        replacement = arg.alt;
+                    } else if (arg.src && String(arg.src).toLowerCase().includes("green-flag")) {
+                        replacement = "green flag";
+                    } else {
+                        replacement = "";
+                    }
+                
                     break;
 
                 case "field_input":
