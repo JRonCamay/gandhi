@@ -1019,7 +1019,9 @@
                );
 
                skewStartBounds =
-                   drawable.getAABB();
+                   {
+                       ...drawable.getAABB()
+                   };
            }
        );
        skewHandle.addEventListener(
@@ -1981,13 +1983,30 @@ flipVerticalHandle.addEventListener(
                 target
             );
 
-            const rawBounds =
-                  (
-                      draggingSkew &&
-                      skewStartBounds
-                  )
-                  ? skewStartBounds
-                  : drawable.getAABB();
+            let rawBounds;
+
+            if (
+                draggingSkew &&
+                skewStartBounds
+            ) {
+
+                rawBounds = {
+                    left:
+                        skewStartBounds.left,
+                    right:
+                        skewStartBounds.right,
+                    top:
+                        skewStartBounds.top,
+                    bottom:
+                        skewStartBounds.bottom
+                };
+
+            } else {
+
+                rawBounds =
+                    drawable.getAABB();
+
+            }
 
             const bounds =
                   getShearAdjustedBounds(
@@ -2097,23 +2116,6 @@ flipVerticalHandle.addEventListener(
 
             wasRunning =
                 running;
-           if (
-               transformMode &&
-               isStageOnTop() &&
-               isCodeTabOpen() &&
-               !stageDraggingSprite
-           ) {
-
-               overlay.style.display =
-                   "block";
-
-               if (
-                   !stageDragActive
-               ) {
-
-                   updateSelectionBox();
-               }
-           }
             if (
                 transformMode &&
                 isStageOnTop() &&
