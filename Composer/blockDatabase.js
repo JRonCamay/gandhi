@@ -1203,14 +1203,23 @@ function normalizeSpaces(text) {
 function scoreBlock(query, block) {
 
     const fields = [
-
         block.pattern,
         block.preview,
         block.opcode,
         block.block,
         block.category
-
     ];
+
+    if (block.opcode === "event_whenflagclicked") {
+        fields.push(
+            "flag",
+            "green flag",
+            "when flag",
+            "when flag clicked",
+            "when green flag",
+            "when green flag clicked"
+        );
+    }
 
     let best = 0;
 
@@ -1220,15 +1229,18 @@ function scoreBlock(query, block) {
 
         if (!text) continue;
 
-        if (text === query)
+        if (text === query) {
             best = Math.max(best, 1000);
-
-        else if (text.startsWith(query))
+        } else if (text.startsWith(query)) {
             best = Math.max(best, 800);
-
-        else if (text.includes(query))
+        } else if (text.includes(query)) {
             best = Math.max(best, 500);
+        }
 
+    }
+
+    if (query === "when" && block.opcode === "event_whenflagclicked") {
+        best += 300;
     }
 
     return best;
