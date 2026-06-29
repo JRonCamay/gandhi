@@ -126,15 +126,26 @@ function scoreCandidate(input, cmd){
 
 }
 function getCandidates(input){
+
+    input = normalize(input);
+
+    if(!input){
+        return [];
+    }
+
+    if(
+        Composer.blocks &&
+        typeof Composer.blocks.search === "function"
+    ){
+        return Composer.blocks.search(input);
+    }
+
     const candidates = [];
 
-    const blocks =
-        Composer.blocks &&
-        typeof Composer.blocks.getAll === "function"
-            ? Composer.blocks.getAll()
-            : Composer.library || [];
+    const blocks = Composer.library || [];
 
     for(const cmd of blocks){
+
         const score = scoreCandidate(input, cmd);
 
         if(score > 0){
@@ -143,6 +154,7 @@ function getCandidates(input){
                 score
             });
         }
+
     }
 
     return candidates
@@ -151,8 +163,8 @@ function getCandidates(input){
             return a.cmd.pattern.length - b.cmd.pattern.length;
         })
         .map(item => item.cmd);
+
 }
-   
 gen.preview = function(input){
     const rawInput = String(input || "");
     const activeText = getActiveText(rawInput);
