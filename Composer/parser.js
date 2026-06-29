@@ -371,14 +371,20 @@
 
     }
 
-    function normalizeCompare(text) {
+   function normalizeCompare(text) {
 
         return normalizeSpace(text)
             .toLowerCase()
-            .replace(/:\s+/g, ": ");
-
+            .replace(/:\s+/g, ": ")
+            .replace(/\[\s*\]/g, "[]");
+    
     }
-
+    function normalizePattern(text){
+        return normalize(text)
+            .replace(/:\s+\[\]/g,": []")
+            .replace(/\[\s*\]/g,"[]")
+            .replace(/\[\s+\]/g,"[]");
+    }
     /*=========================================
         DEBUG
     =========================================*/
