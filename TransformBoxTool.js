@@ -1325,6 +1325,14 @@ function createSkewSession(e) {
             this.drawable.setTransformDirty();
             this.target.emitVisualChange();
             vm.runtime.requestRedraw();
+
+            this.target.setXY(
+                this.target.x,
+                this.target.y
+            );
+
+            this.target.emitVisualChange();
+            vm.runtime.requestRedraw();
         },
 
         onUp() {
