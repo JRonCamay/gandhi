@@ -190,22 +190,54 @@ db.search = function (text) {
     }
 
     return db.all
-        .map(block => ({
-            block,
-            score: scoreBlock(query, block)
-        }))
+        .map(block => {
+
+            let score = scoreBlock(query, block);
+
+            // opcode
+            if (normalize(block.opcode).includes(query)) {
+                score += 500;
+            }
+
+            // block id
+            if (normalize(block.block).includes(query)) {
+                score += 500;
+            }
+
+            // category
+            if (normalize(block.category).includes(query)) {
+                score += 100;
+            }
+
+            // exact opcode
+            if (normalize(block.opcode) === query) {
+                score += 1000;
+            }
+
+            // exact block id
+            if (normalize(block.block) === query) {
+                score += 1000;
+            }
+
+            return {
+                block,
+                score
+            };
+
+        })
         .filter(item => item.score > 0)
         .sort((a, b) => {
+
             if (b.score !== a.score) {
                 return b.score - a.score;
             }
 
             return a.block.pattern.length - b.block.pattern.length;
+
         })
         .map(item => item.block);
 
 };
-
 db.prefix = function (text) {
 
     if (!db.ready) {
