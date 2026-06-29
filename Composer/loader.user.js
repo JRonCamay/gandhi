@@ -12,25 +12,26 @@
     const BASE = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/Composer/";
 
    const MODULES = {
-      core: [
-          "library.js",
-          "model.js",
-          "parser.js",
-          "generator.js",
-          "paths.js",
-          "sockets.js",
-          "blockly.js"
-      ],
-
-       renderer: [
-           "renderer/BlockStyle.js",
-           "renderer/Shapes.js",
-           "renderer.js"
-       ],
-
-       ui: [
-           "ui.js"
-       ]
+    core: [
+            "library.js",
+            "blockDatabase.js",
+            "model.js",
+            "parser.js",
+            "generator.js",
+            "paths.js",
+            "sockets.js",
+            "blockly.js"
+        ],
+        
+        renderer: [
+            "renderer/BlockStyle.js",
+            "renderer/Shapes.js",
+            "renderer.js"
+        ],
+        
+        ui: [
+            "ui.js"
+        ]
    };
 
     window.Composer = {
