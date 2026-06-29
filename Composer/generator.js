@@ -187,5 +187,4 @@ gen.getPreviewCandidates = function(input){
 gen.generate = function(){
     // Block creation comes later.
 };
-
 })();
