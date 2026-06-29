@@ -995,33 +995,7 @@
                e.preventDefault();
                e.stopPropagation();
 
-               draggingSkew =
-                   true;
-
-               skewMoved = false;
-
-               startSkewRedrawLoop();
-
-               startMouseX =
-                   e.clientX;
-
-               startMouseY =
-                   e.clientY;
-
-               const drawable =
-                     vm.runtime.renderer
-                     ._allDrawables[
-                         vm.editingTarget.drawableID
-                     ];
-
-               installShearHook(
-                   drawable
-               );
-
-               skewStartBounds =
-                   {
-                       ...drawable.getAABB()
-                   };
+               createSkewSession(e);
            }
        );
        skewHandle.addEventListener(
@@ -1130,6 +1104,7 @@
         let shearY = 0;
         let skewAnimationFrame = null;
         let skewStartBounds = null;
+        let activeSkewSession = null;
         let alphaDragging = false;
         let lastPosX = null;
         let lastPosY = null;
@@ -1311,6 +1286,71 @@ function installShearHook(drawable) {
 
         };
 
+}
+
+function createSkewSession(e) {
+    if (activeSkewSession) {
+        activeSkewSession.destroy();
+        activeSkewSession = null;
+    }
+
+    const target = vm.editingTarget;
+    if (!target) return null;
+
+    const drawable =
+          vm.runtime.renderer._allDrawables[
+              target.drawableID
+          ];
+    if (!drawable) return null;
+
+    installShearHook(drawable);
+
+    const session = {
+        target,
+        drawable,
+        startMouseX: e.clientX,
+        startMouseY: e.clientY,
+        startShearX: drawable.__gandhiShearX || 0,
+        startShearY: drawable.__gandhiShearY || 0,
+
+        onMove(moveEvent) {
+            this.drawable.__gandhiShearX =
+                this.startShearX +
+                (moveEvent.clientX - this.startMouseX) / 200;
+
+            this.drawable.__gandhiShearY =
+                this.startShearY +
+                (moveEvent.clientY - this.startMouseY) / 200;
+
+            this.drawable.setTransformDirty();
+            this.target.emitVisualChange();
+            vm.runtime.requestRedraw();
+        },
+
+        onUp() {
+            this.destroy();
+            activeSkewSession = null;
+            updateSelectionBox();
+        },
+
+        destroy() {
+            window.removeEventListener("mousemove", this.boundMove, true);
+            window.removeEventListener("mouseup", this.boundUp, true);
+        }
+    };
+
+    session.boundMove =
+        session.onMove.bind(session);
+
+    session.boundUp =
+        session.onUp.bind(session);
+
+    window.addEventListener("mousemove", session.boundMove, true);
+    window.addEventListener("mouseup", session.boundUp, true);
+
+    activeSkewSession = session;
+
+    return session;
 }
 
 function startSkewRedrawLoop() {
@@ -1667,41 +1707,6 @@ flipVerticalHandle.addEventListener(
 
                     hideTooltip();
                 }
-               if (draggingSkew) {
-
-                   const drawable =
-                       vm.runtime.renderer
-                       ._allDrawables[
-                           vm.editingTarget.drawableID
-                       ];
-                   installShearHook(
-                       drawable
-                   );
-
-                   skewMoved = true;
-
-                   drawable.__gandhiShearX =
-                       (e.clientX - startMouseX)
-                       / 200;
-
-                   drawable.__gandhiShearY =
-                       (e.clientY - startMouseY)
-                       / 200;
-
-                   drawable.setTransformDirty();
-
-                   vm.editingTarget.setXY(
-                       vm.editingTarget.x,
-                       vm.editingTarget.y
-                   );
-
-                   vm.editingTarget.emitVisualChange();
-                   vm.runtime.requestRedraw();
-
-                   updateSelectionBox();
-
-                   return;
-               }
                if (alphaDragging) {
 
                    const delta =
