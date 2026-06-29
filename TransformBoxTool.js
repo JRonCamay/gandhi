@@ -1262,9 +1262,6 @@ function installShearHook(drawable) {
     drawable.getUniforms =
         function () {
 
-            // Force Scratch/Gandhi to rebuild the clean matrix first.
-            this.setTransformDirty();
-
             const uniforms =
                 oldGetUniforms();
 
