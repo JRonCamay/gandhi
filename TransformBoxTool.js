@@ -1698,6 +1698,8 @@ flipVerticalHandle.addEventListener(
                    vm.editingTarget.emitVisualChange();
                    vm.runtime.requestRedraw();
 
+                   updateSelectionBox();
+
                    return;
                }
                if (alphaDragging) {
@@ -2121,9 +2123,7 @@ flipVerticalHandle.addEventListener(
                 !stageDraggingSprite
             ) {
                 overlay.style.display = "block";
-                if (!draggingSkew) {
-                    updateSelectionBox();
-                }
+                updateSelectionBox();
             } else {
                 overlay.style.display = "none";
             }
