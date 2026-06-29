@@ -1037,6 +1037,7 @@
         let dragTarget = null;
         let uniformBaseScale = 0;
         let lastUniformRatio = 1;
+        let visualFlipX = false;
 
         // --- CLICK & HOLD SLIDER INTEGRATION FOR INSTANT REVEAL ---
 
@@ -1138,6 +1139,18 @@ function normalizeDirection(deg) {
     return deg;
 }
 
+function applyVisualFlipX(drawable) {
+    const absX =
+          Math.abs(
+              drawable.scale[0]
+          );
+
+    drawable.updateScale([
+        visualFlipX ? -absX : absX,
+        drawable.scale[1]
+    ]);
+}
+
 flipHandle.addEventListener(
     "click",
     () => {
@@ -1154,19 +1167,19 @@ flipHandle.addEventListener(
               target.direction;
 
         // Horizontal screen-space flip:
-        // Use the behavior that previously appeared as vertical.
-        // 1. compensate direction first
-        // 2. then flip X pixels
+        // horizontal should toggle the visible detail mirror.
+        visualFlipX =
+            !visualFlipX;
+
+        applyVisualFlipX(
+            drawable
+        );
+
         target.setDirection(
             normalizeDirection(
                 180 - oldDirection
             )
         );
-
-        drawable.updateScale([
-            -drawable.scale[0],
-            drawable.scale[1]
-        ]);
 
         target.emitVisualChange();
         vm.runtime.requestRedraw();
@@ -1191,18 +1204,16 @@ flipVerticalHandle.addEventListener(
               target.direction;
 
         // Vertical screen-space flip:
-        // Use the behavior that previously appeared as horizontal.
-        // 1. flip X pixels first
-        // 2. then compensate direction
-        drawable.updateScale([
-            -drawable.scale[0],
-            drawable.scale[1]
-        ]);
-
+        // vertical should not toggle detail mirror.
+        // It only changes the logical/screen direction.
         target.setDirection(
             normalizeDirection(
                 -oldDirection
             )
+        );
+
+        applyVisualFlipX(
+            drawable
         );
 
         target.emitVisualChange();
@@ -1499,9 +1510,7 @@ flipVerticalHandle.addEventListener(
                     ];
 
                     const signX =
-                          Math.sign(
-                              drawable.scale[0]
-                          ) || 1;
+                          visualFlipX ? -1 : 1;
 
                     const signY =
                           Math.sign(
@@ -1526,7 +1535,9 @@ flipVerticalHandle.addEventListener(
                            ratio;
 
                        drawable.updateScale([
-                           startScaleX * ratio,
+                           signX * Math.abs(
+                               startScaleX
+                           ) * ratio,
                            startScaleY * ratio
                        ]);
                    }
@@ -1546,7 +1557,9 @@ flipVerticalHandle.addEventListener(
                     ) {
 
                       drawable.updateScale([
-                          startScaleX,
+                          signX * Math.abs(
+                              startScaleX
+                          ),
                           signY * newScale
                       ]);
                     }
