@@ -7,7 +7,7 @@
 
         const ast = [];
 
-        const lines = text
+        const lines = String(text || "")
             .split("\n")
             .map(x => x.trim())
             .filter(x => x.length);
@@ -16,8 +16,9 @@
 
             const node = parseLine(line);
 
-            if (node)
+            if (node) {
                 ast.push(node);
+            }
 
         }
 
@@ -25,7 +26,7 @@
 
     };
 
-    parser.parseBlock = function(text){
+    parser.parseBlock = function (text) {
 
         return parseLine(String(text || "").trim());
 
@@ -33,10 +34,10 @@
 
     function parseLine(line) {
 
-        const libraryNode = parseLibraryBlock(line);
+        const node = parseLibraryBlock(line);
 
-        if(libraryNode){
-            return libraryNode;
+        if (node) {
+            return node;
         }
 
         return {
@@ -46,27 +47,26 @@
 
     }
 
-    function parseLibraryBlock(text){
+    function parseLibraryBlock(text) {
 
-        if(!Composer.library || !Array.isArray(Composer.library)){
+        text = normalizeSpace(text);
+
+        if (!text.length) {
             return null;
         }
 
-        for(const cmd of Composer.library){
+        if (!Composer.library || !Array.isArray(Composer.library)) {
+            return null;
+        }
 
-            const params = matchPattern(text, cmd.pattern);
+        const commands = getSortedLibrary();
 
-            if(params){
+        for (const cmd of commands) {
 
-                return {
-                    type: "block",
-                    id: cmd.id,
-                    block: cmd.block,
-                    pattern: cmd.pattern,
-                    preview: cmd.preview,
-                    params: params.map(value => parseParam(value))
-                };
+            const match = matchCommand(text, cmd);
 
+            if (match) {
+                return createBlockNode(cmd, match);
             }
 
         }
@@ -75,49 +75,109 @@
 
     }
 
-    function parseParam(value){
+    function getSortedLibrary() {
 
-        const trimmed = String(value || "").trim();
+        return Composer.library
+            .slice()
+            .sort((a, b) => {
 
-        const nested = parseLibraryBlock(trimmed);
+                const aSlots = countSlots(a.pattern);
+                const bSlots = countSlots(b.pattern);
 
-        if(nested){
+                if (b.pattern.length !== a.pattern.length) {
+                    return b.pattern.length - a.pattern.length;
+                }
+
+                return bSlots - aSlots;
+
+            });
+
+    }
+
+    function countSlots(pattern) {
+
+        const matches = String(pattern || "").match(/\[\]/g);
+
+        return matches ? matches.length : 0;
+
+    }
+
+    function createBlockNode(cmd, values) {
+
+        return {
+            type: "block",
+            id: cmd.id,
+            block: cmd.block,
+            pattern: cmd.pattern,
+            preview: cmd.preview,
+            params: values.map((value, index) => {
+                const paramInfo = cmd.params && cmd.params[index]
+                    ? cmd.params[index]
+                    : {};
+
+                return parseParam(value, paramInfo);
+            })
+        };
+
+    }
+
+    function parseParam(value, paramInfo) {
+
+        const text = normalizeSpace(value);
+
+        if (!text.length) {
+            return {
+                type: "value",
+                value: "",
+                paramType: paramInfo.type || "string"
+            };
+        }
+
+        const nested = parseLibraryBlock(text);
+
+        if (nested) {
+            nested.paramType = paramInfo.type || null;
             return nested;
         }
 
         return {
             type: "value",
-            value: trimmed
+            value: text,
+            paramType: paramInfo.type || "string"
         };
 
     }
 
-    function matchPattern(text, pattern){
+    function matchCommand(text, cmd) {
 
+        const patternParts = splitPattern(cmd.pattern);
         const textParts = tokenizeText(text);
-        const patternParts = splitPattern(pattern);
 
-        return matchParts(textParts, patternParts);
+        if (!textParts) {
+            return null;
+        }
+
+        const result = matchParts(patternParts, textParts);
+
+        return result;
 
     }
 
-    function splitPattern(pattern){
+    function splitPattern(pattern) {
 
         const parts = [];
+        const source = String(pattern || "");
         const re = /\[\]/g;
 
         let index = 0;
         let match;
 
-        while((match = re.exec(pattern))){
+        while ((match = re.exec(source))) {
 
-            if(match.index > index){
+            const before = source.slice(index, match.index);
 
-                parts.push({
-                    type: "text",
-                    value: normalizeSpace(pattern.slice(index, match.index))
-                });
-
+            if (before.length) {
+                pushTextPart(parts, before);
             }
 
             parts.push({
@@ -128,39 +188,45 @@
 
         }
 
-        if(index < pattern.length){
+        const after = source.slice(index);
 
-            parts.push({
-                type: "text",
-                value: normalizeSpace(pattern.slice(index))
-            });
-
+        if (after.length) {
+            pushTextPart(parts, after);
         }
 
-        return parts.filter(part =>
-            part.type === "slot" ||
-            part.value.length
-        );
+        return parts;
 
     }
 
-    function tokenizeText(text){
+    function pushTextPart(parts, text) {
+
+        const normalized = normalizeSpace(text);
+
+        if (!normalized.length) {
+            return;
+        }
+
+        parts.push({
+            type: "text",
+            value: normalized
+        });
+
+    }
+        function tokenizeText(text) {
 
         const tokens = [];
+
         let buffer = "";
 
-        for(let i = 0; i < text.length; i++){
+        for (let i = 0; i < text.length; i++) {
 
-            const char = text[i];
+            const ch = text[i];
 
-            if(char === "["){
+            if (ch === "[") {
 
-                if(buffer.trim().length){
+                if (buffer.trim().length) {
 
-                    tokens.push({
-                        type: "text",
-                        value: normalizeSpace(buffer)
-                    });
+                    pushTextToken(tokens, buffer);
 
                 }
 
@@ -168,7 +234,7 @@
 
                 const end = findClosingBracket(text, i);
 
-                if(end === -1){
+                if (end === -1) {
                     return null;
                 }
 
@@ -183,16 +249,13 @@
 
             }
 
-            buffer += char;
+            buffer += ch;
 
         }
 
-        if(buffer.trim().length){
+        if (buffer.trim().length) {
 
-            tokens.push({
-                type: "text",
-                value: normalizeSpace(buffer)
-            });
+            pushTextToken(tokens, buffer);
 
         }
 
@@ -200,63 +263,75 @@
 
     }
 
-    function matchParts(textParts, patternParts){
+    function pushTextToken(tokens, text) {
 
-        if(!textParts){
-            return null;
+        const normalized = normalizeSpace(text);
+
+        if (!normalized.length) {
+            return;
         }
 
-        if(textParts.length !== patternParts.length){
-            return null;
-        }
-
-        const params = [];
-
-        for(let i = 0; i < patternParts.length; i++){
-
-            const patternPart = patternParts[i];
-            const textPart = textParts[i];
-
-            if(patternPart.type !== textPart.type){
-                return null;
-            }
-
-            if(patternPart.type === "text"){
-
-                if(
-                    normalizeCompare(patternPart.value) !==
-                    normalizeCompare(textPart.value)
-                ){
-                    return null;
-                }
-
-            }else{
-
-                params.push(textPart.value);
-
-            }
-
-        }
-
-        return params;
+        tokens.push({
+            type: "text",
+            value: normalized
+        });
 
     }
 
-    function findClosingBracket(text, start){
+    function matchParts(patternParts, textParts) {
+
+        if (patternParts.length !== textParts.length) {
+            return null;
+        }
+
+        const values = [];
+
+        for (let i = 0; i < patternParts.length; i++) {
+
+            const pattern = patternParts[i];
+            const text = textParts[i];
+
+            if (pattern.type !== text.type) {
+                return null;
+            }
+
+            if (pattern.type === "text") {
+
+                if (
+                    normalizeCompare(pattern.value) !==
+                    normalizeCompare(text.value)
+                ) {
+                    return null;
+                }
+
+            }
+            else {
+
+                values.push(text.value);
+
+            }
+
+        }
+
+        return values;
+
+    }
+
+    function findClosingBracket(text, start) {
 
         let depth = 0;
 
-        for(let i = start; i < text.length; i++){
+        for (let i = start; i < text.length; i++) {
 
-            if(text[i] === "["){
+            if (text[i] === "[") {
                 depth++;
             }
 
-            if(text[i] === "]"){
+            if (text[i] === "]") {
 
                 depth--;
 
-                if(depth === 0){
+                if (depth === 0) {
                     return i;
                 }
 
@@ -268,7 +343,7 @@
 
     }
 
-    function normalizeSpace(text){
+    function normalizeSpace(text) {
 
         return String(text || "")
             .replace(/\s+/g, " ")
@@ -276,12 +351,26 @@
 
     }
 
-    function normalizeCompare(text){
+    function normalizeCompare(text) {
 
         return normalizeSpace(text)
             .toLowerCase()
             .replace(/:\s+/g, ": ");
 
     }
+
+    /*=========================================
+        DEBUG
+    =========================================*/
+
+    parser.print = function (text) {
+
+        const ast = parser.parseBlock(text);
+
+        console.log(ast);
+
+        return ast;
+
+    };
 
 })();
