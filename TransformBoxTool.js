@@ -64,65 +64,6 @@
                     window.vm = props.vm;
                     clearInterval(interval);
 
-                    (function () {
-
-                        const drawable =
-                            vm.runtime.renderer._allDrawables[
-                                vm.editingTarget.drawableID
-                            ];
-
-                        if (!drawable) return;
-
-                        const proto =
-                            Object.getPrototypeOf(drawable);
-
-                        if (proto.__gandhiShearInstalled)
-                            return;
-
-                        proto.__gandhiShearInstalled =
-                            true;
-
-                        const oldCalculate =
-                            proto._calculateTransform;
-
-                        proto._calculateTransform =
-                            function () {
-
-                                oldCalculate.call(this);
-
-                                const g =
-                                    this._uniforms.u_modelMatrix;
-
-                                if (
-                                    this.__gandhiShearX
-                                ) {
-
-                                    g[4] +=
-                                        g[0] *
-                                        this.__gandhiShearX;
-
-                                    g[5] +=
-                                        g[1] *
-                                        this.__gandhiShearX;
-                                }
-
-                                if (
-                                    this.__gandhiShearY
-                                ) {
-
-                                    g[0] +=
-                                        g[4] *
-                                        this.__gandhiShearY;
-
-                                    g[1] +=
-                                        g[5] *
-                                        this.__gandhiShearY;
-                                }
-
-                            };
-
-                    })();
-
                     init();
                     return;
                 }
