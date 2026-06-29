@@ -184,7 +184,6 @@ ui.init = function () {
 
     editor.addEventListener("paste", e => {
         e.preventDefault();
-
         const text = (e.clipboardData || window.clipboardData).getData("text");
         document.execCommand("insertText", false, text);
     });
@@ -199,10 +198,10 @@ ui.init = function () {
 
     editor.addEventListener("input",()=>{
         const cursor = getCaretOffset();
-        let text = getEditorText();
+        const text = getEditorText();
 
         if(!smartTypingLock && !lastInputType.startsWith("delete")){
-            const result = getSmartTypingResultForEditor(text, cursor);
+            const result = getUniversalSmartTypingResult(text, cursor);
 
             if(result){
                 setEditorText(result.text, result.selectStart, result.selectEnd);
@@ -266,7 +265,6 @@ function renderEditorText(text){
 
 function bracketSpan(char, depth){
     const color = BRACKET_COLORS[(Math.max(1, depth) - 1) % BRACKET_COLORS.length];
-
     return `<span style="color:${color};font-weight:bold;">${char}</span>`;
 }
 
@@ -362,14 +360,36 @@ function updatePreview(){
 }
 
 /*=========================================
-    SMART TYPING
+    UNIVERSAL SMART TYPING
 =========================================*/
 
-function getSmartTypingResultForEditor(value, cursor){
-    const nested = getNestedOperatorResult(value, cursor);
+function getUniversalSmartTypingResult(value, cursor){
+    const slot = getInnermostSlot(value, cursor);
 
-    if(nested){
-        return nested;
+    if(slot){
+        const innerText = value.slice(slot.innerStart, slot.innerEnd);
+        const innerCursor = cursor - slot.innerStart;
+
+        if(innerCursor !== innerText.length){
+            return null;
+        }
+
+        const innerResult = getSmartTypingResult(innerText);
+
+        if(!innerResult){
+            return null;
+        }
+
+        const newText =
+            value.slice(0, slot.innerStart) +
+            innerResult.text +
+            value.slice(slot.innerEnd);
+
+        return {
+            text:newText,
+            selectStart:slot.innerStart + innerResult.selectStart,
+            selectEnd:slot.innerStart + innerResult.selectEnd
+        };
     }
 
     if(cursor !== value.length){
@@ -415,24 +435,61 @@ function getTemplates(){
         "turn counterclockwise [] degrees",
         "go to []",
         "go to x: [] y: []",
+
         "say []",
         "say [] for [] seconds",
         "think []",
         "think [] for [] seconds",
+
         "repeat []",
         "wait [] seconds",
         "if [] then",
         "if on edge, bounce",
+
         "[] + []",
         "[] - []",
         "[] * []",
         "[] / []",
+        "[] mod []",
         "[] < []",
         "[] = []",
         "[] > []",
+
+        "not []",
+        "[] and []",
+        "[] or []",
+
         "pick random [] to []",
         "join [] []",
-        "letter [] of []"
+        "letter [] of []",
+        "length of []",
+        "contains [] ?",
+
+        "item [] of []",
+        "item # of [] in []",
+        "length of []",
+
+        "round []",
+        "abs []",
+        "floor []",
+        "ceiling []",
+        "sqrt []",
+        "sin []",
+        "cos []",
+        "tan []",
+        "asin []",
+        "acos []",
+        "atan []",
+        "ln []",
+        "log []",
+        "e ^ []",
+        "10 ^ []",
+
+        "mouse x",
+        "mouse y",
+        "x position",
+        "y position",
+        "direction"
     ];
 
     for(const item of fallback){
@@ -633,7 +690,7 @@ function buildCompletedText(value, parts, slotIndex){
 }
 
 /*=========================================
-    OPERATORS
+    OPERATORS AS NORMAL TEMPLATES
 =========================================*/
 
 function getOperatorTemplateResult(value, templates){
@@ -649,7 +706,7 @@ function getOperatorTemplateResult(value, templates){
             parts[0].type === "slot" &&
             parts[1].type === "text" &&
             parts[2].type === "slot" &&
-            parts[1].value.trim() === typed
+            parts[1].value.trim().toLowerCase() === typed.toLowerCase()
         ){
             const text = "[ ]" + parts[1].value + "[ ]";
 
@@ -662,41 +719,6 @@ function getOperatorTemplateResult(value, templates){
     }
 
     return null;
-}
-
-function getNestedOperatorResult(value, cursor){
-    const slot = getInnermostSlot(value, cursor);
-
-    if(!slot) return null;
-
-    const inner = value.slice(slot.innerStart, slot.innerEnd).trim();
-
-    if(!isOperatorText(inner)) return null;
-
-    const replacement = "[ ] " + inner + " [ ]";
-
-    const text =
-        value.slice(0, slot.innerStart) +
-        replacement +
-        value.slice(slot.innerEnd);
-
-    return {
-        text,
-        selectStart:slot.innerStart + 1,
-        selectEnd:slot.innerStart + 2
-    };
-}
-
-function isOperatorText(text){
-    return [
-        "+",
-        "-",
-        "*",
-        "/",
-        "<",
-        "=",
-        ">"
-    ].includes(text);
 }
 
 /*=========================================
