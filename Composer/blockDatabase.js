@@ -5,94 +5,238 @@ const db = {};
 
 Composer.blocks = db;
 
+const CACHE_KEY = "composer-block-database-v1";
+const CACHE_VERSION = 1;
+
 db.ready = false;
 db.version = 0;
+db.signature = "";
 
-db.list = [];
+db.all = [];
+db.list = db.all;
+
 db.byOpcode = {};
 db.byPattern = {};
 db.byCategory = {};
 db.byPrefix = {};
 
-db.rebuild = function () {
+const FALLBACK_PATTERNS = {
+    motion_xposition: {
+        pattern: "x position",
+        preview: "x position",
+        params: []
+    },
 
-    db.clear();
+    motion_yposition: {
+        pattern: "y position",
+        preview: "y position",
+        params: []
+    },
+
+    motion_direction: {
+        pattern: "direction",
+        preview: "direction",
+        params: []
+    },
+
+    looks_size: {
+        pattern: "size",
+        preview: "size",
+        params: []
+    },
+
+    looks_costumenumbername: {
+        pattern: "costume []",
+        preview: "costume ()",
+        params: [
+            { name: "property", type: "menu" }
+        ]
+    },
+
+    looks_backdropnumbername: {
+        pattern: "backdrop []",
+        preview: "backdrop ()",
+        params: [
+            { name: "property", type: "menu" }
+        ]
+    },
+
+    sound_volume: {
+        pattern: "volume",
+        preview: "volume",
+        params: []
+    },
+
+    sensing_timer: {
+        pattern: "timer",
+        preview: "timer",
+        params: []
+    },
+
+    sensing_loudness: {
+        pattern: "loudness",
+        preview: "loudness",
+        params: []
+    },
+
+    sensing_current: {
+        pattern: "current []",
+        preview: "current ()",
+        params: [
+            { name: "property", type: "menu" }
+        ]
+    },
+
+    sensing_dayssince2000: {
+        pattern: "days since 2000",
+        preview: "days since 2000",
+        params: []
+    },
+
+    sensing_username: {
+        pattern: "username",
+        preview: "username",
+        params: []
+    }
+};
+
+/*=========================================
+    PUBLIC API
+=========================================*/
+
+db.rebuild = function (force) {
+
+    const workspace = getWorkspace();
+    const registry = getRegistry(workspace);
+    const procedures = getProcedures(workspace);
+    const signature = getSignature(registry, procedures);
+
+    if (!force && loadFromCache(signature)) {
+        console.log(
+            "[Composer.blocks] Loaded from cache:",
+            db.all.length,
+            "blocks"
+        );
+
+        return db.all;
+    }
+
+    clear();
 
     addManualLibrary();
+    addRegistryBlocks(workspace, registry);
+    addProcedureBlocks(procedures);
 
-    scanBlocklyToolbox();
-
-    buildPrefixIndex();
+    buildIndexes();
 
     db.ready = true;
     db.version++;
+    db.signature = signature;
+
+    saveToCache();
 
     console.log(
         "[Composer.blocks] Ready:",
-        db.list.length,
+        db.all.length,
         "blocks"
     );
 
-    return db.list;
+    return db.all;
 
 };
 
-db.clear = function () {
+db.refresh = function () {
 
-    db.list = [];
-    db.byOpcode = {};
-    db.byPattern = {};
-    db.byCategory = {};
-    db.byPrefix = {};
+    return db.rebuild(true);
 
 };
 
 db.getAll = function () {
 
     if (!db.ready) {
-        db.rebuild();
+        db.rebuild(false);
     }
 
-    return db.list;
-
-};
-
-db.search = function (text) {
-
-    if (!db.ready) {
-        db.rebuild();
-    }
-
-    const q = normalize(text);
-
-    if (!q) return [];
-
-    return db.list
-        .map(block => ({
-            block,
-            score: scoreBlock(q, block)
-        }))
-        .filter(x => x.score > 0)
-        .sort((a,b) => b.score - a.score)
-        .map(x => x.block);
+    return db.all;
 
 };
 
 db.find = function (idOrOpcodeOrPattern) {
 
     if (!db.ready) {
-        db.rebuild();
+        db.rebuild(false);
     }
 
-    return db.byOpcode[idOrOpcodeOrPattern] ||
-           db.byPattern[normalize(idOrOpcodeOrPattern)] ||
-           null;
+    const key = String(idOrOpcodeOrPattern || "");
+    const patternKey = normalize(key);
+
+    return db.byOpcode[key] ||
+        db.byOpcode[patternKey] ||
+        db.byPattern[patternKey] ||
+        null;
 
 };
 
+db.search = function (text) {
+
+    if (!db.ready) {
+        db.rebuild(false);
+    }
+
+    const query = normalize(text);
+
+    if (!query) {
+        return [];
+    }
+
+    return db.all
+        .map(block => ({
+            block,
+            score: scoreBlock(query, block)
+        }))
+        .filter(item => item.score > 0)
+        .sort((a, b) => {
+            if (b.score !== a.score) {
+                return b.score - a.score;
+            }
+
+            return a.block.pattern.length - b.block.pattern.length;
+        })
+        .map(item => item.block);
+
+};
+
+db.prefix = function (text) {
+
+    if (!db.ready) {
+        db.rebuild(false);
+    }
+
+    return db.byPrefix[normalize(text)] || [];
+
+};
+
+/*=========================================
+    REBUILD SOURCES
+=========================================*/
+
+function clear() {
+
+    db.all = [];
+    db.list = db.all;
+
+    db.byOpcode = {};
+    db.byPattern = {};
+    db.byCategory = {};
+    db.byPrefix = {};
+
+}
+
 function addManualLibrary() {
 
-    if (!Array.isArray(Composer.library)) return;
+    if (!Array.isArray(Composer.library)) {
+        return;
+    }
 
     for (const item of Composer.library) {
         addBlock(normalizeManualBlock(item));
@@ -103,259 +247,568 @@ function addManualLibrary() {
 function normalizeManualBlock(item) {
 
     return {
-        id: item.id,
-        block: item.block,
-        opcode: item.block,
-        category: getCategoryFromOpcode(item.block),
-        pattern: item.pattern,
-        preview: item.preview,
+        id: item.id || item.block,
+        block: item.block || item.id,
+        opcode: item.block || item.id,
+        category: getCategoryFromOpcode(item.block || item.id),
+        pattern: item.pattern || "",
+        preview: item.preview || "",
         params: item.params || [],
+        color: item.color || null,
+        shape: item.shape || null,
         source: "manual"
     };
 
 }
 
-function scanBlocklyToolbox() {
+function addRegistryBlocks(workspace, registry) {
 
-    const workspace = getWorkspace();
+    if (!registry) {
+        return;
+    }
 
-    if (!workspace) return;
+    const opcodes = Object.keys(registry);
 
-    const flyout = getFlyoutWorkspace(workspace);
+    for (const opcode of opcodes) {
 
-    if (!flyout) return;
+        if (db.byOpcode[opcode]) {
+            continue;
+        }
 
-    const blocks = flyout.getTopBlocks(false) || [];
+        const block = createBlockEntryFromRegistry(
+            workspace,
+            opcode,
+            registry[opcode]
+        );
 
-    for (const block of blocks) {
-
-        const entry = blockToEntry(block);
-
-        if (entry) {
-            addBlock(entry);
+        if (block) {
+            addBlock(block);
         }
 
     }
 
 }
 
-function getWorkspace() {
+function createBlockEntryFromRegistry(workspace, opcode, definition) {
 
-    if (window.Blockly && Blockly.getMainWorkspace) {
-        return Blockly.getMainWorkspace();
-    }
+    const fallback = FALLBACK_PATTERNS[opcode];
 
-    if (
-        Composer.blockly &&
-        Composer.blockly.workspace
-    ) {
-        return Composer.blockly.workspace;
-    }
-
-    return null;
-
-}
-
-function getFlyoutWorkspace(workspace) {
+    let instance = null;
+    let instanceData = null;
 
     try {
+        instance = createTemporaryBlock(workspace, opcode);
 
-        const toolbox = workspace.getToolbox && workspace.getToolbox();
-
-        if (
-            toolbox &&
-            toolbox.flyout_ &&
-            toolbox.flyout_.workspace_
-        ) {
-            return toolbox.flyout_.workspace_;
+        if (instance) {
+            instanceData = readBlockInstance(instance);
         }
+    } catch (e) {
+        instanceData = null;
+    } finally {
+        disposeTemporaryBlock(instance);
+    }
 
-    } catch (e) {}
+    const pattern =
+        (fallback && fallback.pattern) ||
+        (instanceData && instanceData.pattern) ||
+        patternFromOpcode(opcode);
 
-    return null;
+    const preview =
+        (fallback && fallback.preview) ||
+        pattern.replace(/\[\]/g, "()");
 
-}
-
-function blockToEntry(block) {
-
-    if (!block || !block.type) return null;
-
-    const pattern = getPatternFromBlock(block);
-
-    if (!pattern) return null;
+    const params =
+        (fallback && fallback.params) ||
+        (instanceData && instanceData.params) ||
+        [];
 
     return {
-        id: block.type,
-        block: block.type,
-        opcode: block.type,
-        category: getCategoryFromBlocklyBlock(block),
+        id: opcode,
+        block: opcode,
+        opcode,
+        category: getCategoryFromOpcode(opcode),
         pattern,
-        preview: pattern.replace(/\[\]/g, "()"),
-        params: getParamsFromBlock(block),
-        color: block.getColour ? block.getColour() : block.colour_,
-        source: "runtime"
+        preview,
+        params,
+        color: instanceData ? instanceData.color : null,
+        shape: instanceData ? instanceData.shape : null,
+        previous: instanceData ? instanceData.previous : false,
+        next: instanceData ? instanceData.next : false,
+        output: instanceData ? instanceData.output : false,
+        source: "registry"
     };
 
 }
 
-function getPatternFromBlock(block) {
+function createTemporaryBlock(workspace, opcode) {
+
+    if (!workspace || typeof workspace.newBlock !== "function") {
+        return null;
+    }
+
+    const Events = window.Blockly && Blockly.Events;
+
+    if (Events && typeof Events.disable === "function") {
+        Events.disable();
+    }
+
+    try {
+        return workspace.newBlock(opcode);
+    } finally {
+        if (Events && typeof Events.enable === "function") {
+            Events.enable();
+        }
+    }
+
+}
+function disposeTemporaryBlock(block) {
+
+    if (!block) return;
+
+    try {
+        block.dispose(false);
+    } catch (e) {}
+
+}
+
+function readBlockInstance(block) {
+
+    const data = {};
+
+    data.color = block.getColour
+        ? block.getColour()
+        : block.colour_;
+
+    data.previous = !!block.previousConnection;
+    data.next = !!block.nextConnection;
+    data.output = !!block.outputConnection;
+
+    data.shape = getShape(block);
+
+    const parsed = buildPattern(block);
+
+    data.pattern = parsed.pattern;
+    data.params = parsed.params;
+
+    return data;
+
+}
+
+/*=========================================
+    PROCEDURES
+=========================================*/
+
+function addProcedureBlocks(map) {
+
+    if (!map) return;
+
+    if (map instanceof Map) {
+
+        for (const procedure of map.values()) {
+
+            addProcedure(procedure);
+
+        }
+
+        return;
+
+    }
+
+    for (const key in map) {
+
+        addProcedure(map[key]);
+
+    }
+
+}
+
+function addProcedure(proc) {
+
+    if (!proc) return;
+
+    let name = "";
+
+    if (typeof proc.getName === "function") {
+
+        name = proc.getName();
+
+    } else {
+
+        name = proc.name || "";
+
+    }
+
+    if (!name) return;
+
+    const pattern = name;
+
+    addBlock({
+
+        id: "procedure_" + name,
+
+        opcode: "procedures_call",
+
+        block: "procedures_call",
+
+        category: "myblocks",
+
+        pattern,
+
+        preview: pattern,
+
+        params: [],
+
+        shape: "stack",
+
+        source: "procedure"
+
+    });
+
+}
+
+/*=========================================
+    DATABASE
+=========================================*/
+
+function addBlock(block) {
+
+    if (!block) return;
+
+    if (!block.pattern) return;
+
+    const opcode = block.opcode;
+
+    if (db.byOpcode[opcode]) return;
+
+    db.all.push(block);
+
+    db.byOpcode[opcode] = block;
+
+    db.byPattern[
+        normalize(block.pattern)
+    ] = block;
+
+}
+
+function buildIndexes() {
+
+    for (const block of db.all) {
+
+        const category =
+            block.category || "unknown";
+
+        if (!db.byCategory[category]) {
+
+            db.byCategory[category] = [];
+
+        }
+
+        db.byCategory[category].push(block);
+
+        buildPrefixes(block);
+
+    }
+
+}
+
+function buildPrefixes(block) {
+
+    const words = normalize(block.pattern).split(" ");
+
+    let prefix = "";
+
+    for (const word of words) {
+
+        prefix =
+            prefix
+            ? prefix + " " + word
+            : word;
+
+        if (!db.byPrefix[prefix]) {
+
+            db.byPrefix[prefix] = [];
+
+        }
+
+        db.byPrefix[prefix].push(block);
+
+    }
+
+}
+
+/*=========================================
+    CACHE
+=========================================*/
+
+function saveToCache() {
+
+    try {
+
+        sessionStorage.setItem(
+
+            CACHE_KEY,
+
+            JSON.stringify({
+
+                version: CACHE_VERSION,
+
+                signature: db.signature,
+
+                blocks: db.all
+
+            })
+
+        );
+
+    } catch (e) {}
+
+}
+
+function loadFromCache(signature) {
+
+    try {
+
+        const raw =
+            sessionStorage.getItem(CACHE_KEY);
+
+        if (!raw) return false;
+
+        const cache = JSON.parse(raw);
+
+        if (
+            cache.version !== CACHE_VERSION
+        ) {
+            return false;
+        }
+
+        if (
+            cache.signature !== signature
+        ) {
+            return false;
+        }
+
+        clear();
+
+        for (const block of cache.blocks) {
+
+            addBlock(block);
+
+        }
+
+        buildIndexes();
+
+        db.ready = true;
+
+        db.signature = signature;
+
+        return true;
+
+    } catch (e) {
+
+        return false;
+
+    }
+
+}
+
+/*=========================================
+    HELPERS
+=========================================*/
+
+function getWorkspace() {
+
+    if (
+        window.Blockly &&
+        Blockly.getMainWorkspace
+    ) {
+
+        return Blockly.getMainWorkspace();
+
+    }
+
+    return null;
+
+}
+
+function getRegistry(workspace) {
+
+    if (!workspace) return null;
+
+    const factory =
+        workspace.blockFactory_;
+
+    if (!factory) return null;
+
+    return (
+        factory.blockMap ||
+        factory.blockMap_
+    );
+
+}
+
+function getProcedures(workspace) {
+
+    if (!workspace) return null;
+
+    if (workspace.getProcedureMap) {
+
+        return workspace.getProcedureMap();
+
+    }
+
+    return workspace.procedureMap_;
+
+}
+
+function getSignature(
+    registry,
+    procedures
+) {
+
+    const blocks =
+        registry
+        ? Object.keys(registry)
+        : [];
+
+    const procs = [];
+
+    if (procedures) {
+
+        if (procedures instanceof Map) {
+
+            for (const p of procedures.values()) {
+
+                procs.push(
+                    p.getName()
+                );
+
+            }
+
+        } else {
+
+            procs.push(
+                ...Object.keys(procedures)
+            );
+
+        }
+
+    }
+
+    return blocks
+        .concat(procs)
+        .sort()
+        .join("|");
+
+}
+
+function buildPattern(block) {
+
+    const params = [];
 
     let text = "";
 
     try {
+
         text = block.toString();
+
     } catch (e) {
+
         text = block.type;
+
     }
 
-    if (!text) return null;
+    if (
+        Array.isArray(block.inputList)
+    ) {
 
-    text = String(text)
-        .replace(/\s+/g, " ")
-        .trim();
+        for (const input of block.inputList) {
 
-    const params = getParamsFromBlock(block);
+            if (
+                !input.connection
+            ) continue;
 
-    for (const param of params) {
-        text = replaceFirstParameterLikeText(text, param.name);
+            params.push({
+
+                name:
+                    input.name,
+
+                type:
+                    detectParamType(input)
+
+            });
+
+            text += " []";
+
+        }
+
     }
 
-    return text;
+    return {
+
+        pattern:
+            normalizeSpaces(text),
+
+        params
+
+    };
 
 }
 
-function replaceFirstParameterLikeText(text, name) {
+function detectParamType(input) {
 
-    if (!name) return text;
+    const check =
+        input.connection &&
+        input.connection.getCheck
+            ? input.connection.getCheck()
+            : null;
 
-    const escaped = escapeRegex(name);
+    const t = String(
+        check || ""
+    ).toLowerCase();
 
-    const re = new RegExp(escaped, "i");
+    if (
+        t.includes("boolean")
+    ) return "boolean";
 
-    if (re.test(text)) {
-        return text.replace(re, "[]");
-    }
+    if (
+        t.includes("number")
+    ) return "number";
 
-    return text;
-
-}
-
-function getParamsFromBlock(block) {
-
-    const params = [];
-
-    if (!Array.isArray(block.inputList)) {
-        return params;
-    }
-
-    for (const input of block.inputList) {
-
-        if (!input.connection) continue;
-
-        params.push({
-            name: input.name || "value",
-            type: getParamType(input)
-        });
-
-    }
-
-    return params;
-
-}
-
-function getParamType(input) {
-
-    const check = input.connection &&
-        (
-            input.connection.getCheck &&
-            input.connection.getCheck()
-        );
-
-    const checkText = Array.isArray(check)
-        ? check.join(" ").toLowerCase()
-        : String(check || "").toLowerCase();
-
-    if (checkText.includes("boolean")) return "boolean";
-    if (checkText.includes("number")) return "number";
-    if (checkText.includes("colour") || checkText.includes("color")) return "color";
+    if (
+        t.includes("colour") ||
+        t.includes("color")
+    ) return "color";
 
     return "reporter";
 
 }
 
-function addBlock(block) {
+function getShape(block) {
 
-    if (!block || !block.pattern || !block.block) return;
+    if (
+        Composer.Shapes &&
+        Composer.Shapes.getBlockShape
+    ) {
 
-    const key = block.block;
-    const patternKey = normalize(block.pattern);
-
-    if (db.byOpcode[key]) {
-        return;
-    }
-
-    db.list.push(block);
-    db.byOpcode[key] = block;
-    db.byPattern[patternKey] = block;
-
-    const category = block.category || "unknown";
-
-    if (!db.byCategory[category]) {
-        db.byCategory[category] = [];
-    }
-
-    db.byCategory[category].push(block);
-
-}
-
-function buildPrefixIndex() {
-
-    for (const block of db.list) {
-
-        const words = normalize(block.pattern).split(" ");
-
-        let prefix = "";
-
-        for (const word of words) {
-
-            prefix = prefix ? prefix + " " + word : word;
-
-            if (!db.byPrefix[prefix]) {
-                db.byPrefix[prefix] = [];
-            }
-
-            db.byPrefix[prefix].push(block);
-
-        }
+        return Composer.Shapes.getBlockShape(block);
 
     }
 
-}
-
-function scoreBlock(q, block) {
-
-    const p = normalize(block.pattern);
-
-    if (p === q) return 1000;
-    if (p.startsWith(q)) return 800;
-    if (p.includes(q)) return 500;
-
-    return 0;
+    return "stack";
 
 }
 
 function getCategoryFromOpcode(opcode) {
 
-    const first = String(opcode || "").split("_")[0];
-
-    return first || "unknown";
+    return String(opcode)
+        .split("_")[0];
 
 }
 
-function getCategoryFromBlocklyBlock(block) {
+function patternFromOpcode(opcode) {
 
-    return block.category_ ||
-           getCategoryFromOpcode(block.type);
+    return String(opcode)
+        .replace(/_/g, " ");
 
 }
 
@@ -368,19 +821,40 @@ function normalize(text) {
 
 }
 
-function escapeRegex(text) {
+function normalizeSpaces(text) {
 
-    return String(text).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return String(text || "")
+        .replace(/\s+/g, " ")
+        .trim();
 
 }
 
-/* Auto rebuild after page settles */
+function scoreBlock(query, block) {
+
+    const p =
+        normalize(block.pattern);
+
+    if (p === query)
+        return 1000;
+
+    if (p.startsWith(query))
+        return 800;
+
+    if (p.includes(query))
+        return 500;
+
+    return 0;
+
+}
+
+/*=========================================
+    START
+=========================================*/
+
 setTimeout(() => {
-    try {
-        db.rebuild();
-    } catch (e) {
-        console.warn("[Composer.blocks] rebuild failed", e);
-    }
-}, 1500);
+
+    db.rebuild(false);
+
+}, 1000);
 
 })();
