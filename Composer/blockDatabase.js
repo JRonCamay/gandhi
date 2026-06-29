@@ -409,6 +409,8 @@ function hasExtension(json, name) {
 
 function getShapeFromJson(json, opcode) {
 
+    const text = String(opcode || "");
+
     if (hasExtension(json, "shape_hat")) {
         return "hat";
     }
@@ -417,23 +419,48 @@ function getShapeFromJson(json, opcode) {
         return "cap";
     }
 
-    if (hasExtension(json, "shape_boolean") ||
-        hasExtension(json, "output_boolean")) {
+    if (
+        hasExtension(json, "shape_boolean") ||
+        hasExtension(json, "output_boolean") ||
+        json.output === "Boolean"
+    ) {
         return "boolean";
     }
 
-    if (hasExtension(json, "output_number") ||
+    if (
+        hasExtension(json, "output_number") ||
         hasExtension(json, "output_string") ||
-        json.output) {
+        json.output === "Number" ||
+        json.output === "String"
+    ) {
         return "reporter";
     }
 
-    if (String(opcode).startsWith("control_") &&
+    if (
+        text === "motion_xposition" ||
+        text === "motion_yposition" ||
+        text === "motion_direction" ||
+        text === "looks_size" ||
+        text === "sound_volume" ||
+        text === "sensing_timer" ||
+        text === "sensing_loudness" ||
+        text === "sensing_answer" ||
+        text === "sensing_mousex" ||
+        text === "sensing_mousey" ||
+        text === "sensing_dayssince2000" ||
+        text === "sensing_username"
+    ) {
+        return "reporter";
+    }
+
+    if (
+        String(opcode).startsWith("control_") &&
         (
             String(opcode).includes("repeat") ||
             String(opcode).includes("if") ||
             String(opcode).includes("forever")
-        )) {
+        )
+    ) {
         return "c-block";
     }
 
