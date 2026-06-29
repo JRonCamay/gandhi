@@ -5,7 +5,7 @@ const ui = Composer.ui;
 
 let panel;
 let header;
-let input;
+let editor;
 let preview;
 let status;
 let clearButton;
@@ -16,6 +16,14 @@ let dy = 0;
 
 let smartTypingLock = false;
 let lastInputType = "";
+
+const BRACKET_COLORS = [
+    "#48D597",
+    "#B47CFF",
+    "#FFB84D",
+    "#4DDCFF",
+    "#FF77C8"
+];
 
 ui.init = function () {
     if (panel) return;
@@ -31,13 +39,13 @@ ui.init = function () {
 
 <div id="composer-body">
     <div id="composer-input-row">
-        <input
+        <div
             id="composer-editor"
-            type="text"
+            contenteditable="true"
             spellcheck="false"
             autocomplete="off"
-            placeholder="Type a block..."
-        >
+            data-placeholder="Type a block..."
+        ></div>
         <button id="composer-clear" title="Clear">Clear</button>
     </div>
 
@@ -50,7 +58,7 @@ ui.init = function () {
     document.body.appendChild(panel);
 
     header = panel.querySelector("#composer-header");
-    input = panel.querySelector("#composer-editor");
+    editor = panel.querySelector("#composer-editor");
     preview = panel.querySelector("#composer-preview");
     status = panel.querySelector("#composer-status");
     clearButton = panel.querySelector("#composer-clear");
@@ -97,8 +105,9 @@ ui.init = function () {
         gap:"6px"
     });
 
-    Object.assign(input.style,{
+    Object.assign(editor.style,{
         flex:"1",
+        minHeight:"39px",
         boxSizing:"border-box",
         padding:"10px",
         fontSize:"15px",
@@ -107,7 +116,9 @@ ui.init = function () {
         outline:"none",
         background:"#111",
         color:"#fff",
-        fontFamily:"Consolas,monospace"
+        fontFamily:"Consolas,monospace",
+        whiteSpace:"pre-wrap",
+        overflow:"hidden"
     });
 
     Object.assign(clearButton.style,{
@@ -147,10 +158,10 @@ ui.init = function () {
     panel.querySelector("#composer-close").onclick = ui.hide;
 
     clearButton.onclick = function () {
-        input.value = "";
+        setEditorText("");
         Composer.renderer.clear();
         ui.status("Cleared");
-        input.focus();
+        editor.focus();
     };
 
     header.addEventListener("mousedown",e=>{
@@ -167,11 +178,18 @@ ui.init = function () {
 
     document.addEventListener("mouseup",()=>{ drag=false; });
 
-    input.addEventListener("beforeinput", e => {
+    editor.addEventListener("beforeinput", e => {
         lastInputType = e.inputType || "";
     });
 
-    input.addEventListener("keydown",e=>{
+    editor.addEventListener("paste", e => {
+        e.preventDefault();
+
+        const text = (e.clipboardData || window.clipboardData).getData("text");
+        document.execCommand("insertText", false, text);
+    });
+
+    editor.addEventListener("keydown",e=>{
         if(e.key === "Tab" || e.key === "Enter"){
             if(jumpToNextSlot()){
                 e.preventDefault();
@@ -179,14 +197,159 @@ ui.init = function () {
         }
     });
 
-    input.addEventListener("input",()=>{
+    editor.addEventListener("input",()=>{
+        const cursor = getCaretOffset();
+        let text = getEditorText();
+
         if(!smartTypingLock && !lastInputType.startsWith("delete")){
-            applySmartTyping();
+            const result = getSmartTypingResultForEditor(text, cursor);
+
+            if(result){
+                setEditorText(result.text, result.selectStart, result.selectEnd);
+                updatePreview();
+                return;
+            }
         }
 
+        renderEditorText(text);
+        setCaretOffset(cursor);
         updatePreview();
     });
 };
+
+/*=========================================
+    EDITOR TEXT + COLORING
+=========================================*/
+
+function getEditorText(){
+    return editor.textContent || "";
+}
+
+function setEditorText(text, selectStart, selectEnd){
+    renderEditorText(text);
+
+    const start = typeof selectStart === "number" ? selectStart : text.length;
+    const end = typeof selectEnd === "number" ? selectEnd : start;
+
+    setSelectionOffsets(start, end);
+}
+
+function renderEditorText(text){
+    if(!text){
+        editor.innerHTML = "";
+        return;
+    }
+
+    let html = "";
+    let depth = 0;
+
+    for(let i=0;i<text.length;i++){
+        const char = text[i];
+
+        if(char === "["){
+            depth++;
+            html += bracketSpan(char, depth);
+            continue;
+        }
+
+        if(char === "]"){
+            html += bracketSpan(char, depth);
+            depth = Math.max(0, depth - 1);
+            continue;
+        }
+
+        html += escapeHTML(char);
+    }
+
+    editor.innerHTML = html;
+}
+
+function bracketSpan(char, depth){
+    const color = BRACKET_COLORS[(Math.max(1, depth) - 1) % BRACKET_COLORS.length];
+
+    return `<span style="color:${color};font-weight:bold;">${char}</span>`;
+}
+
+function escapeHTML(text){
+    return String(text)
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;");
+}
+
+function getCaretOffset(){
+    const selection = window.getSelection();
+
+    if(!selection || !selection.rangeCount){
+        return 0;
+    }
+
+    const range = selection.getRangeAt(0);
+    const preRange = range.cloneRange();
+
+    preRange.selectNodeContents(editor);
+    preRange.setEnd(range.startContainer, range.startOffset);
+
+    return preRange.toString().length;
+}
+
+function setCaretOffset(offset){
+    setSelectionOffsets(offset, offset);
+}
+
+function setSelectionOffsets(start, end){
+    const range = document.createRange();
+    const selection = window.getSelection();
+
+    const startPos = findTextPosition(editor, start);
+    const endPos = findTextPosition(editor, end);
+
+    range.setStart(startPos.node, startPos.offset);
+    range.setEnd(endPos.node, endPos.offset);
+
+    selection.removeAllRanges();
+    selection.addRange(range);
+}
+
+function findTextPosition(root, targetOffset){
+    let current = 0;
+    const walker = document.createTreeWalker(
+        root,
+        NodeFilter.SHOW_TEXT,
+        null
+    );
+
+    let node;
+
+    while((node = walker.nextNode())){
+        const next = current + node.nodeValue.length;
+
+        if(targetOffset <= next){
+            return {
+                node,
+                offset: targetOffset - current
+            };
+        }
+
+        current = next;
+    }
+
+    if(!root.firstChild){
+        const textNode = document.createTextNode("");
+        root.appendChild(textNode);
+
+        return {
+            node:textNode,
+            offset:0
+        };
+    }
+
+    return {
+        node:root,
+        offset:root.childNodes.length
+    };
+}
 
 /*=========================================
     PREVIEW
@@ -194,7 +357,7 @@ ui.init = function () {
 
 function updatePreview(){
     if(Composer.generator.preview){
-        Composer.generator.preview(input.value);
+        Composer.generator.preview(getEditorText());
     }
 }
 
@@ -202,38 +365,18 @@ function updatePreview(){
     SMART TYPING
 =========================================*/
 
-function applySmartTyping(){
-    const value = input.value;
-    const cursor = input.selectionStart;
-
+function getSmartTypingResultForEditor(value, cursor){
     const nested = getNestedOperatorResult(value, cursor);
+
     if(nested){
-        applyResult(nested);
-        return;
+        return nested;
     }
 
     if(cursor !== value.length){
-        return;
+        return null;
     }
 
-    const result = getSmartTypingResult(value);
-
-    if(result){
-        applyResult(result);
-    }
-}
-
-function applyResult(result){
-    smartTypingLock = true;
-
-    input.value = result.text;
-
-    input.setSelectionRange(
-        result.selectStart,
-        result.selectEnd
-    );
-
-    smartTypingLock = false;
+    return getSmartTypingResult(value);
 }
 
 function getSmartTypingResult(value){
@@ -561,10 +704,14 @@ function isOperatorText(text){
 =========================================*/
 
 function jumpToNextSlot(){
-    const value = input.value;
-    const cursor = input.selectionStart;
-    const selectionStart = input.selectionStart;
-    const selectionEnd = input.selectionEnd;
+    const value = getEditorText();
+    const cursor = getCaretOffset();
+    const selection = window.getSelection();
+
+    const selectionStart = cursor;
+    const selectionEnd = selection && selection.rangeCount
+        ? selection.toString().length + selectionStart
+        : cursor;
 
     const slots = getSelectableSlots(value);
 
@@ -584,7 +731,7 @@ function jumpToNextSlot(){
 
     for(const slot of slots){
         if(slot.innerStart > startAfter || slot.end > startAfter){
-            input.setSelectionRange(slot.innerStart, slot.innerEnd);
+            setSelectionOffsets(slot.innerStart, slot.innerEnd);
             return true;
         }
     }
@@ -668,7 +815,7 @@ ui.show=function(){
         Composer.renderer.resize();
     });
 
-    input.focus();
+    editor.focus();
 };
 
 ui.hide=function(){
@@ -691,11 +838,11 @@ ui.setPreview=function(html){
 };
 
 ui.getText=function(){
-    return input.value;
+    return getEditorText();
 };
 
 ui.clear=function(){
-    input.value="";
+    setEditorText("");
     Composer.renderer.clear();
 };
 
