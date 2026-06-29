@@ -1290,8 +1290,13 @@ function installShearHook(drawable) {
             const uniforms =
                 oldGetUniforms();
 
-            const m =
+            const original =
                 uniforms.u_modelMatrix;
+
+            const m =
+                new Float32Array(
+                    original
+                );
 
             const a = m[0];
             const b = m[1];
@@ -1339,6 +1344,8 @@ function installShearHook(drawable) {
 
             m[5] =
                 d + b * shearX;
+
+            uniforms.u_modelMatrix = m;
 
             return uniforms;
 
