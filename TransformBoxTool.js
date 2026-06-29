@@ -1092,8 +1092,6 @@
         let spriteStartX = 0;
         let spriteStartY = 0;
         let rotating = false;
-        let draggingSkew = false;
-        let skewMoved = false;
         let rotateCenterX = 0;
         let rotateCenterY = 0;
         let rotateScaleX = 0;
@@ -1104,8 +1102,6 @@
         let startMouseY = 0;
         let shearX = 0;
         let shearY = 0;
-        let skewAnimationFrame = null;
-        let skewStartBounds = null;
         let activeSkewSession = null;
         let alphaDragging = false;
         let lastPosX = null;
@@ -1261,23 +1257,27 @@ function installShearHook(drawable) {
             const m =
                 uniforms.u_modelMatrix;
 
-            if (
-                !this.__gandhiShearActive &&
-                !this.__gandhiShearCommitted
-            ) {
-                return uniforms;
-            }
-
             const a = m[0];
             const b = m[1];
             const c = m[4];
             const d = m[5];
 
-            const shearX =
+            let shearX =
                 this.__gandhiShearX || 0;
 
-            const shearY =
+            let shearY =
                 this.__gandhiShearY || 0;
+
+            if (
+                activeSkewSession &&
+                activeSkewSession.drawable === this
+            ) {
+                shearX =
+                    activeSkewSession.liveShearX || 0;
+
+                shearY =
+                    activeSkewSession.liveShearY || 0;
+            }
 
             m[0] =
                 a + c * shearY;
@@ -1313,8 +1313,6 @@ function createSkewSession(e) {
     if (!drawable) return null;
 
     installShearHook(drawable);
-    drawable.__gandhiShearActive = true;
-    drawable.__gandhiShearCommitted = false;
 
     const session = {
         target,
@@ -1323,13 +1321,15 @@ function createSkewSession(e) {
         startMouseY: e.clientY,
         startShearX: drawable.__gandhiShearX || 0,
         startShearY: drawable.__gandhiShearY || 0,
+        liveShearX: drawable.__gandhiShearX || 0,
+        liveShearY: drawable.__gandhiShearY || 0,
 
         onMove(moveEvent) {
-            this.drawable.__gandhiShearX =
+            this.liveShearX =
                 this.startShearX +
                 (moveEvent.clientX - this.startMouseX) / 200;
 
-            this.drawable.__gandhiShearY =
+            this.liveShearY =
                 this.startShearY +
                 (moveEvent.clientY - this.startMouseY) / 200;
 
@@ -1347,15 +1347,18 @@ function createSkewSession(e) {
         },
 
         onUp() {
-            this.drawable.__gandhiShearActive = false;
-            this.drawable.__gandhiShearCommitted = true;
+            this.drawable.__gandhiShearX =
+                this.liveShearX;
+
+            this.drawable.__gandhiShearY =
+                this.liveShearY;
+
             this.destroy();
             activeSkewSession = null;
             updateSelectionBox();
         },
 
         destroy() {
-            this.drawable.__gandhiShearActive = false;
             window.removeEventListener("mousemove", this.boundMove, true);
             window.removeEventListener("mouseup", this.boundUp, true);
         }
@@ -1373,37 +1376,6 @@ function createSkewSession(e) {
     activeSkewSession = session;
 
     return session;
-}
-
-function startSkewRedrawLoop() {
-    if (skewAnimationFrame) return;
-
-    const tick = () => {
-        if (!draggingSkew) {
-            skewAnimationFrame = null;
-            return;
-        }
-
-        const target = vm.editingTarget;
-        if (target) {
-            const drawable =
-                  vm.runtime.renderer._allDrawables[
-                      target.drawableID
-                  ];
-
-            if (drawable) {
-                drawable.setTransformDirty();
-                target.emitVisualChange();
-                vm.runtime.requestRedraw();
-            }
-        }
-
-        skewAnimationFrame =
-            requestAnimationFrame(tick);
-    };
-
-    skewAnimationFrame =
-        requestAnimationFrame(tick);
 }
 
 function applyTargetVisualFlipX(target) {
@@ -1571,23 +1543,6 @@ flipVerticalHandle.addEventListener(
               resizing = false;
               dragging = false;
               rotating = false;
-              const wasDraggingSkew =
-                    draggingSkew;
-
-              draggingSkew = false;
-              skewStartBounds = null;
-              skewMoved = false;
-
-              if (wasDraggingSkew) {
-                  setTimeout(
-                      updateSelectionBox,
-                      0
-                  );
-              }
-              if (skewAnimationFrame) {
-                  cancelAnimationFrame(skewAnimationFrame);
-                  skewAnimationFrame = null;
-              }
 
               alphaDragging =
                   false;
@@ -1700,7 +1655,6 @@ flipVerticalHandle.addEventListener(
                    !dragging &&
                    !resizing &&
                    !rotating &&
-                   !draggingSkew &&
                    !alphaDragging
                ) {
 
@@ -1728,7 +1682,6 @@ flipVerticalHandle.addEventListener(
                     dragging ||
                     resizing ||
                     rotating ||
-                    draggingSkew ||
                     alphaDragging
                 ) {
 
@@ -2015,30 +1968,8 @@ flipVerticalHandle.addEventListener(
                 target
             );
 
-            let rawBounds;
-
-            if (
-                draggingSkew &&
-                skewStartBounds
-            ) {
-
-                rawBounds = {
-                    left:
-                        skewStartBounds.left,
-                    right:
-                        skewStartBounds.right,
-                    top:
-                        skewStartBounds.top,
-                    bottom:
-                        skewStartBounds.bottom
-                };
-
-            } else {
-
-                rawBounds =
-                    drawable.getAABB();
-
-            }
+            const rawBounds =
+                  drawable.getAABB();
 
             const bounds =
                   getShearAdjustedBounds(
