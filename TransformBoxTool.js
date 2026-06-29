@@ -769,6 +769,23 @@
             "click",
             () => {
                 const target = vm.editingTarget;
+                const drawable =
+                    vm.runtime.renderer
+                    ._allDrawables[
+                        target.drawableID
+                    ];
+
+                if (drawable) {
+
+                    installShearHook(
+                        drawable
+                    );
+
+                    drawable.__gandhiShearX = 0;
+                    drawable.__gandhiShearY = 0;
+
+                }
+
                 target.setDirection(90);
                 target.setSize(100);
                 applySpriteAlpha(100);
@@ -1006,6 +1023,9 @@
                ._allDrawables[
                    vm.editingTarget.drawableID
                ];
+               installShearHook(
+                   drawable
+               );
                startScaleX =
                    drawable.scale[0];
 
@@ -1040,6 +1060,9 @@
                ._allDrawables[
                    vm.editingTarget.drawableID
                ];
+               installShearHook(
+                   drawable
+               );
                startScaleX =
                    drawable.scale[0];
 
@@ -1168,6 +1191,9 @@
                 startY = e.clientY;
 
                 const drawable = vm.runtime.renderer._allDrawables[vm.editingTarget.drawableID];
+                installShearHook(
+                    drawable
+                );
                 startSize = Math.abs(drawable.scale[0]);
             }
         );
@@ -1182,6 +1208,9 @@
                 resizing = true;
                 startX = e.clientX;
                 const drawable = vm.runtime.renderer._allDrawables[vm.editingTarget.drawableID];
+                installShearHook(
+                    drawable
+                );
                 startScaleX =
                     drawable.scale[0];
 
@@ -1208,6 +1237,59 @@ function normalizeDirection(deg) {
     return deg;
 }
 
+function installShearHook(drawable) {
+
+    if (!drawable) return;
+
+    if (drawable.__gandhiShearInstalled)
+        return;
+
+    drawable.__gandhiShearInstalled =
+        true;
+
+    drawable.__gandhiShearX = 0;
+    drawable.__gandhiShearY = 0;
+
+    const oldGetUniforms =
+        drawable.getUniforms.bind(drawable);
+
+    drawable.getUniforms =
+        function () {
+
+            const uniforms =
+                oldGetUniforms();
+
+            const m =
+                uniforms.u_modelMatrix;
+
+            if (this.__gandhiShearX) {
+
+                m[4] +=
+                    m[0] *
+                    this.__gandhiShearX;
+
+                m[5] +=
+                    m[1] *
+                    this.__gandhiShearX;
+            }
+
+            if (this.__gandhiShearY) {
+
+                m[0] +=
+                    m[4] *
+                    this.__gandhiShearY;
+
+                m[1] +=
+                    m[5] *
+                    this.__gandhiShearY;
+            }
+
+            return uniforms;
+
+        };
+
+}
+
 function applyTargetVisualFlipX(target) {
     if (!target) return;
 
@@ -1215,6 +1297,9 @@ function applyTargetVisualFlipX(target) {
           vm.runtime.renderer._allDrawables[
               target.drawableID
           ];
+    installShearHook(
+        drawable
+    );
     if (!drawable) return;
 
     const absX =
@@ -1296,6 +1381,9 @@ flipVerticalHandle.addEventListener(
                 e.stopPropagation();
 
                 const drawable = vm.runtime.renderer._allDrawables[vm.editingTarget.drawableID];
+                installShearHook(
+                    drawable
+                );
                 rotateScaleX = drawable.scale[0];
                 rotateScaleY = drawable.scale[1];
 
@@ -1516,6 +1604,9 @@ flipVerticalHandle.addEventListener(
                        ._allDrawables[
                            vm.editingTarget.drawableID
                        ];
+                   installShearHook(
+                       drawable
+                   );
 
                    drawable.__gandhiShearX =
                        (e.clientX - startMouseX)
@@ -1524,8 +1615,6 @@ flipVerticalHandle.addEventListener(
                    drawable.__gandhiShearY =
                        (e.clientY - startMouseY)
                        / 200;
-
-                   drawable.setTransformDirty();
 
                    vm.runtime.requestRedraw();
 
@@ -1599,6 +1688,9 @@ flipVerticalHandle.addEventListener(
                     ._allDrawables[
                         vm.editingTarget.drawableID
                     ];
+                    installShearHook(
+                        drawable
+                    );
 
                     const signX =
                           visualFlipX ? -1 : 1;
@@ -1671,6 +1763,9 @@ flipVerticalHandle.addEventListener(
                     vm.editingTarget.setDirection(newDirection);
 
                     const drawable = vm.runtime.renderer._allDrawables[vm.editingTarget.drawableID];
+                    installShearHook(
+                        drawable
+                    );
                     drawable.updateScale([
                         rotateScaleX,
                         rotateScaleY
@@ -1718,6 +1813,9 @@ flipVerticalHandle.addEventListener(
             if (!target) return;
 
             const drawable = vm.runtime.renderer._allDrawables[target.drawableID];
+            installShearHook(
+                drawable
+            );
             if (!drawable) return;
 
             applyTargetVisualFlipX(
