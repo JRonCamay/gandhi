@@ -81,48 +81,35 @@ Renderer.draw = function(block){
 
     const blockX = 12;
     const blockY = 16;
-    const blockH = 34;
 
     const blockStyle = getBlockStyle(block);
-    const shape = getDrawableShape(
-        getBlockShape(blockStyle)
-    );
-    const color = blockStyle.color;
+    const shape = getBlockShape(blockStyle);
+    const color = blockStyle.color || "#4C97FF";
+    const strokeColor = getStrokeColor(color);
 
-    Composer.paths.draw(
+    const blockH = getBlockHeight(shape);
 
+    drawBlockShape(
         ctx,
-
         shape,
-
         blockX,
-
         blockY,
-
         width,
-
         blockH,
-
         color,
-
-        getStrokeColor(color)
-
+        strokeColor
     );
 
     ctx.font = "bold 15px Segoe UI";
 
-    let x = blockX + 12;
+    let x = blockX + getTextLeftPadding(shape);
 
     for(const component of components){
 
         const used = drawComponent(
-
             component,
-
             x,
-
-            blockY + blockH/2
-
+            blockY + 17
         );
 
         x += used + 4;
@@ -158,6 +145,10 @@ function getBlockStyle(block){
 
 function getBlockShape(blockStyle){
 
+    if(blockStyle && blockStyle.shape){
+        return blockStyle.shape;
+    }
+
     if(
         Composer.Shapes &&
         typeof Composer.Shapes.getBlockShape === "function"
@@ -165,18 +156,243 @@ function getBlockShape(blockStyle){
         return Composer.Shapes.getBlockShape(blockStyle);
     }
 
-    return blockStyle.shape || "stack";
+    return "stack";
 
 }
 
-function getDrawableShape(shape){
+/*=========================================
+    SHAPE DRAWING
+=========================================*/
 
-    if(Composer.paths && Composer.paths[shape]){
-        return shape;
+function getBlockHeight(shape){
+
+    switch(shape){
+
+        case "hat":
+            return 42;
+
+        case "reporter":
+        case "boolean":
+            return 28;
+
+        case "c-block":
+        case "end-block":
+            return 78;
+
+        default:
+            return 34;
+
     }
 
-    // TODO: Draw c-block and end-block shapes when Composer.paths supports them.
-    return "stack";
+}
+
+function getTextLeftPadding(shape){
+
+    switch(shape){
+
+        case "boolean":
+            return 20;
+
+        case "reporter":
+            return 14;
+
+        default:
+            return 12;
+
+    }
+
+}
+
+function drawBlockShape(ctx, shape, x, y, w, h, color, strokeColor){
+
+    ctx.save();
+
+    ctx.fillStyle = color;
+    ctx.strokeStyle = strokeColor || color;
+    ctx.lineWidth = 1;
+
+    ctx.beginPath();
+
+    switch(shape){
+
+        case "hat":
+            drawHatPath(ctx, x, y, w, h);
+        break;
+
+        case "cap":
+            drawCapPath(ctx, x, y, w, h);
+        break;
+
+        case "reporter":
+            drawReporterPath(ctx, x, y, w, h);
+        break;
+
+        case "boolean":
+            drawBooleanPath(ctx, x, y, w, h);
+        break;
+
+        case "c-block":
+            drawCBlockPath(ctx, x, y, w, h, false);
+        break;
+
+        case "end-block":
+            drawCBlockPath(ctx, x, y, w, h, true);
+        break;
+
+        case "stack":
+        default:
+            drawStackPath(ctx, x, y, w, h);
+        break;
+
+    }
+
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.restore();
+
+}
+
+function drawStackPath(ctx, x, y, w, h){
+
+    const r = 4;
+
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + 16, y);
+    drawTopNotch(ctx, x + 16, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + 36, y + h);
+    drawBottomBump(ctx, x + 16, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+
+}
+
+function drawHatPath(ctx, x, y, w, h){
+
+    const r = 4;
+    const hatH = 10;
+
+    ctx.moveTo(x + r, y + hatH);
+    ctx.quadraticCurveTo(x + 16, y - 6, x + 44, y + hatH);
+    ctx.lineTo(x + w - r, y + hatH);
+    ctx.quadraticCurveTo(x + w, y + hatH, x + w, y + hatH + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + 36, y + h);
+    drawBottomBump(ctx, x + 16, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + hatH + r);
+    ctx.quadraticCurveTo(x, y + hatH, x + r, y + hatH);
+
+}
+
+function drawCapPath(ctx, x, y, w, h){
+
+    const r = 4;
+
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + 16, y);
+    drawTopNotch(ctx, x + 16, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+
+}
+
+function drawReporterPath(ctx, x, y, w, h){
+
+    const r = h / 2;
+
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+
+}
+
+function drawBooleanPath(ctx, x, y, w, h){
+
+    const point = 12;
+
+    ctx.moveTo(x + point, y);
+    ctx.lineTo(x + w - point, y);
+    ctx.lineTo(x + w, y + h / 2);
+    ctx.lineTo(x + w - point, y + h);
+    ctx.lineTo(x + point, y + h);
+    ctx.lineTo(x, y + h / 2);
+    ctx.lineTo(x + point, y);
+
+}
+
+function drawCBlockPath(ctx, x, y, w, h, noBottomBump){
+
+    const r = 4;
+    const mouthTop = y + 34;
+    const mouthBottom = y + h - 18;
+    const innerX = x + 26;
+
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + 16, y);
+    drawTopNotch(ctx, x + 16, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, mouthTop - r);
+    ctx.quadraticCurveTo(x + w, mouthTop, x + w - r, mouthTop);
+    ctx.lineTo(innerX + 20, mouthTop);
+    drawBottomBump(ctx, innerX, mouthTop);
+    ctx.lineTo(innerX + r, mouthTop);
+    ctx.quadraticCurveTo(innerX, mouthTop, innerX, mouthTop + r);
+    ctx.lineTo(innerX, mouthBottom - r);
+    ctx.quadraticCurveTo(innerX, mouthBottom, innerX + r, mouthBottom);
+    ctx.lineTo(x + w - r, mouthBottom);
+    ctx.quadraticCurveTo(x + w, mouthBottom, x + w, mouthBottom + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+
+    if(!noBottomBump){
+        ctx.lineTo(x + 36, y + h);
+        drawBottomBump(ctx, x + 16, y + h);
+    }
+
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+
+}
+
+function drawTopNotch(ctx, x, y){
+
+    ctx.lineTo(x + 5, y);
+    ctx.lineTo(x + 9, y + 4);
+    ctx.lineTo(x + 23, y + 4);
+    ctx.lineTo(x + 27, y);
+    ctx.lineTo(x + 36, y);
+
+}
+
+function drawBottomBump(ctx, x, y){
+
+    ctx.lineTo(x + 5, y);
+    ctx.lineTo(x + 9, y + 4);
+    ctx.lineTo(x + 23, y + 4);
+    ctx.lineTo(x + 27, y);
+    ctx.lineTo(x + 36, y);
 
 }
 
@@ -226,11 +442,8 @@ function buildComponents(block){
         if(parts[i].length){
 
             result.push({
-
                 type:"text",
-
                 value:parts[i]
-
             });
 
         }
@@ -238,11 +451,8 @@ function buildComponents(block){
         if(i < block.params.length){
 
             result.push({
-
                 type:block.params[i].type,
-
                 value:block.params[i].name
-
             });
 
         }
@@ -252,6 +462,7 @@ function buildComponents(block){
     return result;
 
 }
+
 /*=========================================
     MEASURE
 =========================================*/
@@ -267,23 +478,16 @@ function measureComponents(components){
         switch(component.type){
 
             case "text":
-
                 width += ctx.measureText(
                     component.value
                 ).width;
-
             break;
 
             default:
-
                 width += Composer.sockets.measure(
-
                     ctx,
-
                     component.type,
-
                     component.value || ""
-
                 );
 
         }
@@ -311,13 +515,9 @@ function drawComponent(component,x,centerY){
             ctx.font = "bold 15px Segoe UI";
 
             ctx.fillText(
-
                 component.value,
-
                 x,
-
                 centerY
-
             );
 
             return ctx.measureText(
@@ -327,83 +527,54 @@ function drawComponent(component,x,centerY){
         case "number":
 
             return Composer.sockets.number(
-
                 ctx,
-
                 component.value,
-
                 x,
-
                 centerY-10
-
             );
 
         case "string":
 
             return Composer.sockets.string(
-
                 ctx,
-
                 component.value,
-
                 x,
-
                 centerY-10
-
             );
 
         case "reporter":
 
             return Composer.sockets.reporter(
-
                 ctx,
-
                 component.value,
-
                 x,
-
                 centerY-10
-
             );
 
         case "menu":
 
             return Composer.sockets.menu(
-
                 ctx,
-
                 component.value,
-
                 x,
-
                 centerY-10
-
             );
 
         case "boolean":
 
             return Composer.sockets.boolean(
-
                 ctx,
-
                 component.value,
-
                 x,
-
                 centerY-10
-
             );
 
         case "color":
 
             return Composer.sockets.color(
-
                 ctx,
-
                 x,
-
                 centerY-10
-
             );
 
     }
@@ -411,6 +582,7 @@ function drawComponent(component,x,centerY){
     return 0;
 
 }
+
 /*=========================================
     INLINE BLOCK SUPPORT
 =========================================*/
@@ -424,13 +596,9 @@ function drawInline(block,x,y){
     for(const component of components){
 
         px += drawComponent(
-
             component,
-
             px,
-
             y
-
         );
 
         px += 4;
@@ -460,23 +628,15 @@ Renderer.measure = function(block){
 };
 
 Renderer.drawInline = function(
-
     block,
-
     x,
-
     y
-
 ){
 
     return drawInline(
-
         block,
-
         x,
-
         y
-
     );
 
 };
@@ -492,6 +652,7 @@ Renderer.setDebug = function(value){
     Renderer.debug = value;
 
 };
+
 /*=========================================
     RESIZE
 =========================================*/
@@ -511,14 +672,14 @@ Renderer.resize = function(){
 
 };
 
+/*=========================================
+    READY
+=========================================*/
+
 window.addEventListener(
     "resize",
     Renderer.resize
 );
-
-/*=========================================
-    READY
-=========================================*/
 
 Renderer.ready = function(){
 
