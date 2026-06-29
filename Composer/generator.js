@@ -152,14 +152,7 @@ function getCandidates(input){
         })
         .map(item => item.cmd);
 }
-    return candidates
-        .sort((a,b)=>{
-            if(b.score !== a.score) return b.score - a.score;
-            return a.cmd.pattern.length - b.cmd.pattern.length;
-        })
-        .map(item => item.cmd);
-}
-
+   
 gen.preview = function(input){
     const rawInput = String(input || "");
     const activeText = getActiveText(rawInput);
