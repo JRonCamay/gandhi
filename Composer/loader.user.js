@@ -9,20 +9,29 @@
 (function () {
     'use strict';
 
-    const BASE = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/";
+    const BASE = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/Composer/";
 
-    const MODULES = [
-        "Composer/parser.js",
-        "Composer/library.js",
-        "Composer/paths.js",
-        "Composer/sockets.js",
-        "composer/renderer/Shapes.js",
-        "composer/BlockStyle.js",
-        "Composer/renderer.js",
-        "Composer/blockly.js",
-        "Composer/generator.js",
-        "Composer/ui.js"
-    ];
+   const MODULES = {
+
+       core: [
+           "parser.js",
+           "generator.js",
+           "library.js",
+           "blockly.js"
+       ],
+
+       renderer: [
+           "renderer/BlockStyle.js",
+           "renderer/Shapes.js",
+
+       ],
+
+       ui: [
+           "ui.js"
+       ]
+
+   };
+
     window.Composer = {
         version: "0.1",
 
@@ -34,8 +43,6 @@
         paths: {},
         sockets: {},
         blockly: {},
-        Shapes: {},
-        BlockStyle: {},
 
         cache: {}
     };
@@ -57,8 +64,10 @@
         console.log("[Composer] Booting...");
 
         try {
-            for (const file of MODULES) {
-                await load(file);
+            for (const group of Object.values(MODULES)) {
+                for (const file of group) {
+                    await load(file);
+                }
             }
 
             console.log("[Composer] Ready.");
