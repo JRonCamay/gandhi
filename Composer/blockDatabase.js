@@ -634,18 +634,58 @@ function getRegistry(workspace) {
 
     if (!workspace) return null;
 
-    const factory =
-        workspace.blockFactory_;
+    if (typeof workspace.getScratchBlocksBlocks === "function") {
+        const blocks = workspace.getScratchBlocksBlocks();
 
-    if (!factory) return null;
+        if (blocks && Object.keys(blocks).length) {
+            return blocks;
+        }
+    }
 
-    return (
-        factory.blockMap ||
-        factory.blockMap_
-    );
+    if (typeof workspace.getScratchBlocks === "function") {
+        const scratchBlocks = workspace.getScratchBlocks();
+
+        if (
+            scratchBlocks &&
+            scratchBlocks.Blocks &&
+            Object.keys(scratchBlocks.Blocks).length
+        ) {
+            return scratchBlocks.Blocks;
+        }
+    }
+
+    const factory = workspace.blockFactory_;
+
+    if (factory) {
+        const map = factory.blockMap || factory.blockMap_;
+
+        if (map && Object.keys(map).length) {
+            return map;
+        }
+    }
+
+    if (
+        workspace.resizeHandlerWrapper_ &&
+        workspace.resizeHandlerWrapper_[0] &&
+        workspace.resizeHandlerWrapper_[0][0] &&
+        workspace.resizeHandlerWrapper_[0][0].Blockly &&
+        workspace.resizeHandlerWrapper_[0][0].Blockly.Blocks
+    ) {
+        return workspace.resizeHandlerWrapper_[0][0].Blockly.Blocks;
+    }
+
+    if (
+        workspace.toolbox_ &&
+        workspace.toolbox_.flyout_ &&
+        workspace.toolbox_.flyout_.workspace_ &&
+        workspace.toolbox_.flyout_.workspace_.blockDB_
+    ) {
+        return workspace.toolbox_.flyout_.workspace_.blockDB_;
+    }
+
+    return null;
 
 }
-
 function getProcedures(workspace) {
 
     if (!workspace) return null;
