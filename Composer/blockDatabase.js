@@ -375,18 +375,68 @@ function createBlockEntryFromRegistry(workspace, opcode, definition) {
             json.color ||
             null,
 
-        shape: null,
+        shape:
+            getShapeFromJson(json, opcode),
 
-        previous: false,
-        next: false,
-        output: false,
+        previous:
+            hasExtension(json, "shape_statement") ||
+            !!json.previousStatement,
+
+        next:
+            hasExtension(json, "shape_statement") ||
+            !!json.nextStatement,
+
+        output:
+            hasExtension(json, "output_number") ||
+            hasExtension(json, "output_string") ||
+            hasExtension(json, "output_boolean") ||
+            !!json.output,
 
         source: "registry"
 
     };
 
 }
+function hasExtension(json, name) {
 
+    return Array.isArray(json.extensions) &&
+        json.extensions.includes(name);
+
+}
+
+function getShapeFromJson(json, opcode) {
+
+    if (hasExtension(json, "shape_hat")) {
+        return "hat";
+    }
+
+    if (hasExtension(json, "shape_end")) {
+        return "cap";
+    }
+
+    if (hasExtension(json, "shape_boolean") ||
+        hasExtension(json, "output_boolean")) {
+        return "boolean";
+    }
+
+    if (hasExtension(json, "output_number") ||
+        hasExtension(json, "output_string") ||
+        json.output) {
+        return "reporter";
+    }
+
+    if (String(opcode).startsWith("control_") &&
+        (
+            String(opcode).includes("repeat") ||
+            String(opcode).includes("if") ||
+            String(opcode).includes("forever")
+        )) {
+        return "c-block";
+    }
+
+    return "stack";
+
+}
 function createTemporaryBlock(workspace, opcode) {
 
     if (!workspace || typeof workspace.newBlock !== "function") {
