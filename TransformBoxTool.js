@@ -1617,7 +1617,9 @@ flipVerticalHandle.addEventListener(
                        / 200;
 
                    drawable.setTransformDirty();
+                   drawable.updateMatrix();
                    vm.editingTarget.emitVisualChange();
+                   vm.runtime.renderer.draw();
                    vm.runtime.requestRedraw();
 
                    updateSelectionBox();
