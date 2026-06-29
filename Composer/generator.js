@@ -104,7 +104,13 @@ function scoreCandidate(input, cmd){
 function getCandidates(input){
     const candidates = [];
 
-    for(const cmd of Composer.library){
+    const blocks =
+        Composer.blocks &&
+        typeof Composer.blocks.getAll === "function"
+            ? Composer.blocks.getAll()
+            : Composer.library || [];
+
+    for(const cmd of blocks){
         const score = scoreCandidate(input, cmd);
 
         if(score > 0){
@@ -115,6 +121,13 @@ function getCandidates(input){
         }
     }
 
+    return candidates
+        .sort((a,b)=>{
+            if(b.score !== a.score) return b.score - a.score;
+            return a.cmd.pattern.length - b.cmd.pattern.length;
+        })
+        .map(item => item.cmd);
+}
     return candidates
         .sort((a,b)=>{
             if(b.score !== a.score) return b.score - a.score;
