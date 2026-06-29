@@ -27,7 +27,6 @@
         control_if: SHAPES.C_BLOCK,
         control_if_else: SHAPES.END_BLOCK,
         control_repeat_until: SHAPES.C_BLOCK,
-
         control_stop: SHAPES.CAP,
         control_delete_this_clone: SHAPES.CAP,
 
@@ -36,6 +35,23 @@
         sensing_coloristouchingcolor: SHAPES.BOOLEAN,
         sensing_keypressed: SHAPES.BOOLEAN,
         sensing_mousedown: SHAPES.BOOLEAN,
+
+        sensing_answer: SHAPES.REPORTER,
+        sensing_distanceto: SHAPES.REPORTER,
+        sensing_mousex: SHAPES.REPORTER,
+        sensing_mousey: SHAPES.REPORTER,
+
+        operator_add: SHAPES.REPORTER,
+        operator_subtract: SHAPES.REPORTER,
+        operator_multiply: SHAPES.REPORTER,
+        operator_divide: SHAPES.REPORTER,
+        operator_random: SHAPES.REPORTER,
+        operator_join: SHAPES.REPORTER,
+        operator_letter_of: SHAPES.REPORTER,
+        operator_length: SHAPES.REPORTER,
+        operator_mod: SHAPES.REPORTER,
+        operator_round: SHAPES.REPORTER,
+        operator_mathop: SHAPES.REPORTER,
 
         operator_lt: SHAPES.BOOLEAN,
         operator_equals: SHAPES.BOOLEAN,
@@ -53,6 +69,8 @@
             blockDefinition.type ||
             blockDefinition.blockType ||
             blockDefinition.opcode ||
+            blockDefinition.block ||
+            blockDefinition.id ||
             ""
         );
     }
