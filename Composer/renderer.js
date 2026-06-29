@@ -95,6 +95,19 @@ Renderer.draw = function(block){
 
 function getBlockStyle(block){
 
+    if(block && (block.color || block.shape)){
+
+        return {
+            color:block.color || null,
+            shape:block.shape || null,
+            previous:!!block.previous,
+            next:!!block.next,
+            output:!!block.output,
+            inputs:block.inputs || []
+        };
+
+    }
+
     if(
         Composer.BlockStyle &&
         typeof Composer.BlockStyle.getBlockStyle === "function" &&
@@ -113,7 +126,6 @@ function getBlockStyle(block){
     };
 
 }
-
 function getBlockShape(blockStyle){
 
     if(blockStyle && blockStyle.shape){
