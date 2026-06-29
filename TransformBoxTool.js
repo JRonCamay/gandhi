@@ -1139,14 +1139,9 @@ function normalizeDirection(deg) {
     return deg;
 }
 
-function applyVisualFlipX(drawable) {
-    const absX =
-          Math.abs(
-              drawable.scale[0]
-          );
-
+function flipDrawableX(drawable) {
     drawable.updateScale([
-        visualFlipX ? -absX : absX,
+        -drawable.scale[0],
         drawable.scale[1]
     ]);
 }
@@ -1167,19 +1162,17 @@ flipHandle.addEventListener(
               target.direction;
 
         // Horizontal screen-space flip:
-        // horizontal should toggle the visible detail mirror.
-        visualFlipX =
-            !visualFlipX;
-
-        applyVisualFlipX(
-            drawable
-        );
-
         target.setDirection(
             normalizeDirection(
                 180 - oldDirection
             )
         );
+
+        flipDrawableX(
+            drawable
+        );
+        visualFlipX =
+            drawable.scale[0] < 0;
 
         target.emitVisualChange();
         vm.runtime.requestRedraw();
@@ -1212,9 +1205,11 @@ flipVerticalHandle.addEventListener(
             )
         );
 
-        applyVisualFlipX(
+        flipDrawableX(
             drawable
         );
+        visualFlipX =
+            drawable.scale[0] < 0;
 
         target.emitVisualChange();
         vm.runtime.requestRedraw();
