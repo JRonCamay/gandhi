@@ -15,6 +15,8 @@
           new Map();
     const runtimeGhostMap =
           new Map();
+    const shearData =
+        Object.create(null);
 
     let runtimePaused =
         false;
@@ -165,6 +167,38 @@
         if (!window.vm || !window.vm.editingTarget) return 100;
         const ghost = window.vm.editingTarget.effects.ghost || 0;
         return 100 - ghost;
+    }
+
+    function getShear(targetId) {
+
+        return (
+            shearData[targetId] || {
+                x: 0,
+                y: 0
+            }
+        );
+
+    }
+
+    function setShear(
+        targetId,
+        x,
+        y
+    ) {
+
+        shearData[targetId] = {
+            x,
+            y
+        };
+
+    }
+
+    function clearShear(
+        targetId
+    ) {
+
+        delete shearData[targetId];
+
     }
 
 
@@ -783,8 +817,9 @@
                         drawable
                     );
 
-                    drawable.__gandhiShearX = 0;
-                    drawable.__gandhiShearY = 0;
+                    clearShear(
+                        target.id
+                    );
 
                 }
 
@@ -1243,8 +1278,8 @@ function installShearHook(drawable) {
     drawable.__gandhiShearInstalled =
         true;
 
-    drawable.__gandhiShearX = 0;
-    drawable.__gandhiShearY = 0;
+    drawable.__gandhiTargetId =
+        vm.editingTarget.id;
 
     const oldGetUniforms =
         drawable.getUniforms.bind(drawable);
@@ -1266,12 +1301,31 @@ function installShearHook(drawable) {
             let shearX = 0;
             let shearY = 0;
 
+            const targetId =
+                this.__gandhiTargetId;
+
             if (
                 activeShearBridge &&
                 activeShearBridge.drawable === this
             ) {
-                shearX = activeShearBridge.shearX || 0;
-                shearY = activeShearBridge.shearY || 0;
+                shearX =
+                    activeShearBridge.shearX;
+
+                shearY =
+                    activeShearBridge.shearY;
+            }
+            else
+            if (
+                targetId
+            ) {
+
+                const s =
+                    getShear(
+                        targetId
+                    );
+
+                shearX = s.x;
+                shearY = s.y;
             }
 
             m[0] =
@@ -1311,17 +1365,22 @@ function createSkewSession(e) {
 
     activeShearBridge = {
         drawable,
-        shearX: drawable.__gandhiShearX || 0,
-        shearY: drawable.__gandhiShearY || 0
+        shearX: getShear(target.id).x,
+        shearY: getShear(target.id).y
     };
+
+    const startShear =
+        getShear(
+            target.id
+        );
 
     const session = {
         target,
         drawable,
         startMouseX: e.clientX,
         startMouseY: e.clientY,
-        startShearX: drawable.__gandhiShearX || 0,
-        startShearY: drawable.__gandhiShearY || 0,
+        startShearX: startShear.x,
+        startShearY: startShear.y,
 
         onMove(moveEvent) {
             activeShearBridge.shearX =
@@ -1346,6 +1405,12 @@ function createSkewSession(e) {
         },
 
         onUp() {
+            setShear(
+                this.target.id,
+                activeShearBridge.shearX,
+                activeShearBridge.shearY
+            );
+
             activeShearBridge = null;
             this.destroy();
             activeSkewSession = null;
@@ -1877,11 +1942,22 @@ flipVerticalHandle.addEventListener(
             bounds,
             drawable
         ) {
+            const targetId =
+                  drawable.__gandhiTargetId;
+
+            const shear =
+                  targetId
+                  ? getShear(targetId)
+                  : {
+                      x: 0,
+                      y: 0
+                  };
+
             const shearX =
-                  drawable.__gandhiShearX || 0;
+                  shear.x;
 
             const shearY =
-                  drawable.__gandhiShearY || 0;
+                  shear.y;
 
             if (
                 !shearX &&
