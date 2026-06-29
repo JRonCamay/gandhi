@@ -293,49 +293,63 @@ function createBlockEntryFromRegistry(workspace, opcode, definition) {
 
     const fallback = FALLBACK_PATTERNS[opcode];
 
-    let instance = null;
-    let instanceData = null;
+    let json = null;
 
     try {
-        instance = createTemporaryBlock(workspace, opcode);
 
-        if (instance) {
-            instanceData = readBlockInstance(instance);
-        }
-    } catch (e) {
-        instanceData = null;
-    } finally {
-        disposeTemporaryBlock(instance);
-    }
+        definition.init.call({
+
+            jsonInit(data) {
+
+                json = data;
+
+            }
+
+        });
+
+    } catch (e) {}
+
+    const parsed = json
+        ? buildPatternFromJson(json)
+        : null;
 
     const pattern =
         (fallback && fallback.pattern) ||
-        (instanceData && instanceData.pattern) ||
+        (parsed && parsed.pattern) ||
         patternFromOpcode(opcode);
 
     const preview =
         (fallback && fallback.preview) ||
+        (parsed && parsed.preview) ||
         pattern.replace(/\[\]/g, "()");
 
     const params =
         (fallback && fallback.params) ||
-        (instanceData && instanceData.params) ||
+        (parsed && parsed.params) ||
         [];
 
     return {
+
         id: opcode,
         block: opcode,
         opcode,
-        category: getCategoryFromOpcode(opcode),
+
+        category:
+            getCategoryFromOpcode(opcode),
+
         pattern,
         preview,
         params,
-        color: instanceData ? instanceData.color : null,
-        shape: instanceData ? instanceData.shape : null,
-        previous: instanceData ? instanceData.previous : false,
-        next: instanceData ? instanceData.next : false,
-        output: instanceData ? instanceData.output : false,
+
+        color: null,
+        shape: null,
+
+        previous: false,
+        next: false,
+        output: false,
+
         source: "registry"
+
     };
 
 }
@@ -793,7 +807,131 @@ function buildPattern(block) {
     };
 
 }
+function buildPatternFromJson(json) {
 
+    const params = [];
+
+    const previewParams = [];
+
+    let pattern = "";
+
+    let index = 1;
+
+    while (json["message" + (index - 1)] !== undefined) {
+
+        const message =
+            String(json["message" + (index - 1)] || "");
+
+        const args =
+            json["args" + (index - 1)] || [];
+
+        pattern += message;
+
+        for (let i = 0; i < args.length; i++) {
+
+            const arg = args[i];
+
+            const placeholder = "%" + (i + 1);
+
+            let replacement = "[]";
+
+            switch (arg.type) {
+
+                case "field_dropdown":
+
+                    replacement = "[]";
+
+                    params.push({
+                        name: arg.name || "",
+                        type: "menu"
+                    });
+
+                    previewParams.push("()");
+
+                    break;
+
+                case "field_variable":
+
+                    replacement = "[]";
+
+                    params.push({
+                        name: arg.name || "",
+                        type: "variable"
+                    });
+
+                    previewParams.push("()");
+
+                    break;
+
+                case "input_statement":
+
+                    replacement = "{}";
+
+                    params.push({
+                        name: arg.name || "",
+                        type: "stack"
+                    });
+
+                    previewParams.push("{}");
+
+                    break;
+
+                case "input_value":
+
+                    replacement = "[]";
+
+                    params.push({
+                        name: arg.name || "",
+                        type: "reporter"
+                    });
+
+                    previewParams.push("()");
+
+                    break;
+
+                default:
+
+                    replacement = "[]";
+
+                    params.push({
+                        name: arg.name || "",
+                        type: arg.type || "unknown"
+                    });
+
+                    previewParams.push("()");
+
+                    break;
+
+            }
+
+            pattern = pattern.replace(
+                placeholder,
+                replacement
+            );
+
+        }
+
+        pattern += " ";
+
+        index++;
+
+    }
+
+    pattern = normalizeSpaces(pattern);
+
+    return {
+
+        pattern,
+
+        preview: pattern
+            .replace(/\[\]/g, "()")
+            .replace(/\{\}/g, "{}"),
+
+        params
+
+    };
+
+}
 function detectParamType(input) {
 
     const check =
