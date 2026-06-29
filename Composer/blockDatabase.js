@@ -1104,22 +1104,38 @@ function normalizeSpaces(text) {
 
 function scoreBlock(query, block) {
 
-    const p =
-        normalize(block.pattern);
+    const fields = [
 
-    if (p === query)
-        return 1000;
+        block.pattern,
+        block.preview,
+        block.opcode,
+        block.block,
+        block.category
 
-    if (p.startsWith(query))
-        return 800;
+    ];
 
-    if (p.includes(query))
-        return 500;
+    let best = 0;
 
-    return 0;
+    for (const value of fields) {
+
+        const text = normalize(value || "");
+
+        if (!text) continue;
+
+        if (text === query)
+            best = Math.max(best, 1000);
+
+        else if (text.startsWith(query))
+            best = Math.max(best, 800);
+
+        else if (text.includes(query))
+            best = Math.max(best, 500);
+
+    }
+
+    return best;
 
 }
-
 /*=========================================
     START
 =========================================*/
