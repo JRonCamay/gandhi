@@ -1007,6 +1007,19 @@
 
                startMouseY =
                    e.clientY;
+
+               const drawable =
+                     vm.runtime.renderer
+                     ._allDrawables[
+                         vm.editingTarget.drawableID
+                     ];
+
+               installShearHook(
+                   drawable
+               );
+
+               skewStartBounds =
+                   drawable.getAABB();
            }
        );
        skewHandle.addEventListener(
@@ -1114,6 +1127,7 @@
         let shearX = 0;
         let shearY = 0;
         let skewAnimationFrame = null;
+        let skewStartBounds = null;
         let alphaDragging = false;
         let lastPosX = null;
         let lastPosY = null;
@@ -1496,6 +1510,7 @@ flipVerticalHandle.addEventListener(
                     draggingSkew;
 
               draggingSkew = false;
+              skewStartBounds = null;
               skewMoved = false;
 
               if (wasDraggingSkew) {
@@ -1966,9 +1981,17 @@ flipVerticalHandle.addEventListener(
                 target
             );
 
+            const rawBounds =
+                  (
+                      draggingSkew &&
+                      skewStartBounds
+                  )
+                  ? skewStartBounds
+                  : drawable.getAABB();
+
             const bounds =
                   getShearAdjustedBounds(
-                      drawable.getAABB(),
+                      rawBounds,
                       drawable
                   );
             const tl = scratchToScreen(bounds.left, bounds.top, canvas);
