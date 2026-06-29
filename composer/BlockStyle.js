@@ -40,8 +40,12 @@
     }
 
     function getBlockShape(block) {
+        if (global.Shapes && typeof global.Shapes.getBlockShape === "function") {
+            return global.Shapes.getBlockShape(block);
+        }
+
         if (block.outputConnection) {
-            return "output";
+            return "reporter";
         }
 
         if (block.previousConnection || block.nextConnection) {
