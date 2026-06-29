@@ -13,6 +13,8 @@ let drag = false;
 let dx = 0;
 let dy = 0;
 
+let smartTypingLock = false;
+
 ui.init = function () {
 
     if (panel) return;
@@ -51,19 +53,20 @@ Ready
 
     header = panel.querySelector("#composer-header");
     input = panel.querySelector("#composer-editor");
-   preview = panel.querySelector("#composer-preview");
+    preview = panel.querySelector("#composer-preview");
 
     preview.style.padding = "0";
     preview.style.background = "#202020";
     preview.style.border = "0";
     preview.style.overflow = "hidden";
- 
-       if(
+
+    if(
         Composer.renderer &&
         Composer.renderer.init
     ){
         Composer.renderer.init(preview);
     }
+
     status = panel.querySelector("#composer-status");
 
     Object.assign(panel.style,{
@@ -171,7 +174,8 @@ Ready
         boxSizing:"border-box"
 
     });
-       Object.assign(status.style,{
+
+    Object.assign(status.style,{
 
         position:"absolute",
 
@@ -225,19 +229,533 @@ Ready
 
     });
 
-   input.addEventListener("input",()=>{
+    input.addEventListener("keydown",e=>{
 
-        console.log("UI:",input.value);
-    
-        if(Composer.generator.preview){
-    
-            Composer.generator.preview(input.value);
-    
+        if(e.key === "Tab"){
+
+            if(jumpToNextSlot()){
+
+                e.preventDefault();
+
+            }
+
         }
-    
+
+        if(e.key === "Enter"){
+
+            if(jumpToNextSlot()){
+
+                e.preventDefault();
+
+            }
+
+        }
+
+    });
+
+    input.addEventListener("input",()=>{
+
+        if(!smartTypingLock){
+
+            applySmartTyping();
+
+        }
+
+        updatePreview();
+
     });
 
 };
+
+function updatePreview(){
+
+    console.log("UI:",input.value);
+
+    if(Composer.generator.preview){
+
+        Composer.generator.preview(input.value);
+
+    }
+
+}
+
+/*=========================================
+    SMART TYPING
+=========================================*/
+
+function applySmartTyping(){
+
+    const value = input.value;
+    const cursor = input.selectionStart;
+
+    if(cursor !== value.length){
+        return;
+    }
+
+    const result = getSmartTypingResult(value);
+
+    if(!result){
+        return;
+    }
+
+    smartTypingLock = true;
+
+    input.value = result.text;
+
+    if(result.selectStart !== null && result.selectEnd !== null){
+
+        input.setSelectionRange(
+            result.selectStart,
+            result.selectEnd
+        );
+
+    }else{
+
+        input.setSelectionRange(
+            result.cursor,
+            result.cursor
+        );
+
+    }
+
+    smartTypingLock = false;
+
+}
+
+function getSmartTypingResult(value){
+
+    const templates = getTemplates();
+
+    const operatorResult = getOperatorTemplateResult(value, templates);
+
+    if(operatorResult){
+        return operatorResult;
+    }
+
+    let best = null;
+
+    for(const template of templates){
+
+        const result = getTemplateCompletion(value, template);
+
+        if(!result){
+            continue;
+        }
+
+        if(
+            !best ||
+            result.text.length < best.text.length
+        ){
+            best = result;
+        }
+
+    }
+
+    return best;
+
+}
+
+function getTemplates(){
+
+    const found = [];
+
+    collectTemplates(Composer.library, found);
+
+    const fallback = [
+        "move [] steps",
+        "turn clockwise [] degrees",
+        "turn counterclockwise [] degrees",
+        "go to x: [] y: []",
+        "say []",
+        "say [] for [] seconds",
+        "think []",
+        "think [] for [] seconds",
+        "repeat []",
+        "wait [] seconds",
+        "[] + []",
+        "[] - []",
+        "[] * []",
+        "[] / []",
+        "[] < []",
+        "[] = []",
+        "[] > []",
+        "pick random [] to []",
+        "join [] []",
+        "letter [] of []"
+    ];
+
+    for(const item of fallback){
+
+        found.push(item);
+
+    }
+
+    return unique(found)
+        .map(normalizeTemplate)
+        .filter(Boolean);
+
+}
+
+function collectTemplates(source, result){
+
+    if(!source){
+        return;
+    }
+
+    if(Array.isArray(source)){
+
+        for(const item of source){
+
+            collectTemplates(item, result);
+
+        }
+
+        return;
+    }
+
+    if(typeof source === "object"){
+
+        const keys = [
+            "pattern",
+            "template",
+            "syntax",
+            "text",
+            "label",
+            "preview",
+            "command"
+        ];
+
+        for(const key of keys){
+
+            if(typeof source[key] === "string"){
+
+                result.push(source[key]);
+
+            }
+
+        }
+
+        for(const key in source){
+
+            if(
+                typeof source[key] === "object" &&
+                source[key] !== null
+            ){
+
+                collectTemplates(source[key], result);
+
+            }
+
+        }
+
+    }
+
+}
+
+function normalizeTemplate(template){
+
+    if(!template || typeof template !== "string"){
+        return null;
+    }
+
+    return template
+        .replace(/\(\)/g, "[]")
+        .replace(/\[\s*\]/g, "[]")
+        .replace(/\s+/g, " ")
+        .trim();
+
+}
+
+function unique(list){
+
+    const seen = new Set();
+    const result = [];
+
+    for(const item of list){
+
+        const normalized = normalizeTemplate(item);
+
+        if(!normalized || seen.has(normalized)){
+            continue;
+        }
+
+        seen.add(normalized);
+        result.push(normalized);
+
+    }
+
+    return result;
+
+}
+
+function splitTemplate(template){
+
+    const parts = [];
+    const re = /\[\]/g;
+
+    let index = 0;
+    let match;
+
+    while((match = re.exec(template))){
+
+        if(match.index > index){
+
+            parts.push({
+                type:"text",
+                value:template.slice(index, match.index)
+            });
+
+        }
+
+        parts.push({
+            type:"slot"
+        });
+
+        index = match.index + 2;
+
+    }
+
+    if(index < template.length){
+
+        parts.push({
+            type:"text",
+            value:template.slice(index)
+        });
+
+    }
+
+    return parts;
+
+}
+
+function getTemplateCompletion(value, template){
+
+    const parts = splitTemplate(template);
+
+    if(!parts.some(part => part.type === "slot")){
+        return null;
+    }
+
+    for(let i=0;i<parts.length;i++){
+
+        if(parts[i].type !== "slot"){
+            continue;
+        }
+
+        const prefixParts = parts.slice(0, i);
+        const prefixRegex = new RegExp(
+            "^" + partsToRegex(prefixParts) + "$",
+            "i"
+        );
+
+        if(!prefixRegex.test(value)){
+            continue;
+        }
+
+        return buildCompletedText(value, parts, i);
+
+    }
+
+    return null;
+
+}
+
+function partsToRegex(parts){
+
+    let result = "";
+
+    for(const part of parts){
+
+        if(part.type === "text"){
+
+            result += escapeRegex(part.value);
+
+        }else{
+
+            result += "\\[[^\\]]*\\]";
+
+        }
+
+    }
+
+    return result;
+
+}
+
+function buildCompletedText(value, parts, slotIndex){
+
+    let output = value;
+    let selectStart = null;
+    let selectEnd = null;
+
+    for(let i=slotIndex;i<parts.length;i++){
+
+        const part = parts[i];
+
+        if(part.type === "slot"){
+
+            const start = output.length;
+
+            output += "[ ]";
+
+            if(selectStart === null){
+
+                selectStart = start + 1;
+                selectEnd = start + 2;
+
+            }
+
+        }else{
+
+            output += part.value;
+
+        }
+
+    }
+
+    return {
+        text: output,
+        cursor: selectStart !== null ? selectStart : output.length,
+        selectStart,
+        selectEnd
+    };
+
+}
+
+function getOperatorTemplateResult(value, templates){
+
+    const typed = value.trim();
+
+    if(!typed){
+        return null;
+    }
+
+    for(const template of templates){
+
+        const parts = splitTemplate(template);
+
+        if(
+            parts.length === 3 &&
+            parts[0].type === "slot" &&
+            parts[1].type === "text" &&
+            parts[2].type === "slot" &&
+            parts[1].value.trim() === typed
+        ){
+
+            const text = "[ ]" + parts[1].value + "[ ]";
+
+            return {
+                text,
+                cursor: 1,
+                selectStart: 1,
+                selectEnd: 2
+            };
+
+        }
+
+    }
+
+    return null;
+
+}
+
+function jumpToNextSlot(){
+
+    const value = input.value;
+    const cursor = input.selectionStart;
+
+    const slots = getSlots(value);
+
+    if(!slots.length){
+        return false;
+    }
+
+    for(const slot of slots){
+
+        if(cursor < slot.end){
+
+            input.setSelectionRange(
+                slot.innerStart,
+                slot.innerEnd
+            );
+
+            return true;
+
+        }
+
+    }
+
+    return false;
+
+}
+
+function getSlots(text){
+
+    const slots = [];
+
+    for(let i=0;i<text.length;i++){
+
+        if(text[i] !== "["){
+            continue;
+        }
+
+        const end = findClosingBracket(text, i);
+
+        if(end === -1){
+            continue;
+        }
+
+        slots.push({
+            start:i,
+            end:end + 1,
+            innerStart:i + 1,
+            innerEnd:end
+        });
+
+        i = end;
+
+    }
+
+    return slots;
+
+}
+
+function findClosingBracket(text, start){
+
+    let depth = 0;
+
+    for(let i=start;i<text.length;i++){
+
+        if(text[i] === "["){
+            depth++;
+        }
+
+        if(text[i] === "]"){
+
+            depth--;
+
+            if(depth === 0){
+                return i;
+            }
+
+        }
+
+    }
+
+    return -1;
+
+}
+
+function escapeRegex(text){
+
+    return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+}
+
+/*=========================================
+    PUBLIC UI API
+=========================================*/
+
 ui.show=function(){
 
     panel.style.display="block";
