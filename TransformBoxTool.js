@@ -1681,6 +1681,8 @@ flipVerticalHandle.addEventListener(
                    vm.editingTarget.emitVisualChange();
                    vm.runtime.requestRedraw();
 
+                   updateSelectionBox();
+
                    return;
                }
                if (alphaDragging) {
@@ -1868,6 +1870,85 @@ flipVerticalHandle.addEventListener(
             };
         }
 
+        function getShearAdjustedBounds(
+            bounds,
+            drawable
+        ) {
+            const shearX =
+                  drawable.__gandhiShearX || 0;
+
+            const shearY =
+                  drawable.__gandhiShearY || 0;
+
+            if (
+                !shearX &&
+                !shearY
+            ) {
+                return bounds;
+            }
+
+            const cx =
+                  (
+                      bounds.left +
+                      bounds.right
+                  ) / 2;
+
+            const cy =
+                  (
+                      bounds.top +
+                      bounds.bottom
+                  ) / 2;
+
+            const points = [
+                [bounds.left, bounds.top],
+                [bounds.right, bounds.top],
+                [bounds.right, bounds.bottom],
+                [bounds.left, bounds.bottom]
+            ].map(
+                p => {
+                    const x =
+                          p[0] - cx;
+
+                    const y =
+                          p[1] - cy;
+
+                    return {
+                        x:
+                            cx +
+                            x +
+                            y * shearX,
+
+                        y:
+                            cy +
+                            y +
+                            x * shearY
+                    };
+                }
+            );
+
+            return {
+                left:
+                    Math.min(
+                        ...points.map(p => p.x)
+                    ),
+
+                right:
+                    Math.max(
+                        ...points.map(p => p.x)
+                    ),
+
+                top:
+                    Math.max(
+                        ...points.map(p => p.y)
+                    ),
+
+                bottom:
+                    Math.min(
+                        ...points.map(p => p.y)
+                    )
+            };
+        }
+
         function updateSelectionBox() {
             const canvas = getStageCanvas();
             if (!canvas) return;
@@ -1886,7 +1967,10 @@ flipVerticalHandle.addEventListener(
             );
 
             const bounds =
-                  drawable.getAABB();
+                  getShearAdjustedBounds(
+                      drawable.getAABB(),
+                      drawable
+                  );
             const tl = scratchToScreen(bounds.left, bounds.top, canvas);
             const br = scratchToScreen(bounds.right, bounds.bottom, canvas);
 
