@@ -1286,6 +1286,9 @@ function installShearHook(drawable, target) {
             target.id;
     }
 
+    drawable.__lastAppliedShearX = 0;
+    drawable.__lastAppliedShearY = 0;
+
     const oldGetUniforms =
         drawable.getUniforms.bind(drawable);
 
@@ -1303,11 +1306,6 @@ function installShearHook(drawable, target) {
                     original
                 );
 
-            const a = m[0];
-            const b = m[1];
-            const c = m[4];
-            const d = m[5];
-
             let shearX = 0;
             let shearY = 0;
 
@@ -1317,6 +1315,43 @@ function installShearHook(drawable, target) {
             ) {
                 shearX = activeShearBridge.shearX || 0;
                 shearY = activeShearBridge.shearY || 0;
+            }
+
+            const lastShearX =
+                this.__lastAppliedShearX || 0;
+
+            const lastShearY =
+                this.__lastAppliedShearY || 0;
+
+            const inverseDenominator =
+                1 - lastShearX * lastShearY;
+
+            let a = m[0];
+            let b = m[1];
+            let c = m[4];
+            let d = m[5];
+
+            if (inverseDenominator) {
+                const baseA =
+                    (a - lastShearY * c) /
+                    inverseDenominator;
+
+                const baseB =
+                    (b - lastShearY * d) /
+                    inverseDenominator;
+
+                const baseC =
+                    (c - lastShearX * a) /
+                    inverseDenominator;
+
+                const baseD =
+                    (d - lastShearX * b) /
+                    inverseDenominator;
+
+                a = baseA;
+                b = baseB;
+                c = baseC;
+                d = baseD;
             }
 
             m[0] =
@@ -1330,6 +1365,12 @@ function installShearHook(drawable, target) {
 
             m[5] =
                 d + b * shearX;
+
+            this.__lastAppliedShearX =
+                shearX;
+
+            this.__lastAppliedShearY =
+                shearY;
 
             uniforms.u_modelMatrix = m;
 
