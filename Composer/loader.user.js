@@ -9,17 +9,19 @@
 (function () {
     'use strict';
 
-    const BASE = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/Composer/";
+    const BASE = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/";
 
     const MODULES = [
-        "parser.js",
-        "library.js",
-        "paths.js",
-        "sockets.js",
-        "renderer.js",
-        "blockly.js",
-        "generator.js",
-        "ui.js"
+        "Composer/parser.js",
+        "Composer/library.js",
+        "Composer/paths.js",
+        "Composer/sockets.js",
+        "composer/renderer/Shapes.js",
+        "composer/BlockStyle.js",
+        "Composer/renderer.js",
+        "Composer/blockly.js",
+        "Composer/generator.js",
+        "Composer/ui.js"
     ];
     window.Composer = {
         version: "0.1",
@@ -32,6 +34,8 @@
         paths: {},
         sockets: {},
         blockly: {},
+        Shapes: {},
+        BlockStyle: {},
 
         cache: {}
     };
