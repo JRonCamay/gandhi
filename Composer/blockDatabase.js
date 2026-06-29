@@ -376,9 +376,7 @@ function createBlockEntryFromRegistry(workspace, opcode, definition) {
             parsed.params,
 
         color:
-            json.colour ||
-            json.color ||
-            null,
+            getColorFromJson(json, opcode),
 
         shape:
             getShapeFromJson(json, opcode),
@@ -442,6 +440,26 @@ function getShapeFromJson(json, opcode) {
     return "stack";
 
 }
+function getColorFromJson(json, opcode) {
+
+    if (json.colour) return json.colour;
+    if (json.color) return json.color;
+
+    const text = String(opcode || "");
+
+    if (text.startsWith("motion_")) return "#4C97FF";
+    if (text.startsWith("looks_")) return "#9966FF";
+    if (text.startsWith("sound_")) return "#CF63CF";
+    if (text.startsWith("event_")) return "#FFBF00";
+    if (text.startsWith("control_")) return "#FFAB19";
+    if (text.startsWith("sensing_")) return "#5CB1D6";
+    if (text.startsWith("operator_")) return "#59C059";
+    if (text.startsWith("data_")) return "#FF8C1A";
+    if (text.startsWith("procedures_")) return "#FF6680";
+
+    return "#4C97FF";
+
+}    
 function createTemporaryBlock(workspace, opcode) {
 
     if (!workspace || typeof workspace.newBlock !== "function") {
