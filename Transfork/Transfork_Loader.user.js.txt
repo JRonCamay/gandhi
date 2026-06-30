@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Transfork Loader
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  Stable loader for modular Gandhi Transform Box / Transfork
 // @match        *://www.cocrea.world/*
 // @grant        GM_xmlhttpRequest
@@ -17,9 +17,7 @@
     const BASE =
         BOOT.substring(0, BOOT.lastIndexOf('/') + 1);
 
-    window.__TransforkBaseURL = BASE;
-
-    window.__TransforkLoadText = function (url) {
+    function loadText(url) {
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
                 method: 'GET',
@@ -27,29 +25,33 @@
                 onload(response) {
                     if (response.status >= 200 && response.status < 300) {
                         resolve(response.responseText);
-                    } else {
-                        reject(new Error('HTTP ' + response.status + ' loading ' + url));
+                        return;
                     }
+
+                    reject(new Error('HTTP ' + response.status + ' loading ' + url));
                 },
                 onerror() {
                     reject(new Error('Network error loading ' + url));
                 }
             });
         });
-    };
+    }
 
-    window.__TransforkRunCode = function (code, url) {
-        try {
-            new Function(code + '\n//# sourceURL=' + url)();
-        } catch (error) {
-            console.error('[Transfork eval error]', url, error);
-            alert('Transfork error in ' + url + ': ' + error.message);
-            throw error;
-        }
-    };
+    function runCode(code, url) {
+        new Function(
+            'TRANSFORK_BASE',
+            'TRANSFORK_LOAD_TEXT',
+            'TRANSFORK_RUN_CODE',
+            code + '\n//# sourceURL=' + url
+        )(
+            BASE,
+            loadText,
+            runCode
+        );
+    }
 
-    window.__TransforkLoadText(BOOT)
-        .then(code => window.__TransforkRunCode(code, BOOT))
+    loadText(BOOT)
+        .then(code => runCode(code, BOOT))
         .catch(error => {
             console.error('[Transfork Loader]', error);
             alert('Transfork Loader: ' + error.message);
