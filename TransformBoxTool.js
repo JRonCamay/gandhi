@@ -1563,15 +1563,16 @@ function setNativeSpriteDraggingEnabled(enabled) {
 
                e.preventDefault();
                e.stopPropagation();
+               transformTarget = vm.editingTarget;
 
                const drawable =
                      vm.runtime.renderer
                ._allDrawables[
-                   vm.editingTarget.drawableID
+                   transformTarget.drawableID
                ];
                installShearHook(
                    drawable,
-                   vm.editingTarget
+                   transformTarget
                );
                startScaleX =
                    drawable.scale[0];
@@ -1601,15 +1602,16 @@ function setNativeSpriteDraggingEnabled(enabled) {
 
                e.preventDefault();
                e.stopPropagation();
+               transformTarget = vm.editingTarget;
 
                const drawable =
                      vm.runtime.renderer
                ._allDrawables[
-                   vm.editingTarget.drawableID
+                   transformTarget.drawableID
                ];
                installShearHook(
                    drawable,
-                   vm.editingTarget
+                   transformTarget
                );
                startScaleX =
                    drawable.scale[0];
@@ -1679,6 +1681,7 @@ function setNativeSpriteDraggingEnabled(enabled) {
         let uniformBaseScale = 0;
         let lastUniformRatio = 1;
         let visualFlipX = false;
+        let transformTarget = null;
 
         // --- CLICK & HOLD SLIDER INTEGRATION FOR INSTANT REVEAL ---
 
@@ -1735,14 +1738,15 @@ function setNativeSpriteDraggingEnabled(enabled) {
             e => {
                 e.preventDefault();
                 e.stopPropagation();
+                transformTarget = vm.editingTarget;
                 resizing = true;
                 startX = e.clientX;
                 startY = e.clientY;
 
-                const drawable = vm.runtime.renderer._allDrawables[vm.editingTarget.drawableID];
+                const drawable = vm.runtime.renderer._allDrawables[transformTarget.drawableID];
                 installShearHook(
                     drawable,
-                    vm.editingTarget
+                    transformTarget
                 );
                 startSize = Math.abs(drawable.scale[0]);
             }
@@ -1753,14 +1757,15 @@ function setNativeSpriteDraggingEnabled(enabled) {
             e => {
                 e.preventDefault();
                 e.stopPropagation();
+                transformTarget = vm.editingTarget;
                 resizeMode =
                     "uniform";
                 resizing = true;
                 startX = e.clientX;
-                const drawable = vm.runtime.renderer._allDrawables[vm.editingTarget.drawableID];
+                const drawable = vm.runtime.renderer._allDrawables[transformTarget.drawableID];
                 installShearHook(
                     drawable,
-                    vm.editingTarget
+                    transformTarget
                 );
                 startScaleX =
                     drawable.scale[0];
@@ -1768,7 +1773,7 @@ function setNativeSpriteDraggingEnabled(enabled) {
                 startScaleY =
                     drawable.scale[1];
                 startTargetSize =
-                    vm.editingTarget.size;
+                    transformTarget.size;
                 startSize = Math.abs(drawable.scale[0]);
                 uniformBaseScale =
                     Math.max(
@@ -2242,11 +2247,12 @@ flipVerticalHandle.addEventListener(
             e => {
                 e.preventDefault();
                 e.stopPropagation();
+                transformTarget = vm.editingTarget;
 
-                const drawable = vm.runtime.renderer._allDrawables[vm.editingTarget.drawableID];
+                const drawable = vm.runtime.renderer._allDrawables[transformTarget.drawableID];
                 installShearHook(
                     drawable,
-                    vm.editingTarget
+                    transformTarget
                 );
                 rotateScaleX = drawable.scale[0];
                 rotateScaleY = drawable.scale[1];
@@ -2260,7 +2266,7 @@ flipVerticalHandle.addEventListener(
                     e.clientX - rotateCenterX
                 );
 
-                startDirection = vm.editingTarget.direction;
+                startDirection = transformTarget.direction;
                 rotating = true;
             }
         );
@@ -2271,11 +2277,12 @@ flipVerticalHandle.addEventListener(
                 e.preventDefault();
                 e.stopPropagation();
                 if (activeSkewSession) return;
+                transformTarget = vm.editingTarget;
                 dragging = true;
                 dragStartX = e.clientX;
                 dragStartY = e.clientY;
-                spriteStartX = vm.editingTarget.x;
-                spriteStartY = vm.editingTarget.y;
+                spriteStartX = transformTarget.x;
+                spriteStartY = transformTarget.y;
                 overlayStartLeft =
                     parseFloat(
                     overlay.style.left
@@ -2307,11 +2314,11 @@ flipVerticalHandle.addEventListener(
                         startTargetSize *
                         lastUniformRatio;
 
-                  vm.editingTarget.setSize(
+                  transformTarget.setSize(
                       size
                   );
 
-                  vm.editingTarget.emitVisualChange();
+                  transformTarget.emitVisualChange();
 
                   vm.runtime.requestRedraw();
               }
@@ -2319,6 +2326,7 @@ flipVerticalHandle.addEventListener(
               resizing = false;
               dragging = false;
               rotating = false;
+              transformTarget = null;
 
               alphaDragging =
                   false;
@@ -2544,11 +2552,11 @@ console.log(
                     const drawable =
                           vm.runtime.renderer
                     ._allDrawables[
-                        vm.editingTarget.drawableID
+                        transformTarget.drawableID
                     ];
                     installShearHook(
                         drawable,
-                        vm.editingTarget
+                        transformTarget
                     );
 
                     const signX =
@@ -2613,11 +2621,11 @@ console.log(
                                  newBounds.bottom
                              ) / 2;
 
-                       vm.editingTarget.setXY(
-                           vm.editingTarget.x +
+                       transformTarget.setXY(
+                           transformTarget.x +
                                oldCenterX -
                                newCenterX,
-                           vm.editingTarget.y +
+                           transformTarget.y +
                                oldCenterY -
                                newCenterY
                        );
@@ -2662,11 +2670,11 @@ console.log(
                                   newBounds.bottom
                               ) / 2;
 
-                        vm.editingTarget.setXY(
-                            vm.editingTarget.x +
+                        transformTarget.setXY(
+                            transformTarget.x +
                                 oldCenterX -
                                 newCenterX,
-                            vm.editingTarget.y +
+                            transformTarget.y +
                                 oldCenterY -
                                 newCenterY
                         );
@@ -2713,17 +2721,17 @@ console.log(
                                   newBounds.bottom
                               ) / 2;
 
-                        vm.editingTarget.setXY(
-                            vm.editingTarget.x +
+                        transformTarget.setXY(
+                            transformTarget.x +
                                 oldCenterX -
                                 newCenterX,
-                            vm.editingTarget.y +
+                            transformTarget.y +
                                 oldCenterY -
                                 newCenterY
                         );
                     }
 
-                    vm.editingTarget
+                    transformTarget
                         .emitVisualChange();
                 }
 
@@ -2736,12 +2744,12 @@ console.log(
                     const delta = (angle - startAngle) * 180 / Math.PI;
                     const newDirection = startDirection + delta;
 
-                    vm.editingTarget.setDirection(newDirection);
+                    transformTarget.setDirection(newDirection);
 
-                    const drawable = vm.runtime.renderer._allDrawables[vm.editingTarget.drawableID];
+                    const drawable = vm.runtime.renderer._allDrawables[transformTarget.drawableID];
                     installShearHook(
                         drawable,
-                        vm.editingTarget
+                        transformTarget
                     );
                     drawable.updateScale([
                         rotateScaleX,
@@ -2762,7 +2770,7 @@ console.log(
 console.log(
                         "GANDHI MOVE HANDLE SNAP PATH",
                         {
-                            target: vm.editingTarget && vm.editingTarget.sprite && vm.editingTarget.sprite.name,
+                            target: transformTarget && transformTarget.sprite && transformTarget.sprite.name,
                             x: spriteStartX + dx,
                             y: spriteStartY - dy
                         }
@@ -2770,12 +2778,12 @@ console.log(
 
                     const snapPosition =
                           findSnapPosition(
-                              vm.editingTarget,
+                              transformTarget,
                               spriteStartX + dx,
                               spriteStartY - dy
                           );
 
-                    vm.editingTarget.setXY(
+                    transformTarget.setXY(
                         snapPosition.x,
                         snapPosition.y
                     );
