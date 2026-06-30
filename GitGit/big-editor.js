@@ -1,8 +1,8 @@
 (function () {
     'use strict';
 
-    if (window.__gitgitBigEditorLoaded) return;
-    window.__gitgitBigEditorLoaded = true;
+    if (window.__gitgitBigEditorModularLoaded) return;
+    window.__gitgitBigEditorModularLoaded = true;
 
     const STORAGE_KEY = (window.GitGit && window.GitGit.config && window.GitGit.config.storageKey) || 'gitgit_big_editor_settings_v1';
 
@@ -207,7 +207,7 @@
 
     const launcher = createEl('button', {
         text: '🐒✍️',
-        title: 'Open GitGit Editor',
+        title: 'Open GitGit Modular Editor',
         style: `
             position: fixed;
             right: 80px;
