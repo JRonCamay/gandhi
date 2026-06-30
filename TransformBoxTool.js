@@ -8,480 +8,478 @@
 // ==/UserScript==
 
 (function () {
-    'use strict';
+        'use strict';
 
-    let transformMode = false;
-    const spriteAlphaMap =
-          new Map();
-    const runtimeGhostMap =
-          new Map();
+        let transformMode = false;
+        const spriteAlphaMap =
+        new Map();
+        const runtimeGhostMap =
+        new Map();
 
-    let runtimePaused =
+        let runtimePaused =
         false;
-    let wasRunning =
-    false;
-const originalSpriteDraggableMap =
-          new Map();
+        let wasRunning =
+        false;
+        const originalSpriteDraggableMap =
+        new Map();
 
-function setNativeSpriteDraggingEnabled(enabled) {
-    if (
-        !window.vm ||
-        !window.vm.runtime ||
-        !window.vm.runtime.targets
-    ) {
-        return;
-    }
+        function setNativeSpriteDraggingEnabled(enabled) {
+            if (
+                !window.vm ||
+                !window.vm.runtime ||
+                !window.vm.runtime.targets
+            ) {
+                return;
+            }
 
-    for (
-        const target of
-        window.vm.runtime.targets
-    ) {
-        if (
-            !target ||
-            target.isStage
-        ) {
-            continue;
-        }
+            for (
+                const target of
+                window.vm.runtime.targets
+            ) {
+                if (
+                    !target ||
+                    target.isStage
+                ) {
+                    continue;
+                }
 
-        if (
-            !originalSpriteDraggableMap.has(
-                target.id
-            )
-        ) {
-            originalSpriteDraggableMap.set(
-                target.id,
-                target.draggable
-            );
-        }
+                if (
+                    !originalSpriteDraggableMap.has(
+                        target.id
+                    )
+                ) {
+                    originalSpriteDraggableMap.set(
+                        target.id,
+                        target.draggable
+                    );
+                }
 
-        target.draggable =
-            enabled
+                target.draggable =
+                enabled
                 ? originalSpriteDraggableMap.get(
                     target.id
                 )
                 : false;
-    }
-}
-
-    function toggleTransformMode() {
-        transformMode = !transformMode;
-
-        setNativeSpriteDraggingEnabled(
-            !transformMode
-        );
-    }
-
-    window.addEventListener(
-        "keydown",
-        e => {
-            if (e.repeat) return;
-
-            const tag = e.target?.tagName;
-            if (
-                tag === "INPUT" ||
-                tag === "TEXTAREA" ||
-                e.target?.isContentEditable
-            ) {
-                return;
             }
+        }
 
-            if (e.key.toLowerCase() === "r") {
-                e.preventDefault();
-                toggleTransformMode();
-            }
-        },
-        true
-    );
+        function toggleTransformMode() {
+            transformMode = !transformMode;
 
-    function waitForVM() {
-        const interval = setInterval(() => {
-            const sprite = document.querySelector('[class*="sprite-selector"]');
-            if (!sprite) return;
-
-            const fiberKey = Object.keys(sprite).find(
-                k => k.startsWith("__reactFiber$")
+            setNativeSpriteDraggingEnabled(
+                !transformMode
             );
-            if (!fiberKey) return;
+        }
 
-            let node = sprite[fiberKey];
-            while (node) {
-                const props = node.memoizedProps;
-                if (props && props.vm) {
-                    window.vm = props.vm;
-                    clearInterval(interval);
+        window.addEventListener(
+            "keydown",
+            e => {
+                if (e.repeat) return;
 
-                    init();
+                const tag = e.target?.tagName;
+                if (
+                    tag === "INPUT" ||
+                    tag === "TEXTAREA" ||
+                    e.target?.isContentEditable
+                ) {
                     return;
                 }
-                node = node.return;
-            }
-        }, 1000);
-    }
 
-    function isStageMaximized() {
+                if (e.key.toLowerCase() === "r") {
+                    e.preventDefault();
+                    toggleTransformMode();
+                }
+            },
+            true
+        );
 
-        const fullscreenButton =
-              document.querySelector(
-                  '[class*="stage-size-toggle-group"]'
-              );
+        function waitForVM() {
+            const interval = setInterval(() => {
+                    const sprite = document.querySelector('[class*="sprite-selector"]');
+                    if (!sprite) return;
 
-        if (!fullscreenButton)
+                    const fiberKey = Object.keys(sprite).find(
+                        k => k.startsWith("__reactFiber$")
+                    );
+                    if (!fiberKey) return;
+
+                    let node = sprite[fiberKey];
+                    while (node) {
+                        const props = node.memoizedProps;
+                        if (props && props.vm) {
+                            window.vm = props.vm;
+                            clearInterval(interval);
+
+                            init();
+                            return;
+                        }
+                        node = node.return;
+                    }
+                }, 1000);
+        }
+
+        function isStageMaximized() {
+
+            const fullscreenButton =
+            document.querySelector(
+                '[class*="stage-size-toggle-group"]'
+            );
+
+            if (!fullscreenButton)
             return false;
 
-        return (
-            document.body.innerText
-            .includes("Small Stage")
-        );
-    }
-
-   function restoreEditorAlphas() {
-
-       for (
-           const target of
-           vm.runtime.targets
-       ) {
-
-
-           const alpha =
-                 spriteAlphaMap.get(
-                     target.id
-                 );
-
-
-           if (
-               alpha === undefined
-           ) continue;
-
-           target.setEffect(
-               "ghost",
-               100 - alpha
-           );
-       }
-   }
-    function captureRuntimeGhosts() {
-
-        runtimeGhostMap.clear();
-
-        for (
-            const target of
-            vm.runtime.targets
-        ) {
-
-            runtimeGhostMap.set(
-                target.id,
-                target.effects.ghost || 0
-            );
-        }
-    }
-
-    function restoreRuntimeGhosts() {
-
-        for (
-            const target of
-            vm.runtime.targets
-        ) {
-
-            const ghost =
-                  runtimeGhostMap.get(
-                      target.id
-                  );
-
-            if (
-                ghost === undefined
-            ) continue;
-
-            target.setEffect(
-                "ghost",
-                ghost
-            );
-        }
-    }
-    // Helper to safely manipulate sprite graphic transparency via the Scratch VM engine
-    function applySpriteAlpha(value) {
-        if (!window.vm || !window.vm.editingTarget) return;
-        const target = window.vm.editingTarget;
-
-        // Map alpha (0-100 opacity) to Scratch ghost effect (100 = invisible, 0 = fully opaque)
-        const ghostValue = 100 - value;
-        target.setEffect('ghost', ghostValue);
-    }
-
-    // Helper to retrieve current sprite alpha status
-    function getSpriteAlpha() {
-        if (!window.vm || !window.vm.editingTarget) return 100;
-        const ghost = window.vm.editingTarget.effects.ghost || 0;
-        return 100 - ghost;
-    }
-
-    const AssetBakeEngine = (() => {
-        function getCurrentCostume(target) {
-            if (
-                !target ||
-                !target.sprite ||
-                !target.sprite.costumes
-            ) {
-                return null;
-            }
-
-            return target.sprite.costumes[
-                target.currentCostume
-            ];
-        }
-
-        function getCostumeSource(costume) {
-            if (
-                !costume ||
-                !costume.asset
-            ) {
-                return null;
-            }
-
-            if (
-                typeof costume.asset.encodeDataURI === "function"
-            ) {
-                return costume.asset.encodeDataURI();
-            }
-
-            return null;
-        }
-
-        function getCanvasWidth(image, costume) {
             return (
-                image.naturalWidth ||
-                image.width ||
-                (
-                    costume &&
-                    costume.size &&
-                    costume.size[0]
-                ) ||
-                1
+                document.body.innerText
+                .includes("Small Stage")
             );
         }
 
-        function getCanvasHeight(image, costume) {
-            return (
-                image.naturalHeight ||
-                image.height ||
-                (
-                    costume &&
-                    costume.size &&
-                    costume.size[1]
-                ) ||
-                1
-            );
+        function restoreEditorAlphas() {
+
+            for (
+                const target of
+                vm.runtime.targets
+            ) {
+
+                const alpha =
+                spriteAlphaMap.get(
+                    target.id
+                );
+
+                if (
+                    alpha === undefined
+                ) continue;
+
+                target.setEffect(
+                    "ghost",
+                    100 - alpha
+                );
+            }
+        }
+        function captureRuntimeGhosts() {
+
+            runtimeGhostMap.clear();
+
+            for (
+                const target of
+                vm.runtime.targets
+            ) {
+
+                runtimeGhostMap.set(
+                    target.id,
+                    target.effects.ghost || 0
+                );
+            }
         }
 
-        function exportCanvas(
-            canvas,
-            callback
-        ) {
-            canvas.toBlob(
-                blob => {
-                    if (!blob) return;
+        function restoreRuntimeGhosts() {
 
-                    const reader =
-                          new FileReader();
+            for (
+                const target of
+                vm.runtime.targets
+            ) {
 
-                    reader.onload =
-                        () => {
-                            callback(
-                                new Uint8Array(
-                                    reader.result
-                                )
-                            );
-                        };
+                const ghost =
+                runtimeGhostMap.get(
+                    target.id
+                );
 
-                    reader.readAsArrayBuffer(
-                        blob
+                if (
+                    ghost === undefined
+                ) continue;
+
+                target.setEffect(
+                    "ghost",
+                    ghost
+                );
+            }
+        }
+        // Helper to safely manipulate sprite graphic transparency via the Scratch VM engine
+        function applySpriteAlpha(value) {
+            if (!window.vm || !window.vm.editingTarget) return;
+            const target = window.vm.editingTarget;
+
+            // Map alpha (0-100 opacity) to Scratch ghost effect (100 = invisible, 0 = fully opaque)
+            const ghostValue = 100 - value;
+            target.setEffect('ghost', ghostValue);
+        }
+
+        // Helper to retrieve current sprite alpha status
+        function getSpriteAlpha() {
+            if (!window.vm || !window.vm.editingTarget) return 100;
+            const ghost = window.vm.editingTarget.effects.ghost || 0;
+            return 100 - ghost;
+        }
+
+        const AssetBakeEngine = (() => {
+                function getCurrentCostume(target) {
+                    if (
+                        !target ||
+                        !target.sprite ||
+                        !target.sprite.costumes
+                    ) {
+                        return null;
+                    }
+
+                    return target.sprite.costumes[
+                        target.currentCostume
+                    ];
+                }
+
+                function getCostumeSource(costume) {
+                    if (
+                        !costume ||
+                        !costume.asset
+                    ) {
+                        return null;
+                    }
+
+                    if (
+                        typeof costume.asset.encodeDataURI === "function"
+                    ) {
+                        return costume.asset.encodeDataURI();
+                    }
+
+                    return null;
+                }
+
+                function getCanvasWidth(image, costume) {
+                    return (
+                        image.naturalWidth ||
+                        image.width ||
+                        (
+                            costume &&
+                            costume.size &&
+                            costume.size[0]
+                        ) ||
+                        1
                     );
-                },
-                "image/png"
-            );
-        }
+                }
 
-        function createCostumeAsset(data) {
-            const storage =
-                  vm.runtime.storage;
+                function getCanvasHeight(image, costume) {
+                    return (
+                        image.naturalHeight ||
+                        image.height ||
+                        (
+                            costume &&
+                            costume.size &&
+                            costume.size[1]
+                        ) ||
+                        1
+                    );
+                }
 
-            if (
-                !storage ||
-                typeof storage.createAsset !== "function"
-            ) {
-                return null;
-            }
+                function exportCanvas(
+                    canvas,
+                    callback
+                ) {
+                    canvas.toBlob(
+                        blob => {
+                            if (!blob) return;
 
-            const assetType =
-                  (
-                      storage.AssetType &&
-                      storage.AssetType.ImageBitmap
-                  ) ||
-                  "ImageBitmap";
+                            const reader =
+                            new FileReader();
 
-            const dataFormat =
-                  (
-                      storage.DataFormat &&
-                      storage.DataFormat.PNG
-                  ) ||
-                  "png";
+                            reader.onload =
+                            () => {
+                                callback(
+                                    new Uint8Array(
+                                        reader.result
+                                    )
+                                );
+                            };
 
-            return storage.createAsset(
-                assetType,
-                dataFormat,
-                data,
-                null,
-                true
-            );
-        }
+                            reader.readAsArrayBuffer(
+                                blob
+                            );
+                        },
+                        "image/png"
+                    );
+                }
 
-        function replaceCurrentCostume(
-            target,
-            costume,
-            asset,
-            canvas
-        ) {
-            if (
-                !target ||
-                !target.sprite ||
-                !target.sprite.costumes ||
-                !asset
-            ) {
-                return;
-            }
+                function createCostumeAsset(data) {
+                    const storage =
+                    vm.runtime.storage;
 
-            const index =
-                  target.currentCostume;
+                    if (
+                        !storage ||
+                        typeof storage.createAsset !== "function"
+                    ) {
+                        return null;
+                    }
 
-            const skinId =
-                  costume.skinId;
+                    const assetType =
+                    (
+                        storage.AssetType &&
+                        storage.AssetType.ImageBitmap
+                    ) ||
+                    "ImageBitmap";
 
-            const replacement =
-                  Object.assign(
-                      {},
-                      costume
-                  );
+                    const dataFormat =
+                    (
+                        storage.DataFormat &&
+                        storage.DataFormat.PNG
+                    ) ||
+                    "png";
 
-            replacement.asset =
-                asset;
+                    return storage.createAsset(
+                        assetType,
+                        dataFormat,
+                        data,
+                        null,
+                        true
+                    );
+                }
 
-            replacement.assetId =
-                asset.assetId;
+                function replaceCurrentCostume(
+                    target,
+                    costume,
+                    asset,
+                    canvas
+                ) {
+                    if (
+                        !target ||
+                        !target.sprite ||
+                        !target.sprite.costumes ||
+                        !asset
+                    ) {
+                        return;
+                    }
 
-            replacement.dataFormat =
-                "png";
+                    const index =
+                    target.currentCostume;
 
-            replacement.md5ext =
-                asset.assetId + ".png";
+                    const skinId =
+                    costume.skinId;
 
-            replacement.skinId =
-                skinId;
+                    const replacement =
+                    Object.assign(
+                        {},
+                        costume
+                    );
 
-            if (
-                canvas &&
-                canvas.width &&
-                canvas.height
-            ) {
-                replacement.size = [
-                    canvas.width,
-                    canvas.height
-                ];
-            }
+                    replacement.asset =
+                    asset;
 
-            if (
-                canvas &&
-                typeof canvas.__gandhiBakeRotationCenterX === "number" &&
-                typeof canvas.__gandhiBakeRotationCenterY === "number"
-            ) {
-                replacement.rotationCenterX =
-                    canvas.__gandhiBakeRotationCenterX;
+                    replacement.assetId =
+                    asset.assetId;
 
-                replacement.rotationCenterY =
-                    canvas.__gandhiBakeRotationCenterY;
-            }
+                    replacement.dataFormat =
+                    "png";
 
-            target.sprite.costumes[
-                index
-            ] = replacement;
+                    replacement.md5ext =
+                    asset.assetId + ".png";
 
-            vm.runtime.renderer.updateBitmapSkin(
-                skinId,
-                canvas,
-                replacement.bitmapResolution || 1,
-                [
-                    replacement.rotationCenterX,
-                    replacement.rotationCenterY
-                ]
-            );
+                    replacement.skinId =
+                    skinId;
 
-            target.setCostume(
-                index
-            );
+                    if (
+                        canvas &&
+                        canvas.width &&
+                        canvas.height
+                    ) {
+                        replacement.size = [
+                            canvas.width,
+                            canvas.height
+                        ];
+                    }
 
-            if (
-                typeof target.updateAllDrawableProperties === "function"
-            ) {
-                target.updateAllDrawableProperties();
-            }
+                    if (
+                        canvas &&
+                        typeof canvas.__gandhiBakeRotationCenterX === "number" &&
+                        typeof canvas.__gandhiBakeRotationCenterY === "number"
+                    ) {
+                        replacement.rotationCenterX =
+                        canvas.__gandhiBakeRotationCenterX;
 
-            target.emitVisualChange();
-            vm.runtime.requestRedraw();
-        }
+                        replacement.rotationCenterY =
+                        canvas.__gandhiBakeRotationCenterY;
+                    }
 
-        function bakeCurrentCostume(
-            callback,
-            targetOverride
-        ) {
-            const target =
-                  targetOverride ||
-                  vm.editingTarget;
+                    target.sprite.costumes[
+                        index
+                    ] = replacement;
 
-            const costume =
-                  getCurrentCostume(
-                      target
-                  );
+                    vm.runtime.renderer.updateBitmapSkin(
+                        skinId,
+                        canvas,
+                        replacement.bitmapResolution || 1,
+                        [
+                            replacement.rotationCenterX,
+                            replacement.rotationCenterY
+                        ]
+                    );
 
-            const source =
-                  getCostumeSource(
-                      costume
-                  );
+                    target.setCostume(
+                        index
+                    );
 
-            if (!source) return;
+                    if (
+                        typeof target.updateAllDrawableProperties === "function"
+                    ) {
+                        target.updateAllDrawableProperties();
+                    }
 
-            const image =
-                  new Image();
+                    target.emitVisualChange();
+                    vm.runtime.requestRedraw();
+                }
 
-            image.onload =
-                () => {
-                    const canvas =
-                          document.createElement("canvas");
+                function bakeCurrentCostume(
+                    callback,
+                    targetOverride
+                ) {
+                    const target =
+                    targetOverride ||
+                    vm.editingTarget;
 
-                    canvas.width =
+                    const costume =
+                    getCurrentCostume(
+                        target
+                    );
+
+                    const source =
+                    getCostumeSource(
+                        costume
+                    );
+
+                    if (!source) return;
+
+                    const image =
+                    new Image();
+
+                    image.onload =
+                    () => {
+                        const canvas =
+                        document.createElement("canvas");
+
+                        canvas.width =
                         getCanvasWidth(
                             image,
                             costume
                         );
 
-                    canvas.height =
+                        canvas.height =
                         getCanvasHeight(
                             image,
                             costume
                         );
 
-                    const ctx =
-                          canvas.getContext("2d");
+                        const ctx =
+                        canvas.getContext("2d");
 
-                    ctx.drawImage(
-                        image,
-                        0,
-                        0
-                    );
+                        ctx.drawImage(
+                            image,
+                            0,
+                            0
+                        );
 
-                    let afterBake =
+                        let afterBake =
                         null;
 
-                    if (
-                        typeof callback === "function"
-                    ) {
-                        afterBake =
+                        if (
+                            typeof callback === "function"
+                        ) {
+                            afterBake =
                             callback(
                                 canvas,
                                 ctx,
@@ -489,2068 +487,1082 @@ function setNativeSpriteDraggingEnabled(enabled) {
                                 costume,
                                 target
                             );
-                    }
-
-                    exportCanvas(
-                        canvas,
-                        data => {
-                            const asset =
-                                  createCostumeAsset(
-                                      data
-                                  );
-
-                            if (
-                                canvas &&
-                                typeof canvas.__gandhiBeforeReplace === "function"
-                            ) {
-                                canvas.__gandhiBeforeReplace();
-                            }
-
-                            replaceCurrentCostume(
-                                target,
-                                costume,
-                                asset,
-                                canvas
-                            );
-
-                            if (
-                                typeof afterBake === "function"
-                            ) {
-                                afterBake();
-                            }
-
                         }
-                    );
+
+                        exportCanvas(
+                            canvas,
+                            data => {
+                                const asset =
+                                createCostumeAsset(
+                                    data
+                                );
+
+                                if (
+                                    canvas &&
+                                    typeof canvas.__gandhiBeforeReplace === "function"
+                                ) {
+                                    canvas.__gandhiBeforeReplace();
+                                }
+
+                                replaceCurrentCostume(
+                                    target,
+                                    costume,
+                                    asset,
+                                    canvas
+                                );
+
+                                if (
+                                    typeof afterBake === "function"
+                                ) {
+                                    afterBake();
+                                }
+
+                            }
+                        );
+                    };
+
+                    image.src =
+                    source;
+                }
+
+                return {
+                    bakeCurrentCostume
                 };
+        })();
 
-            image.src =
-                source;
-        }
-
-        return {
-            bakeCurrentCostume
-        };
-    })();
-
-    window.AssetBakeEngine =
+        window.AssetBakeEngine =
         AssetBakeEngine;
 
-    function init() {
-        const canvas = getStageCanvas();
+        function init() {
+            const canvas = getStageCanvas();
 
-        canvas.addEventListener(
-           "mousedown",
-           e => {
+            canvas.addEventListener(
+                "mousedown",
+                e => {
 
-               if (activeSkewSession) return;
+                    if (activeSkewSession) return;
 
-               if (!transformMode)
-                   return;
+                    if (!transformMode)
+                    return;
 
-               const rect =
-                     canvas.getBoundingClientRect();
+                    const rect =
+                    canvas.getBoundingClientRect();
 
-               const drawableID =
-                     vm.runtime.renderer.pick(
-                         e.clientX - rect.left,
-                         e.clientY - rect.top
-                     );
+                    const drawableID =
+                    vm.runtime.renderer.pick(
+                        e.clientX - rect.left,
+                        e.clientY - rect.top
+                    );
 
-              if (
-                  drawableID >= 0
-              ) {
-                  e.preventDefault();
-                  e.stopPropagation();
+                    if (
+                        drawableID >= 0
+                    ) {
+                        e.preventDefault();
+                        e.stopPropagation();
 
-                 dragTarget =
-                     vm.runtime.targets.find(
-                     t =>
-                     t.drawableID ===
-                     drawableID
-                 );
-                  potentialStageDrag =
-                      true;
+                        dragTarget =
+                        vm.runtime.targets.find(
+                            t =>
+                            t.drawableID ===
+                            drawableID
+                        );
+                        potentialStageDrag =
+                        true;
 
+                        if (
+                            drawableID >= 0
+                        ) {
 
-                  if (
-                      drawableID >= 0
-                  ) {
+                            potentialStageDrag =
+                            true;
 
-                      potentialStageDrag =
-                          true;
+                        }
+                        stageDragStartX =
+                        e.clientX;
 
+                        stageDragStartY =
+                        e.clientY;
+                    }
+                    overlayStartLeft =
+                    parseFloat(
+                        overlay.style.left
+                    ) || 0;
 
-                  }
-                  stageDragStartX =
-                      e.clientX;
+                    overlayStartTop =
+                    parseFloat(
+                        overlay.style.top
+                    ) || 0;
+                    /* TEMP TEST:
+                    Disable stageDragActive to verify whether it is
+                    preventing the snapping pipeline on the normal stage.
+                    */
+                    stageDragStartX =
+                    e.clientX;
 
-                  stageDragStartY =
-                      e.clientY;
-              }
-               overlayStartLeft =
-                   parseFloat(
-                   overlay.style.left
-               ) || 0;
+                    stageDragStartY =
+                    e.clientY;
 
-               overlayStartTop =
-                   parseFloat(
-                   overlay.style.top
-               ) || 0;
-              /* TEMP TEST:
-                 Disable stageDragActive to verify whether it is
-                 preventing the snapping pipeline on the normal stage.
-              */
-               stageDragStartX =
-                   e.clientX;
+                },
+                true
+            );
+            canvas.addEventListener(
+                "click",
+                e => {
+                    if (!transformMode) return;
 
-               stageDragStartY =
-                   e.clientY;
+                    const rect = canvas.getBoundingClientRect();
 
-           },
-           true
-       );
-        canvas.addEventListener(
-            "click",
-            e => {
-                if (!transformMode) return;
+                    const drawableID = vm.runtime.renderer.pick(
+                        e.clientX - rect.left,
+                        e.clientY - rect.top
+                    );
 
-                const rect = canvas.getBoundingClientRect();
+                    const target = vm.runtime.targets.find(
+                        t => t.drawableID === drawableID
+                    );
 
-                const drawableID = vm.runtime.renderer.pick(
-                    e.clientX - rect.left,
-                    e.clientY - rect.top
-                );
-
-                const target = vm.runtime.targets.find(
-                    t => t.drawableID === drawableID
-                );
-
-                if (target) {
-                    vm.setEditingTarget(target.id);
+                    if (target) {
+                        vm.setEditingTarget(target.id);
+                    }
                 }
-            }
-        );
+            );
 
-        const overlay = document.createElement("div");
-        overlay.id = "gandi-transform-box";
+            const overlay = document.createElement("div");
+            overlay.id = "gandi-transform-box";
 
-        Object.assign(
-            overlay.style,
-            {
-                position: "fixed",
-                border: "2px solid #00A2FF",
-                pointerEvents: "none",
-                zIndex: "9999",
-                boxSizing: "border-box",
-                display: "none",
-                userSelect: "none",
-                cursor: "move"
-            }
-        );
+            Object.assign(
+                overlay.style,
+                {
+                    position: "fixed",
+                    border: "2px solid #00A2FF",
+                    pointerEvents: "none",
+                    zIndex: "9999",
+                    boxSizing: "border-box",
+                    display: "none",
+                    userSelect: "none",
+                    cursor: "move"
+                }
+            );
 
-        document.body.appendChild(overlay);
-        const tooltip =
-              document.createElement(
-                  "div"
-              );
+            document.body.appendChild(overlay);
+            const tooltip =
+            document.createElement(
+                "div"
+            );
 
-        Object.assign(
-            tooltip.style,
-            {
-                position: "fixed",
+            Object.assign(
+                tooltip.style,
+                {
+                    position: "fixed",
 
-                background:  "rgba(20,20,20,.92)",
+                    background:  "rgba(20,20,20,.92)",
 
-                color: "white",
-                fontWeight:
-                "500",
-                padding: "2px 6px",
+                    color: "white",
+                    fontWeight:
+                    "500",
+                    padding: "2px 6px",
 
-                borderRadius: "3px",
+                    borderRadius: "3px",
 
-                fontSize: "10px",
+                    fontSize: "10px",
 
-                pointerEvents: "none",
+                    pointerEvents: "none",
 
-                zIndex: "10001",
+                    zIndex: "10001",
 
-                display: "none",
+                    display: "none",
 
-                whiteSpace: "nowrap",
+                    whiteSpace: "nowrap",
 
-                boxShadow:
-                "0 2px 8px rgba(0,0,0,.4)"
-            }
-        );
+                    boxShadow:
+                    "0 2px 8px rgba(0,0,0,.4)"
+                }
+            );
 
-        document.body.appendChild(
-            tooltip
-        );
-        function showTooltip(
-        text,
-         e
-        ) {
+            document.body.appendChild(
+                tooltip
+            );
+            function showTooltip(
+                text,
+                e
+            ) {
 
-            tooltip.textContent =
+                tooltip.textContent =
                 text;
 
-            tooltip.style.display =
+                tooltip.style.display =
                 "block";
 
-            moveTooltip(e);
-        }
+                moveTooltip(e);
+            }
 
-        function hideTooltip() {
+            function hideTooltip() {
 
-            tooltip.style.display =
+                tooltip.style.display =
                 "none";
-        }
-        function attachTooltip(
-        element,
-         name
-        ) {
+            }
+            function attachTooltip(
+                element,
+                name
+            ) {
 
-            element.addEventListener(
-                "mouseenter",
-                e =>
-                showTooltip(
-                    name,
-                    e
-                )
-            );
+                element.addEventListener(
+                    "mouseenter",
+                    e =>
+                    showTooltip(
+                        name,
+                        e
+                    )
+                );
 
-            element.addEventListener(
-                "mouseleave",
-                hideTooltip
-            );
+                element.addEventListener(
+                    "mouseleave",
+                    hideTooltip
+                );
 
-            element.addEventListener(
-                "mousemove",
-                moveTooltip
-            );
+                element.addEventListener(
+                    "mousemove",
+                    moveTooltip
+                );
 
-            element.addEventListener(
-                "mousedown",
-                hideTooltip
-            );
+                element.addEventListener(
+                    "mousedown",
+                    hideTooltip
+                );
 
-            element.addEventListener(
-                "click",
-                hideTooltip
-            );
-        }
-        function moveTooltip(
-        e
-        ) {
+                element.addEventListener(
+                    "click",
+                    hideTooltip
+                );
+            }
+            function moveTooltip(
+                e
+            ) {
 
-            const offset = 8;
+                const offset = 8;
 
-            let x =
+                let x =
                 e.clientX +
                 offset;
 
-            let y =
+                let y =
                 e.clientY +
                 offset;
 
-            const rect =
-                  tooltip.getBoundingClientRect();
+                const rect =
+                tooltip.getBoundingClientRect();
 
-            if (
-                x + rect.width >
-                window.innerWidth
-            ) {
+                if (
+                    x + rect.width >
+                    window.innerWidth
+                ) {
 
-                x =
+                    x =
                     e.clientX -
                     rect.width -
                     offset;
-            }
+                }
 
-            if (
-                y + rect.height >
-                window.innerHeight
-            ) {
+                if (
+                    y + rect.height >
+                    window.innerHeight
+                ) {
 
-                y =
+                    y =
                     e.clientY -
                     rect.height -
                     offset;
-            }
+                }
 
-            tooltip.style.left =
+                tooltip.style.left =
                 x + "px";
 
-            tooltip.style.top =
+                tooltip.style.top =
                 y + "px";
-        }
-
-        const resizeHandle = document.createElement("div");
-        Object.assign(
-            resizeHandle.style,
-            {
-                position: "absolute",
-                width: "12px",
-                height: "12px",
-                background: "#00A2FF",
-                right: "-6px",
-                bottom: "-6px",
-                cursor: "nwse-resize",
-                border: "1px solid white",
-                boxSizing: "border-box",
-                pointerEvents: "auto"
-            }
-        );
-        overlay.appendChild(resizeHandle);
-
-        const moveHandle = document.createElement("div");
-        Object.assign(
-            moveHandle.style,
-            {
-                position: "absolute",
-                left: "50%",
-                top: "-23px",
-                width: "20px",
-                height: "20px",
-                marginLeft: "-12px",
-                background: "#e53935",
-                color: "white",
-                fontSize: "16px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "move",
-                borderRadius: "4px",
-                border: "1px solid white",
-                pointerEvents: "auto"
-            }
-        );
-        moveHandle.innerHTML = "✥";
-        overlay.appendChild(moveHandle);
-
-        const flipVerticalHandle = document.createElement("div");
-        Object.assign(
-            flipVerticalHandle.style,
-            {
-                position: "absolute",
-                width: "20px",
-                height: "20px",
-                left: "-26px",
-                top: "24px",
-                background: "#16a085",
-                color: "white",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: "4px",
-                cursor: "pointer",
-                pointerEvents: "auto"
-            }
-        );
-        flipVerticalHandle.innerHTML = "⇅";
-        overlay.appendChild(flipVerticalHandle);
-
-        const rotateHandle = document.createElement("div");
-        rotateHandle.innerHTML = "↻";
-        Object.assign(
-            rotateHandle.style,
-            {
-                position: "absolute",
-                width: "20px",
-                height: "20px",
-                background: "#ff9800",
-                borderRadius: "50%",
-                left: "50%",
-                top: "-44px",
-                marginLeft: "-12px",
-                cursor: "grab",
-                pointerEvents: "auto",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "white",
-                fontSize: "14px",
-                fontWeight: "bold",
-            }
-        );
-        overlay.appendChild(rotateHandle);
-
-        // --- NEW SPARK: ALPHA CONTROLLER INPUT OVER THE ROTATE BUTTON ---
-        const alphaContainer = document.createElement("div");
-        alphaContainer.id = "transform-alpha-container";
-        Object.assign(
-            alphaContainer.style,
-            {
-                position: "absolute",
-                left: "50%",
-                top: "-70px",
-                width: "36px",
-                marginLeft: "-20px",
-              background: "#34495e",
-                border: "1px solid #5d7a94",
-                borderRadius: "4px",
-                padding: "2px 2px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                pointerEvents: "auto",
-                boxShadow: "0 2px 6px rgba(0,0,0,0.3)"
-            }
-        );
-
-       alphaContainer.innerHTML = `
-<span
-    id="transform-alpha-icon"
-    style="
-        color:white;
-        font-size:11px;
-        margin-right:3px;
-        user-select:none;
-        transition:opacity 0.1s linear;
-    "
->
-◐
-</span>
-
-<input
-    id="transform-alpha-num"
-    type="text"
-    value="100"
-    style="
-        background:transparent;
-        color:white;
-        border:none;
-        width:22px;
-        text-align:center;
-        font-size:10px;
-        font-weight:bold;
-        outline:none;
-        cursor:ew-resize;
-    "
->
-`;
-        overlay.appendChild(alphaContainer);
-
-        const alphaInput = alphaContainer.querySelector("#transform-alpha-num");
-        const alphaIcon =
-              alphaContainer.querySelector(
-                  "#transform-alpha-icon"
-              );
-        function updateAlphaIcon(opacity) {
-
-            alphaIcon.style.opacity =
-                Math.max(
-                0.15,
-                opacity / 100
-            );
-        }
-        alphaInput.addEventListener(
-            "click",
-            e => {
-
-                e.stopPropagation();
-
-                alphaInput.focus();
-
-                alphaInput.select();
-            }
-        );
-        const resizeButton = document.createElement("div");
-        const skewHandle =
-              document.createElement("div");
-
-        Object.assign(
-            skewHandle.style,
-            {
-                position: "absolute",
-
-                width: "20px",
-                height: "20px",
-
-                right: "-27px",
-                bottom: "66px",
-
-                background: "#00A2FF",
-
-                color: "white",
-
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-
-                cursor: "pointer",
-
-                borderRadius: "4px",
-
-                border: "1px solid white",
-
-                pointerEvents: "auto"
-            }
-        );
-
-        skewHandle.innerHTML =
-            "🛠";
-
-        overlay.appendChild(
-            skewHandle
-        );
-        const assetToolsPanel =
-              document.createElement("div");
-
-        Object.assign(
-            assetToolsPanel.style,
-            {
-                position: "absolute",
-                left: "calc(100% + 35px)",
-                top: "calc(100% - 86px)",
-                width: "150px",
-                background: "#2c3e50",
-                border: "1px solid #5d7a94",
-                borderRadius: "4px",
-                padding: "4px",
-                display: "none",
-                flexDirection: "column",
-                gap: "4px",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
-                pointerEvents: "auto",
-                zIndex: "10000"
-            }
-        );
-
-        function createAssetToolButton(
-            label,
-            disabled
-        ) {
-            const button =
-                  document.createElement("button");
-
-            button.type =
-                "button";
-
-            if (
-                label.includes("Skew")
-            ) {
-                button.textContent =
-                    "↗ Skew";
-            }
-            else if (
-                label.includes("Perspective")
-            ) {
-                button.textContent =
-                    "◰ Perspective (Disabled)";
-            }
-            else if (
-                label.includes("Wave")
-            ) {
-                button.textContent =
-                    "〰 Wave (Disabled)";
-            }
-            else if (
-                label.includes("Twirl")
-            ) {
-                button.textContent =
-                    "🌀 Twirl (Disabled)";
-            }
-            else if (
-                label.includes("Bulge")
-            ) {
-                button.textContent =
-                    "⬤ Bulge (Disabled)";
-            }
-            else {
-                button.textContent =
-                    label;
             }
 
+            const resizeHandle = document.createElement("div");
             Object.assign(
-                button.style,
+                resizeHandle.style,
                 {
-                    width: "100%",
-                    background: disabled ? "#3f5364" : "#00A2FF",
+                    position: "absolute",
+                    width: "12px",
+                    height: "12px",
+                    background: "#00A2FF",
+                    right: "-6px",
+                    bottom: "-6px",
+                    cursor: "nwse-resize",
+                    border: "1px solid white",
+                    boxSizing: "border-box",
+                    pointerEvents: "auto"
+                }
+            );
+            overlay.appendChild(resizeHandle);
+
+            const moveHandle = document.createElement("div");
+            Object.assign(
+                moveHandle.style,
+                {
+                    position: "absolute",
+                    left: "50%",
+                    top: "-23px",
+                    width: "20px",
+                    height: "20px",
+                    marginLeft: "-12px",
+                    background: "#e53935",
                     color: "white",
+                    fontSize: "16px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "move",
+                    borderRadius: "4px",
+                    border: "1px solid white",
+                    pointerEvents: "auto"
+                }
+            );
+            moveHandle.innerHTML = "✥";
+            overlay.appendChild(moveHandle);
+
+            const flipVerticalHandle = document.createElement("div");
+            Object.assign(
+                flipVerticalHandle.style,
+                {
+                    position: "absolute",
+                    width: "20px",
+                    height: "20px",
+                    left: "-26px",
+                    top: "24px",
+                    background: "#16a085",
+                    color: "white",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    pointerEvents: "auto"
+                }
+            );
+            flipVerticalHandle.innerHTML = "⇅";
+            overlay.appendChild(flipVerticalHandle);
+
+            const rotateHandle = document.createElement("div");
+            rotateHandle.innerHTML = "↻";
+            Object.assign(
+                rotateHandle.style,
+                {
+                    position: "absolute",
+                    width: "20px",
+                    height: "20px",
+                    background: "#ff9800",
+                    borderRadius: "50%",
+                    left: "50%",
+                    top: "-44px",
+                    marginLeft: "-12px",
+                    cursor: "grab",
+                    pointerEvents: "auto",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "white",
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                }
+            );
+            overlay.appendChild(rotateHandle);
+
+            // --- NEW SPARK: ALPHA CONTROLLER INPUT OVER THE ROTATE BUTTON ---
+            const alphaContainer = document.createElement("div");
+            alphaContainer.id = "transform-alpha-container";
+            Object.assign(
+                alphaContainer.style,
+                {
+                    position: "absolute",
+                    left: "50%",
+                    top: "-70px",
+                    width: "36px",
+                    marginLeft: "-20px",
+                    background: "#34495e",
                     border: "1px solid #5d7a94",
                     borderRadius: "4px",
-                    padding: "4px 6px",
-                    fontSize: "11px",
-                    textAlign: "left",
-                    cursor: disabled ? "not-allowed" : "pointer",
-                    opacity: disabled ? "0.55" : "1",
+                    padding: "2px 2px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    pointerEvents: "auto",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.3)"
+                }
+            );
+
+            alphaContainer.innerHTML = `
+            <span
+            id="transform-alpha-icon"
+            style="
+            color:white;
+            font-size:11px;
+            margin-right:3px;
+            user-select:none;
+            transition:opacity 0.1s linear;
+            "
+            >
+            ◐
+            </span>
+
+            <input
+            id="transform-alpha-num"
+            type="text"
+            value="100"
+            style="
+            background:transparent;
+            color:white;
+            border:none;
+            width:22px;
+            text-align:center;
+            font-size:10px;
+            font-weight:bold;
+            outline:none;
+            cursor:ew-resize;
+            "
+            >
+            `;
+            overlay.appendChild(alphaContainer);
+
+            const alphaInput = alphaContainer.querySelector("#transform-alpha-num");
+            const alphaIcon =
+            alphaContainer.querySelector(
+                "#transform-alpha-icon"
+            );
+            function updateAlphaIcon(opacity) {
+
+                alphaIcon.style.opacity =
+                Math.max(
+                    0.15,
+                    opacity / 100
+                );
+            }
+            alphaInput.addEventListener(
+                "click",
+                e => {
+
+                    e.stopPropagation();
+
+                    alphaInput.focus();
+
+                    alphaInput.select();
+                }
+            );
+            const resizeButton = document.createElement("div");
+            const skewHandle =
+            document.createElement("div");
+
+            Object.assign(
+                skewHandle.style,
+                {
+                    position: "absolute",
+
+                    width: "20px",
+                    height: "20px",
+
+                    right: "-27px",
+                    bottom: "66px",
+
+                    background: "#00A2FF",
+
+                    color: "white",
+
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+
+                    cursor: "pointer",
+
+                    borderRadius: "4px",
+
+                    border: "1px solid white",
+
                     pointerEvents: "auto"
                 }
             );
 
-            button.disabled =
+            skewHandle.innerHTML =
+            "🛠";
+
+            overlay.appendChild(
+                skewHandle
+            );
+            const assetToolsPanel =
+            document.createElement("div");
+
+            Object.assign(
+                assetToolsPanel.style,
+                {
+                    position: "absolute",
+                    left: "calc(100% + 35px)",
+                    top: "calc(100% - 86px)",
+                    width: "150px",
+                    background: "#2c3e50",
+                    border: "1px solid #5d7a94",
+                    borderRadius: "4px",
+                    padding: "4px",
+                    display: "none",
+                    flexDirection: "column",
+                    gap: "4px",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
+                    pointerEvents: "auto",
+                    zIndex: "10000"
+                }
+            );
+
+            function createAssetToolButton(
+                label,
+                disabled
+            ) {
+                const button =
+                document.createElement("button");
+
+                button.type =
+                "button";
+
+                if (
+                    label.includes("Skew")
+                ) {
+                    button.textContent =
+                    "↗ Skew";
+                }
+                else if (
+                    label.includes("Perspective")
+                ) {
+                    button.textContent =
+                    "◰ Perspective (Disabled)";
+                }
+                else if (
+                    label.includes("Wave")
+                ) {
+                    button.textContent =
+                    "〰 Wave (Disabled)";
+                }
+                else if (
+                    label.includes("Twirl")
+                ) {
+                    button.textContent =
+                    "🌀 Twirl (Disabled)";
+                }
+                else if (
+                    label.includes("Bulge")
+                ) {
+                    button.textContent =
+                    "⬤ Bulge (Disabled)";
+                }
+                else {
+                    button.textContent =
+                    label;
+                }
+
+                Object.assign(
+                    button.style,
+                    {
+                        width: "100%",
+                        background: disabled ? "#3f5364" : "#00A2FF",
+                        color: "white",
+                        border: "1px solid #5d7a94",
+                        borderRadius: "4px",
+                        padding: "4px 6px",
+                        fontSize: "11px",
+                        textAlign: "left",
+                        cursor: disabled ? "not-allowed" : "pointer",
+                        opacity: disabled ? "0.55" : "1",
+                        pointerEvents: "auto"
+                    }
+                );
+
+                button.disabled =
                 disabled;
 
-            return button;
-        }
-
-        const assetSkewButton =
-              createAssetToolButton(
-                  "↗ Skew (Coming Soon)",
-                  false
-              );
-
-        assetToolsPanel.appendChild(
-            assetSkewButton
-        );
-
-        assetToolsPanel.appendChild(
-            createAssetToolButton(
-                "◰ Perspective (Disabled)",
-                true
-            )
-        );
-
-        assetToolsPanel.appendChild(
-            createAssetToolButton(
-                "〰 Wave (Disabled)",
-                true
-            )
-        );
-
-        assetToolsPanel.appendChild(
-            createAssetToolButton(
-                "🌀 Twirl (Disabled)",
-                true
-            )
-        );
-
-        assetToolsPanel.appendChild(
-            createAssetToolButton(
-                "⬤ Bulge (Disabled)",
-                true
-            )
-        );
-
-        overlay.appendChild(
-            assetToolsPanel
-        );
-        const widthHandle =
-              document.createElement("div");
-
-        Object.assign(
-            widthHandle.style,
-            {
-                position: "absolute",
-
-                width: "20px",
-                height: "20px",
-
-                right: "-27px",
-                bottom: "42px",
-
-                background: "#00A2FF",
-
-                color: "white",
-
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-
-                cursor: "ew-resize",
-
-                borderRadius: "4px",
-
-                border: "1px solid white",
-
-                pointerEvents: "auto"
+                return button;
             }
-        );
 
-        widthHandle.innerHTML =
+            const assetSkewButton =
+            createAssetToolButton(
+                "↗ Skew (Coming Soon)",
+                false
+            );
+
+            assetToolsPanel.appendChild(
+                assetSkewButton
+            );
+
+            assetToolsPanel.appendChild(
+                createAssetToolButton(
+                    "◰ Perspective (Disabled)",
+                    true
+                )
+            );
+
+            assetToolsPanel.appendChild(
+                createAssetToolButton(
+                    "〰 Wave (Disabled)",
+                    true
+                )
+            );
+
+            assetToolsPanel.appendChild(
+                createAssetToolButton(
+                    "🌀 Twirl (Disabled)",
+                    true
+                )
+            );
+
+            assetToolsPanel.appendChild(
+                createAssetToolButton(
+                    "⬤ Bulge (Disabled)",
+                    true
+                )
+            );
+
+            overlay.appendChild(
+                assetToolsPanel
+            );
+            const widthHandle =
+            document.createElement("div");
+
+            Object.assign(
+                widthHandle.style,
+                {
+                    position: "absolute",
+
+                    width: "20px",
+                    height: "20px",
+
+                    right: "-27px",
+                    bottom: "42px",
+
+                    background: "#00A2FF",
+
+                    color: "white",
+
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+
+                    cursor: "ew-resize",
+
+                    borderRadius: "4px",
+
+                    border: "1px solid white",
+
+                    pointerEvents: "auto"
+                }
+            );
+
+            widthHandle.innerHTML =
             "↔";
 
-        overlay.appendChild(
-            widthHandle
-        );
-        const heightHandle =
-              document.createElement("div");
+            overlay.appendChild(
+                widthHandle
+            );
+            const heightHandle =
+            document.createElement("div");
 
-        Object.assign(
-            heightHandle.style,
-            {
-                position: "absolute",
+            Object.assign(
+                heightHandle.style,
+                {
+                    position: "absolute",
 
-                width: "20px",
-                height: "20px",
+                    width: "20px",
+                    height: "20px",
 
-                right: "-27px",
-                bottom: "18px",
+                    right: "-27px",
+                    bottom: "18px",
 
-                background: "#00A2FF",
+                    background: "#00A2FF",
 
-                color: "white",
+                    color: "white",
 
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
 
-                cursor: "ns-resize",
+                    cursor: "ns-resize",
 
-                borderRadius: "4px",
+                    borderRadius: "4px",
 
-                border: "1px solid white",
+                    border: "1px solid white",
 
-                pointerEvents: "auto"
-            }
-        );
+                    pointerEvents: "auto"
+                }
+            );
 
-        heightHandle.innerHTML =
+            heightHandle.innerHTML =
             "↕";
 
-        overlay.appendChild(
-            heightHandle
-        );
-        Object.assign(
-            resizeButton.style,
-            {
-                position: "absolute",
-                width: "20px",
-                height: "20px",
-                right: "-27px",
-                bottom: "-6px",
-                background: "#00A2FF",
-                color: "white",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "nwse-resize",
-                borderRadius: "4px",
-                border: "1px solid white",
-                pointerEvents: "auto"
-            }
-        );
-        resizeButton.innerHTML = "◲";
-        overlay.appendChild(resizeButton);
+            overlay.appendChild(
+                heightHandle
+            );
+            Object.assign(
+                resizeButton.style,
+                {
+                    position: "absolute",
+                    width: "20px",
+                    height: "20px",
+                    right: "-27px",
+                    bottom: "-6px",
+                    background: "#00A2FF",
+                    color: "white",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "nwse-resize",
+                    borderRadius: "4px",
+                    border: "1px solid white",
+                    pointerEvents: "auto"
+                }
+            );
+            resizeButton.innerHTML = "◲";
+            overlay.appendChild(resizeButton);
 
-        const flipHandle = document.createElement("div");
-        Object.assign(
-            flipHandle.style,
-            {
-                position: "absolute",
-                width: "20px",
-                height: "20px",
-                left: "-26px",
-                top: "0px",
-                background: "#8e44ad",
-                color: "white",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: "4px",
-                cursor: "pointer",
-                pointerEvents: "auto"
-            }
-        );
-        flipHandle.innerHTML = "⇋";
-        overlay.appendChild(flipHandle);
+            const flipHandle = document.createElement("div");
+            Object.assign(
+                flipHandle.style,
+                {
+                    position: "absolute",
+                    width: "20px",
+                    height: "20px",
+                    left: "-26px",
+                    top: "0px",
+                    background: "#8e44ad",
+                    color: "white",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    pointerEvents: "auto"
+                }
+            );
+            flipHandle.innerHTML = "⇋";
+            overlay.appendChild(flipHandle);
 
-        const resetHandle = document.createElement("div");
-        Object.assign(
-            resetHandle.style,
-            {
-                position: "absolute",
-                width: "20px",
-                height: "20px",
-                left: "-26px",
-                top: "48px",
-                background: "#c0392b",
-                color: "white",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: "4px",
-                cursor: "pointer",
-                pointerEvents: "auto"
-            }
-        );
-        resetHandle.innerHTML = "⟲";
-        overlay.appendChild(resetHandle);
+            const resetHandle = document.createElement("div");
+            Object.assign(
+                resetHandle.style,
+                {
+                    position: "absolute",
+                    width: "20px",
+                    height: "20px",
+                    left: "-26px",
+                    top: "48px",
+                    background: "#c0392b",
+                    color: "white",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    pointerEvents: "auto"
+                }
+            );
+            resetHandle.innerHTML = "⟲";
+            overlay.appendChild(resetHandle);
 
-        resetHandle.addEventListener(
-            "click",
-            () => {
-                const target = vm.editingTarget;
-                const drawable =
+            resetHandle.addEventListener(
+                "click",
+                () => {
+                    const target = vm.editingTarget;
+                    const drawable =
                     vm.runtime.renderer
                     ._allDrawables[
                         target.drawableID
                     ];
 
-                if (drawable) {
+                    if (drawable) {
 
-                    installShearHook(
-                        drawable,
-                        target
-                    );
+                        installShearHook(
+                            drawable,
+                            target
+                        );
 
+                    }
+
+                    target.setDirection(90);
+                    target.setSize(100);
+                    applySpriteAlpha(100);
+                    alphaInput.value = 100;
+                    target.updateAllDrawableProperties();
+                    target.emitVisualChange();
                 }
+            );
+            const nameContainer =
+            document.createElement(
+                "div"
+            );
 
-                target.setDirection(90);
-                target.setSize(100);
-                applySpriteAlpha(100);
-                alphaInput.value = 100;
-                target.updateAllDrawableProperties();
-                target.emitVisualChange();
-            }
-        );
-        const nameContainer =
-              document.createElement(
-                  "div"
-              );
+            Object.assign(
+                nameContainer.style,
+                {
+                    position: "absolute",
 
-        Object.assign(
-            nameContainer.style,
-            {
-                position: "absolute",
+                    left: "-1px",
+                    top: "100%",
 
-                left: "-1px",
-                top: "100%",
+                    transform:
+                    "translateY(6px)",
 
-                transform:
-                "translateY(6px)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
 
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
+                    pointerEvents: "auto"
+                }
+            );
 
-                pointerEvents: "auto"
-            }
-        );
+            overlay.appendChild(
+                nameContainer
+            );
+            const renameButton =
+            document.createElement(
+                "div"
+            );
 
-        overlay.appendChild(
-            nameContainer
-        );
-        const renameButton =
-              document.createElement(
-                  "div"
-              );
+            Object.assign(
+                renameButton.style,
+                {
+                    width: "20px",
+                    height: "20px",
 
-        Object.assign(
-            renameButton.style,
-            {
-                width: "20px",
-                height: "20px",
+                    background: "#f39c12",
 
-                background: "#f39c12",
+                    color: "white",
 
-                color: "white",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
 
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                    borderRadius: "4px",
 
-                borderRadius: "4px",
+                    cursor: "pointer",
 
-                cursor: "pointer",
+                    fontSize: "12px"
+                }
+            );
 
-                fontSize: "12px"
-            }
-        );
-
-        renameButton.innerHTML =
+            renameButton.innerHTML =
             "✎";
 
-        nameContainer.appendChild(
-            renameButton
-        );
-        renameButton.addEventListener(
-            "click",
-            () => {
+            nameContainer.appendChild(
+                renameButton
+            );
+            renameButton.addEventListener(
+                "click",
+                () => {
 
-                nameInput.focus();
+                    nameInput.focus();
 
-                nameInput.select();
-            }
-        );
-        const nameInput =
-              document.createElement(
-                  "input"
-              );
+                    nameInput.select();
+                }
+            );
+            const nameInput =
+            document.createElement(
+                "input"
+            );
 
-       Object.assign(
-           nameInput.style,
-           {
-               minWidth: "60px",
-               maxWidth: "250px",
+            Object.assign(
+                nameInput.style,
+                {
+                    minWidth: "60px",
+                    maxWidth: "250px",
 
-               background: "#34495e",
+                    background: "#34495e",
 
-               color: "white",
+                    color: "white",
 
-               border: "1px solid #5d7a94",
+                    border: "1px solid #5d7a94",
 
-               borderRadius: "4px",
+                    borderRadius: "4px",
 
-               fontSize: "10px",
+                    fontSize: "10px",
 
-               padding: "2px 6px",
+                    padding: "2px 6px",
 
-               outline: "none"
-           }
-       );
+                    outline: "none"
+                }
+            );
 
-        nameContainer.appendChild(
-            nameInput
-        );
-        function updateNameInputWidth() {
+            nameContainer.appendChild(
+                nameInput
+            );
+            function updateNameInputWidth() {
 
-            const chars =
-                  Math.max(
-                      8,
-                      nameInput.value.length
-                  );
+                const chars =
+                Math.max(
+                    8,
+                    nameInput.value.length
+                );
 
-            nameInput.style.width =
+                nameInput.style.width =
                 (chars * 7) + "px";
-        }
-        nameInput.addEventListener(
-            "input",
-            updateNameInputWidth
-        );
-       nameInput.addEventListener(
-           "keydown",
-           e => {
-
-               if (
-                   e.key === "Enter"
-               ) {
-
-                   const newName =
-                         nameInput.value.trim();
-
-                   if (
-                       !newName
-                   ) return;
-
-                   const target =
-                         vm.editingTarget;
-                  vm.renameSprite(
-                      target.id,
-                      newName
-                  );
-
-                   nameInput.blur();
-               }
-           }
-       );
-        attachTooltip(
-            moveHandle,
-            "Move"
-        );
-
-        attachTooltip(
-            rotateHandle,
-            "Rotate"
-        );
-
-        attachTooltip(
-            resizeButton,
-            "Resize"
-        );
-
-        attachTooltip(
-            resizeHandle,
-            "Resize"
-        );
-
-        attachTooltip(
-            flipHandle,
-            "Flip Horizontal"
-        );
-
-        attachTooltip(
-            flipVerticalHandle,
-            "Flip Vertical"
-        );
-
-        attachTooltip(
-            resetHandle,
-            "Reset"
-        );
-
-        attachTooltip(
-            alphaContainer,
-            "Opacity"
-        );
-        attachTooltip(
-            skewHandle,
-            "Asset Tools"
-        );
-        attachTooltip(
-            widthHandle,
-            "Width Scale"
-        );
-
-        attachTooltip(
-            heightHandle,
-            "Height Scale"
-        );
-        let resizing = false;
-        let resizeMode =
-            "uniform";
-        function closeAssetToolsPanel() {
-            assetToolsPanel.style.display =
-                "none";
-        }
-
-        function toggleAssetToolsPanel() {
-            assetToolsPanel.style.display =
-                assetToolsPanel.style.display === "none"
-                    ? "flex"
-                    : "none";
-        }
-
-        skewHandle.addEventListener(
-            "mousedown",
-            e => {
-                e.preventDefault();
-                e.stopPropagation();
             }
-        );
-
-        skewHandle.addEventListener(
-            "click",
-            e => {
-                e.preventDefault();
-                e.stopPropagation();
-
-                toggleAssetToolsPanel();
-            }
-        );
-
-        assetToolsPanel.addEventListener(
-            "mousedown",
-            e => {
-                e.stopPropagation();
-            }
-        );
-
-        assetSkewButton.addEventListener(
-            "mousedown",
-            e => {
-                e.preventDefault();
-                e.stopPropagation();
-
-                closeAssetToolsPanel();
-                createSkewSession(e);
-            }
-        );
-
-        document.addEventListener(
-            "mousedown",
-            e => {
-                if (
-                    assetToolsPanel.style.display === "none"
-                ) {
-                    return;
-                }
-
-                if (
-                    overlay.contains(e.target)
-                ) {
-                    return;
-                }
-
-                closeAssetToolsPanel();
-            },
-            true
-        );
-       widthHandle.addEventListener(
-           "mousedown",
-           e => {
-
-               e.preventDefault();
-               e.stopPropagation();
-               transformTarget = vm.editingTarget;
-
-               const drawable =
-                     vm.runtime.renderer
-               ._allDrawables[
-                   transformTarget.drawableID
-               ];
-               installShearHook(
-                   drawable,
-                   transformTarget
-               );
-               startScaleX =
-                   drawable.scale[0];
-
-               startScaleY =
-                   drawable.scale[1];
-
-
-               resizeMode =
-                   "width";
-
-               resizing =
-                   true;
-
-               startX =
-                   e.clientX;
-
-               startSize =
-                   Math.abs(
-                   drawable.scale[0]
-               );
-           }
-       );
-       heightHandle.addEventListener(
-           "mousedown",
-           e => {
-
-               e.preventDefault();
-               e.stopPropagation();
-               transformTarget = vm.editingTarget;
-
-               const drawable =
-                     vm.runtime.renderer
-               ._allDrawables[
-                   transformTarget.drawableID
-               ];
-               installShearHook(
-                   drawable,
-                   transformTarget
-               );
-               startScaleX =
-                   drawable.scale[0];
-
-               startScaleY =
-                   drawable.scale[1];
-
-               resizeMode =
-                   "height";
-
-               resizing =
-                   true;
-
-               startX =
-                   e.clientX;
-               startY =
-                   e.clientY;
-               startSize =
-                   Math.abs(
-                   drawable.scale[1]
-               );
-           }
-       );
-        let startX = 0;
-        let startY = 0;
-        let startSize = 0;
-        let startScaleX = 0;
-        let startScaleY = 0;
-        let startTargetSize = 100;
-        let dragging = false;
-        let dragStartX = 0;
-        let dragStartY = 0;
-        let spriteStartX = 0;
-        let spriteStartY = 0;
-        let rotating = false;
-        let rotateCenterX = 0;
-        let rotateCenterY = 0;
-        let rotateScaleX = 0;
-        let rotateScaleY = 0;
-        let startDirection = 0;
-        let startAngle = 0;
-        let startMouseX = 0;
-        let startMouseY = 0;
-        let shearX = 0;
-        let shearY = 0;
-        let activeSkewSession = null;
-        let activeShearBridge = null;
-        let alphaDragging = false;
-        let lastPosX = null;
-        let lastPosY = null;
-        let alphaDragStartX = 0;
-
-        let alphaStartValue = 100;
-        let stageDragActive = false;
-
-        let stageDragStartX = 0;
-        let stageDragStartY = 0;
-
-        let overlayDragDX = 0;
-        let overlayDragDY = 0;
-        let overlayStartLeft = 0;
-        let overlayStartTop = 0;
-        let potentialStageDrag = false;
-        let stageDraggingSprite =false;
-        let stageSpriteDrag = false;
-        let dragTarget = null;
-        let uniformBaseScale = 0;
-        let lastUniformRatio = 1;
-        let visualFlipX = false;
-        let transformTarget = null;
-
-        // --- CLICK & HOLD SLIDER INTEGRATION FOR INSTANT REVEAL ---
-
-
-
-     alphaInput.addEventListener(
-         "mousedown",
-         e => {
-
-             alphaDragging = true;
-
-             alphaDragStartX =
-                 e.clientX;
-
-             alphaStartValue =
-                 parseInt(
-                 alphaInput.value,
-                 10
-             );
-
-             e.preventDefault();
-         }
-     );
-
-
-        alphaInput.addEventListener("change", () => {
-            let val = parseInt(alphaInput.value, 10);
-            if (isNaN(val)) return;
-            if (val > 100) alphaInput.value = 100;
-            if (val < 0) alphaInput.value = 0;
-            updateAlphaIcon(
-                Number(alphaInput.value)
+            nameInput.addEventListener(
+                "input",
+                updateNameInputWidth
             );
-            applySpriteAlpha(alphaInput.value);
-             spriteAlphaMap.set(
-                vm.editingTarget.id,
-                Number(alphaInput.value)
-            );
-        });
-        alphaInput.addEventListener(
-            "keydown",
-            e => {
-
-                if (
-                    e.key === "Enter"
-                ) {
-
-                    alphaInput.blur();
-                }
-            }
-        );
-        resizeHandle.addEventListener(
-            "mousedown",
-            e => {
-                e.preventDefault();
-                e.stopPropagation();
-                transformTarget = vm.editingTarget;
-                resizing = true;
-                startX = e.clientX;
-                startY = e.clientY;
-
-                const drawable = vm.runtime.renderer._allDrawables[transformTarget.drawableID];
-                installShearHook(
-                    drawable,
-                    transformTarget
-                );
-                startSize = Math.abs(drawable.scale[0]);
-            }
-        );
-
-        resizeButton.addEventListener(
-            "mousedown",
-            e => {
-                e.preventDefault();
-                e.stopPropagation();
-                transformTarget = vm.editingTarget;
-                resizeMode =
-                    "uniform";
-                resizing = true;
-                startX = e.clientX;
-                const drawable = vm.runtime.renderer._allDrawables[transformTarget.drawableID];
-                installShearHook(
-                    drawable,
-                    transformTarget
-                );
-                startScaleX =
-                    drawable.scale[0];
-
-                startScaleY =
-                    drawable.scale[1];
-                startTargetSize =
-                    transformTarget.size;
-                startSize = Math.abs(drawable.scale[0]);
-                uniformBaseScale =
-                    Math.max(
-                    Math.abs(
-                        drawable.scale[0]
-                    ),
-                    Math.abs(
-                        drawable.scale[1]
-                    )
-                );
-            }
-        );
-
-function normalizeDirection(deg) {
-    while (deg > 180) deg -= 360;
-    while (deg <= -180) deg += 360;
-    return deg;
-}
-
-function installShearHook(drawable, target) {
-
-    if (!drawable) return;
-
-    if (drawable.__gandhiShearInstalled)
-        return;
-
-    drawable.__gandhiShearInstalled =
-        true;
-
-    if (target) {
-        drawable.__gandhiTargetId =
-            target.id;
-    }
-
-    const oldGetUniforms =
-        drawable.getUniforms.bind(drawable);
-
-    drawable.getUniforms =
-        function () {
-
-            const uniforms =
-                oldGetUniforms();
-
-            const original =
-                uniforms.u_modelMatrix;
-
-            const m =
-                new Float32Array(
-                    original
-                );
-
-            let shearX = 0;
-            let shearY = 0;
-
-            if (
-                activeShearBridge &&
-                activeShearBridge.drawable === this
-            ) {
-                shearX = activeShearBridge.shearX || 0;
-                shearY = activeShearBridge.shearY || 0;
-            }
-
-            const a = m[0];
-            const b = m[1];
-            const c = m[4];
-            const d = m[5];
-
-            m[0] =
-                a + c * shearY;
-
-            m[1] =
-                b + d * shearY;
-
-            m[4] =
-                c + a * shearX;
-
-            m[5] =
-                d + b * shearX;
-
-            uniforms.u_modelMatrix = m;
-
-            return uniforms;
-
-        };
-
-}
-
-function createSkewSession(e) {
-    if (activeSkewSession) {
-        activeSkewSession.destroy();
-        activeSkewSession = null;
-    }
-
-    const target = vm.editingTarget;
-    if (!target) return null;
-
-    const drawable =
-          vm.runtime.renderer._allDrawables[
-              target.drawableID
-          ];
-    if (!drawable) return null;
-
-    installShearHook(
-        drawable,
-        target
-    );
-
-    activeShearBridge = {
-        drawable,
-        shearX: 0,
-        shearY: 0
-    };
-
-    const session = {
-        target,
-        drawable,
-        startMouseX: e.clientX,
-        startMouseY: e.clientY,
-        startShearX: 0,
-        startShearY: 0,
-
-        onMove(moveEvent) {
-            activeShearBridge.shearX =
-                this.startShearX +
-                (moveEvent.clientX - this.startMouseX) / 200;
-
-            activeShearBridge.shearY =
-                this.startShearY +
-                (moveEvent.clientY - this.startMouseY) / 200;
-
-            this.drawable.setTransformDirty();
-            this.target.emitVisualChange();
-            vm.runtime.requestRedraw();
-
-            this.target.setXY(
-                this.target.x,
-                this.target.y
-            );
-
-            this.target.emitVisualChange();
-            vm.runtime.requestRedraw();
-        },
-
-        onUp(upEvent) {
-            const finalShearX =
-                this.startShearX +
-                (upEvent.clientX - this.startMouseX) / 200;
-
-            const finalShearY =
-                this.startShearY +
-                (upEvent.clientY - this.startMouseY) / 200;
-
-            if (activeShearBridge) {
-                activeShearBridge.shearX = finalShearX;
-                activeShearBridge.shearY = finalShearY;
-            }
-
-            window.removeEventListener("mousemove", this.boundMove, true);
-            window.removeEventListener("mouseup", this.boundUp, true);
-
-            activeSkewSession = null;
-
-            AssetBakeEngine.bakeCurrentCostume(
-                (
-                    canvas,
-                    ctx,
-                    image,
-                    costume
-                ) => {
-                    bakeSkewToCanvas(
-                        canvas,
-                        costume,
-                        -finalShearX,
-                        -finalShearY
-                    );
-
-                    canvas.__gandhiBeforeReplace =
-                        () => {
-                            activeShearBridge = null;
-                        };
-
-                    return updateSelectionBox;
-                },
-                this.target
-            );
-        },
-
-        destroy() {
-            if (
-                activeShearBridge &&
-                activeShearBridge.drawable === this.drawable
-            ) {
-                activeShearBridge = null;
-            }
-
-            window.removeEventListener("mousemove", this.boundMove, true);
-            window.removeEventListener("mouseup", this.boundUp, true);
-        }
-    };
-
-    session.boundMove =
-        session.onMove.bind(session);
-
-    session.boundUp =
-        session.onUp.bind(session);
-
-    window.addEventListener("mousemove", session.boundMove, true);
-    window.addEventListener("mouseup", session.boundUp, true);
-
-    activeSkewSession = session;
-
-    return session;
-}
-
-function bakeSkewToCanvas(
-    canvas,
-    costume,
-    shearX,
-    shearY
-) {
-    if (
-        !shearX &&
-        !shearY
-    ) {
-        return;
-    }
-
-    const width =
-          canvas.width;
-
-    const height =
-          canvas.height;
-
-    const source =
-          document.createElement("canvas");
-
-    source.width =
-        width;
-
-    source.height =
-        height;
-
-    const sourceCtx =
-          source.getContext("2d");
-
-    sourceCtx.drawImage(
-        canvas,
-        0,
-        0
-    );
-
-    const cx =
-          width / 2;
-
-    const cy =
-          height / 2;
-
-    const points = [
-        [0, 0],
-        [width, 0],
-        [width, height],
-        [0, height]
-    ].map(
-        point => {
-            const x =
-                  point[0];
-
-            const y =
-                  point[1];
-
-            return {
-                x:
-                    x +
-                    (
-                        y -
-                        cy
-                    ) *
-                    shearX,
-
-                y:
-                    y +
-                    (
-                        x -
-                        cx
-                    ) *
-                    shearY
-            };
-        }
-    );
-
-    const minX =
-          Math.floor(
-              Math.min(
-                  ...points.map(point => point.x)
-              )
-          );
-
-    const minY =
-          Math.floor(
-              Math.min(
-                  ...points.map(point => point.y)
-              )
-          );
-
-    const maxX =
-          Math.ceil(
-              Math.max(
-                  ...points.map(point => point.x)
-              )
-          );
-
-    const maxY =
-          Math.ceil(
-              Math.max(
-                  ...points.map(point => point.y)
-              )
-          );
-
-    canvas.width =
-        Math.max(
-            1,
-            maxX - minX
-        );
-
-    canvas.height =
-        Math.max(
-            1,
-            maxY - minY
-        );
-
-    const ctx =
-          canvas.getContext("2d");
-
-    ctx.clearRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
-
-    ctx.setTransform(
-        1,
-        shearY,
-        shearX,
-        1,
-        -shearX * cy - minX,
-        -shearY * cx - minY
-    );
-
-    ctx.drawImage(
-        source,
-        0,
-        0
-    );
-
-    ctx.setTransform(
-        1,
-        0,
-        0,
-        1,
-        0,
-        0
-    );
-
-    const rotationCenterX =
-          typeof costume.rotationCenterX === "number"
-              ? costume.rotationCenterX
-              : cx;
-
-    const rotationCenterY =
-          typeof costume.rotationCenterY === "number"
-              ? costume.rotationCenterY
-              : cy;
-
-    canvas.__gandhiBakeRotationCenterX =
-        rotationCenterX -
-        minX;
-
-    canvas.__gandhiBakeRotationCenterY =
-        rotationCenterY -
-        minY;
-}
-
-function applyTargetVisualFlipX(target) {
-    if (!target) return;
-
-    const drawable =
-          vm.runtime.renderer._allDrawables[
-              target.drawableID
-          ];
-    installShearHook(
-        drawable,
-        target
-    );
-    if (!drawable) return;
-
-    const absX =
-          Math.abs(
-              drawable.scale[0]
-          );
-
-    drawable.updateScale([
-        target.__gandhiVisualFlipX ? -absX : absX,
-        drawable.scale[1]
-    ]);
-}
-
-function toggleTargetVisualFlipX(target) {
-    target.__gandhiVisualFlipX =
-        !target.__gandhiVisualFlipX;
-
-    applyTargetVisualFlipX(
-        target
-    );
-}
-
-flipHandle.addEventListener(
-    "click",
-    () => {
-        const target = vm.editingTarget;
-        if (!target) return;
-
-        const oldDirection =
-              target.direction;
-
-        target.setDirection(
-            normalizeDirection(
-                180 - oldDirection
-            )
-        );
-
-        toggleTargetVisualFlipX(
-            target
-        );
-
-        target.emitVisualChange();
-        vm.runtime.requestRedraw();
-
-        updateSelectionBox();
-    }
-);
-
-flipVerticalHandle.addEventListener(
-    "click",
-    () => {
-        const target = vm.editingTarget;
-        if (!target) return;
-
-        const oldDirection =
-              target.direction;
-
-        target.setDirection(
-            normalizeDirection(
-                -oldDirection
-            )
-        );
-
-        toggleTargetVisualFlipX(
-            target
-        );
-
-        target.emitVisualChange();
-        vm.runtime.requestRedraw();
-
-        updateSelectionBox();
-    }
-);
-
-        rotateHandle.addEventListener(
-            "mousedown",
-            e => {
-                e.preventDefault();
-                e.stopPropagation();
-                transformTarget = vm.editingTarget;
-
-                const drawable = vm.runtime.renderer._allDrawables[transformTarget.drawableID];
-                installShearHook(
-                    drawable,
-                    transformTarget
-                );
-                rotateScaleX = drawable.scale[0];
-                rotateScaleY = drawable.scale[1];
-
-                const rect = overlay.getBoundingClientRect();
-                rotateCenterX = rect.left + rect.width / 2;
-                rotateCenterY = rect.top + rect.height / 2;
-
-                startAngle = Math.atan2(
-                    e.clientY - rotateCenterY,
-                    e.clientX - rotateCenterX
-                );
-
-                startDirection = transformTarget.direction;
-                rotating = true;
-            }
-        );
-
-        moveHandle.addEventListener(
-            "mousedown",
-            e => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (activeSkewSession) return;
-                transformTarget = vm.editingTarget;
-                dragging = true;
-                dragStartX = e.clientX;
-                dragStartY = e.clientY;
-                spriteStartX = transformTarget.x;
-                spriteStartY = transformTarget.y;
-                overlayStartLeft =
-                    parseFloat(
-                    overlay.style.left
-                );
-
-                overlayStartTop =
-                    parseFloat(
-                    overlay.style.top
-                );
-            }
-        );
-
-      window.addEventListener(
-          "mouseup",
-          () => {
-
-              potentialStageDrag =
-                  false;
-
-              stageDraggingSprite =
-                  false;
-
-              if (
-                  resizing &&
-                  resizeMode === "uniform"
-              ) {
-
-                  const size =
-                        startTargetSize *
-                        lastUniformRatio;
-
-                  transformTarget.setSize(
-                      size
-                  );
-
-                  transformTarget.emitVisualChange();
-
-                  vm.runtime.requestRedraw();
-              }
-
-              resizing = false;
-              dragging = false;
-              rotating = false;
-              transformTarget = null;
-
-              alphaDragging =
-                  false;
-
-              stageDragActive =
-                  false;
-
-              overlayDragDX = 0;
-              overlayDragDY = 0;
-
-              stageSpriteDrag =
-                  false;
-
-              dragTarget =
-                  null;
-          }
-      );
-
-        window.addEventListener(
-            "mousemove",
-            e => {
-
-                if (activeSkewSession) {
-                    return;
-                }
-
-                if (
-                    potentialStageDrag &&
-                    !stageDraggingSprite
-                ) {
-
-                    const dx =
-                          Math.abs(
-                              e.clientX -
-                              stageDragStartX
-                          );
-
-                    const dy =
-                          Math.abs(
-                              e.clientY -
-                              stageDragStartY
-                          );
+            nameInput.addEventListener(
+                "keydown",
+                e => {
 
                     if (
-                        dx > 5 ||
-                        dy > 5
+                        e.key === "Enter"
                     ) {
 
-                        stageDraggingSprite =
-                            true;
-                       if (true){
+                        const newName =
+                        nameInput.value.trim();
 
-                            stageSpriteDrag =
-                                true;
+                        if (
+                            !newName
+                        ) return;
 
-                            spriteStartX =
-                                dragTarget.x;
+                        const target =
+                        vm.editingTarget;
+                        vm.renameSprite(
+                            target.id,
+                            newName
+                        );
 
-                            spriteStartY =
-                                dragTarget.y;
-
-                            dragStartX =
-                                stageDragStartX;
-
-                            dragStartY =
-                                stageDragStartY;
-                        }
-                        /* Keep transform box visible while dragging */
+                        nameInput.blur();
                     }
                 }
-                if (
-                    stageSpriteDrag &&
-                    dragTarget
-                ) {
+            );
+            attachTooltip(
+                moveHandle,
+                "Move"
+            );
 
-                    const canvas =
-                          getStageCanvas();
+            attachTooltip(
+                rotateHandle,
+                "Rotate"
+            );
 
-                    const rect =
-                          canvas.getBoundingClientRect();
+            attachTooltip(
+                resizeButton,
+                "Resize"
+            );
 
-                    const [stageWidth, stageHeight] =
-                          vm.runtime.renderer
-                    .getNativeSize();
+            attachTooltip(
+                resizeHandle,
+                "Resize"
+            );
 
-                    const dx =
-                          (
-                              e.clientX -
-                              dragStartX
-                          ) /
-                          rect.width *
-                          stageWidth;
+            attachTooltip(
+                flipHandle,
+                "Flip Horizontal"
+            );
 
-                    const dy =
-                          (
-                              e.clientY -
-                              dragStartY
-                          ) /
-                          rect.height *
-                          stageHeight;
+            attachTooltip(
+                flipVerticalHandle,
+                "Flip Vertical"
+            );
 
-console.log(
-                        "GANDHI DIRECT DRAG SNAP PATH",
-                        {
-                            target: dragTarget && dragTarget.sprite && dragTarget.sprite.name,
-                            x: spriteStartX + dx,
-                            y: spriteStartY - dy
-                        }
-                    );
+            attachTooltip(
+                resetHandle,
+                "Reset"
+            );
 
-                    const snapPosition =
-                          findSnapPosition(
-                              dragTarget,
-                              spriteStartX + dx,
-                              spriteStartY - dy
-                          );
+            attachTooltip(
+                alphaContainer,
+                "Opacity"
+            );
+            attachTooltip(
+                skewHandle,
+                "Asset Tools"
+            );
+            attachTooltip(
+                widthHandle,
+                "Width Scale"
+            );
 
-                    dragTarget.setXY(
-                        snapPosition.x,
-                        snapPosition.y
-                    );
+            attachTooltip(
+                heightHandle,
+                "Height Scale"
+            );
+            let resizing = false;
+            let resizeMode =
+            "uniform";
+            function closeAssetToolsPanel() {
+                assetToolsPanel.style.display =
+                "none";
+            }
+
+            function toggleAssetToolsPanel() {
+                assetToolsPanel.style.display =
+                assetToolsPanel.style.display === "none"
+                ? "flex"
+                : "none";
+            }
+
+            skewHandle.addEventListener(
+                "mousedown",
+                e => {
+                    e.preventDefault();
+                    e.stopPropagation();
                 }
-               if (
-                   stageDragActive &&
-                   !dragging &&
-                   !resizing &&
-                   !rotating &&
-                   !alphaDragging
-               ) {
+            );
 
-                   overlay.style.left =
-                       (
-                       overlayStartLeft +
-                       (
-                           e.clientX -
-                           stageDragStartX
-                       )
-                   ) + "px";
+            skewHandle.addEventListener(
+                "click",
+                e => {
+                    e.preventDefault();
+                    e.stopPropagation();
 
-                   overlay.style.top =
-                       (
-                       overlayStartTop +
-                       (
-                           e.clientY -
-                           stageDragStartY
-                       )
-                   ) + "px";
-
-                   return;
-               }
-                if (
-                    dragging ||
-                    resizing ||
-                    rotating ||
-                    alphaDragging
-                ) {
-
-                    hideTooltip();
+                    toggleAssetToolsPanel();
                 }
-               if (alphaDragging) {
+            );
 
-                   const delta =
-                         Math.floor(
-                             (
-                                 e.clientX -
-                                 alphaDragStartX
-                             ) / 2
-                         );
+            assetToolsPanel.addEventListener(
+                "mousedown",
+                e => {
+                    e.stopPropagation();
+                }
+            );
 
-                   let value =
-                       alphaStartValue +
-                       delta;
+            assetSkewButton.addEventListener(
+                "mousedown",
+                e => {
+                    e.preventDefault();
+                    e.stopPropagation();
 
-                   value =
-                       Math.max(
-                       0,
-                       Math.min(
-                           100,
-                           value
-                       )
-                   );
+                    closeAssetToolsPanel();
+                    createSkewSession(e);
+                }
+            );
 
-                   alphaInput.value =
-                       value;
-                   alphaIcon.style.opacity =
-                       Math.max(
-                       0.15,
-                       value / 100
-                   );
-                   applySpriteAlpha(
-                       value
-                   );
-                   spriteAlphaMap.set(
-                       vm.editingTarget.id,
-                       value
-                   );
-                   vm.editingTarget
-                       .emitVisualChange();
-               }
-                if (resizing) {
-                   let delta;
-
-                   if (
-                       resizeMode ===
-                       "height"
-                   ) {
-
-                       delta =
-                           e.clientY -
-                           startY;
-                   }
-                    else {
-
-
-                        delta =
-                            e.clientX -
-                            startX;
-
-
+            document.addEventListener(
+                "mousedown",
+                e => {
+                    if (
+                        assetToolsPanel.style.display === "none"
+                    ) {
+                        return;
                     }
 
+                    if (
+                        overlay.contains(e.target)
+                    ) {
+                        return;
+                    }
+
+                    closeAssetToolsPanel();
+                },
+                true
+            );
+            widthHandle.addEventListener(
+                "mousedown",
+                e => {
+
+                    e.preventDefault();
+                    e.stopPropagation();
+                    transformTarget = vm.editingTarget;
 
                     const drawable =
-                          vm.runtime.renderer
+                    vm.runtime.renderer
                     ._allDrawables[
                         transformTarget.drawableID
                     ];
@@ -2558,787 +1570,1762 @@ console.log(
                         drawable,
                         transformTarget
                     );
+                    startScaleX =
+                    drawable.scale[0];
 
-                    const signX =
-                          visualFlipX ? -1 : 1;
+                    startScaleY =
+                    drawable.scale[1];
 
-                    const signY =
-                          Math.sign(
-                              drawable.scale[1]
-                          ) || 1;
+                    resizeMode =
+                    "width";
 
-                  const newScale =
-                        Math.max(
-                            0.01,
-                            startSize + delta
-                        );
-                   if (
-                       resizeMode ===
-                       "uniform"
-                   ) {
+                    resizing =
+                    true;
 
-                       const ratio =
-                             newScale /
-                             uniformBaseScale;
+                    startX =
+                    e.clientX;
 
-                       lastUniformRatio =
-                           ratio;
-
-                       const oldBounds =
-                             drawable.getAABB();
-
-                       drawable.updateScale([
-                           signX * Math.abs(
-                               startScaleX
-                           ) * ratio,
-                           startScaleY * ratio
-                       ]);
-
-                       const newBounds =
-                             drawable.getAABB();
-
-                       const oldCenterX =
-                             (
-                                 oldBounds.left +
-                                 oldBounds.right
-                             ) / 2;
-
-                       const oldCenterY =
-                             (
-                                 oldBounds.top +
-                                 oldBounds.bottom
-                             ) / 2;
-
-                       const newCenterX =
-                             (
-                                 newBounds.left +
-                                 newBounds.right
-                             ) / 2;
-
-                       const newCenterY =
-                             (
-                                 newBounds.top +
-                                 newBounds.bottom
-                             ) / 2;
-
-                       transformTarget.setXY(
-                           transformTarget.x +
-                               oldCenterX -
-                               newCenterX,
-                           transformTarget.y +
-                               oldCenterY -
-                               newCenterY
-                       );
-                   }
-                    else if (
-                        resizeMode ===
-                        "width"
-                    ) {
-
-                        const oldBounds =
-                              drawable.getAABB();
-
-                        drawable.updateScale([
-                            signX * newScale,
-                            startScaleY
-                        ]);
-
-                        const newBounds =
-                              drawable.getAABB();
-
-                        const oldCenterX =
-                              (
-                                  oldBounds.left +
-                                  oldBounds.right
-                              ) / 2;
-
-                        const oldCenterY =
-                              (
-                                  oldBounds.top +
-                                  oldBounds.bottom
-                              ) / 2;
-
-                        const newCenterX =
-                              (
-                                  newBounds.left +
-                                  newBounds.right
-                              ) / 2;
-
-                        const newCenterY =
-                              (
-                                  newBounds.top +
-                                  newBounds.bottom
-                              ) / 2;
-
-                        transformTarget.setXY(
-                            transformTarget.x +
-                                oldCenterX -
-                                newCenterX,
-                            transformTarget.y +
-                                oldCenterY -
-                                newCenterY
-                        );
-                    }
-                    else if (
-                        resizeMode ===
-                        "height"
-                    ) {
-
-                        const oldBounds =
-                              drawable.getAABB();
-
-                        drawable.updateScale([
-                            signX * Math.abs(
-                                startScaleX
-                            ),
-                            signY * newScale
-                        ]);
-
-                        const newBounds =
-                              drawable.getAABB();
-
-                        const oldCenterX =
-                              (
-                                  oldBounds.left +
-                                  oldBounds.right
-                              ) / 2;
-
-                        const oldCenterY =
-                              (
-                                  oldBounds.top +
-                                  oldBounds.bottom
-                              ) / 2;
-
-                        const newCenterX =
-                              (
-                                  newBounds.left +
-                                  newBounds.right
-                              ) / 2;
-
-                        const newCenterY =
-                              (
-                                  newBounds.top +
-                                  newBounds.bottom
-                              ) / 2;
-
-                        transformTarget.setXY(
-                            transformTarget.x +
-                                oldCenterX -
-                                newCenterX,
-                            transformTarget.y +
-                                oldCenterY -
-                                newCenterY
-                        );
-                    }
-
-                    transformTarget
-                        .emitVisualChange();
+                    startSize =
+                    Math.abs(
+                        drawable.scale[0]
+                    );
                 }
+            );
+            heightHandle.addEventListener(
+                "mousedown",
+                e => {
 
-                if (rotating) {
-                    const angle = Math.atan2(
-                        e.clientY - rotateCenterY,
-                        e.clientX - rotateCenterX
+                    e.preventDefault();
+                    e.stopPropagation();
+                    transformTarget = vm.editingTarget;
+
+                    const drawable =
+                    vm.runtime.renderer
+                    ._allDrawables[
+                        transformTarget.drawableID
+                    ];
+                    installShearHook(
+                        drawable,
+                        transformTarget
+                    );
+                    startScaleX =
+                    drawable.scale[0];
+
+                    startScaleY =
+                    drawable.scale[1];
+
+                    resizeMode =
+                    "height";
+
+                    resizing =
+                    true;
+
+                    startX =
+                    e.clientX;
+                    startY =
+                    e.clientY;
+                    startSize =
+                    Math.abs(
+                        drawable.scale[1]
+                    );
+                }
+            );
+            let startX = 0;
+            let startY = 0;
+            let startSize = 0;
+            let startScaleX = 0;
+            let startScaleY = 0;
+            let startTargetSize = 100;
+            let dragging = false;
+            let dragStartX = 0;
+            let dragStartY = 0;
+            let spriteStartX = 0;
+            let spriteStartY = 0;
+            let rotating = false;
+            let rotateCenterX = 0;
+            let rotateCenterY = 0;
+            let rotateScaleX = 0;
+            let rotateScaleY = 0;
+            let startDirection = 0;
+            let startAngle = 0;
+            let startMouseX = 0;
+            let startMouseY = 0;
+            let shearX = 0;
+            let shearY = 0;
+            let activeSkewSession = null;
+            let activeShearBridge = null;
+            let alphaDragging = false;
+            let lastPosX = null;
+            let lastPosY = null;
+            let alphaDragStartX = 0;
+
+            let alphaStartValue = 100;
+            let stageDragActive = false;
+
+            let stageDragStartX = 0;
+            let stageDragStartY = 0;
+
+            let overlayDragDX = 0;
+            let overlayDragDY = 0;
+            let overlayStartLeft = 0;
+            let overlayStartTop = 0;
+            let potentialStageDrag = false;
+            let stageDraggingSprite =false;
+            let stageSpriteDrag = false;
+            let dragTarget = null;
+            let uniformBaseScale = 0;
+            let lastUniformRatio = 1;
+            let visualFlipX = false;
+            let transformTarget = null;
+
+            // --- CLICK & HOLD SLIDER INTEGRATION FOR INSTANT REVEAL ---
+
+            alphaInput.addEventListener(
+                "mousedown",
+                e => {
+
+                    alphaDragging = true;
+
+                    alphaDragStartX =
+                    e.clientX;
+
+                    alphaStartValue =
+                    parseInt(
+                        alphaInput.value,
+                        10
                     );
 
-                    const delta = (angle - startAngle) * 180 / Math.PI;
-                    const newDirection = startDirection + delta;
+                    e.preventDefault();
+                }
+            );
 
-                    transformTarget.setDirection(newDirection);
+            alphaInput.addEventListener("change", () => {
+                    let val = parseInt(alphaInput.value, 10);
+                    if (isNaN(val)) return;
+                    if (val > 100) alphaInput.value = 100;
+                    if (val < 0) alphaInput.value = 0;
+                    updateAlphaIcon(
+                        Number(alphaInput.value)
+                    );
+                    applySpriteAlpha(alphaInput.value);
+                    spriteAlphaMap.set(
+                        vm.editingTarget.id,
+                        Number(alphaInput.value)
+                    );
+            });
+            alphaInput.addEventListener(
+                "keydown",
+                e => {
+
+                    if (
+                        e.key === "Enter"
+                    ) {
+
+                        alphaInput.blur();
+                    }
+                }
+            );
+            resizeHandle.addEventListener(
+                "mousedown",
+                e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    transformTarget = vm.editingTarget;
+                    resizing = true;
+                    startX = e.clientX;
+                    startY = e.clientY;
 
                     const drawable = vm.runtime.renderer._allDrawables[transformTarget.drawableID];
                     installShearHook(
                         drawable,
                         transformTarget
                     );
-                    drawable.updateScale([
-                        rotateScaleX,
-                        rotateScaleY
-                    ]);
+                    startSize = Math.abs(drawable.scale[0]);
                 }
+            );
 
-                if (dragging) {
-                    const canvas = getStageCanvas();
-                    if (!canvas) return;
-
-                    const rect = canvas.getBoundingClientRect();
-                    const [stageWidth, stageHeight] = vm.runtime.renderer.getNativeSize();
-
-                    const dx = ((e.clientX - dragStartX) / rect.width) * stageWidth;
-                    const dy = ((e.clientY - dragStartY) / rect.height) * stageHeight;
-
-console.log(
-                        "GANDHI MOVE HANDLE SNAP PATH",
-                        {
-                            target: transformTarget && transformTarget.sprite && transformTarget.sprite.name,
-                            x: spriteStartX + dx,
-                            y: spriteStartY - dy
-                        }
+            resizeButton.addEventListener(
+                "mousedown",
+                e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    transformTarget = vm.editingTarget;
+                    resizeMode =
+                    "uniform";
+                    resizing = true;
+                    startX = e.clientX;
+                    const drawable = vm.runtime.renderer._allDrawables[transformTarget.drawableID];
+                    installShearHook(
+                        drawable,
+                        transformTarget
                     );
+                    startScaleX =
+                    drawable.scale[0];
 
-                    const snapPosition =
-                          findSnapPosition(
-                              transformTarget,
-                              spriteStartX + dx,
-                              spriteStartY - dy
-                          );
-
-                    transformTarget.setXY(
-                        snapPosition.x,
-                        snapPosition.y
-                    );
-                }
-            }
-        );
-
-        function getStageCanvas() {
-            const canvases = document.querySelectorAll("canvas");
-            return canvases[0] || null;
-        }
-
-        function scratchToScreen(x, y, canvas) {
-            const [width, height] = vm.runtime.renderer.getNativeSize();
-            const rect = canvas.getBoundingClientRect();
-
-            return {
-                x: rect.left + ((x + width / 2) / width) * rect.width,
-                y: rect.top + ((height / 2 - y) / height) * rect.height
-            };
-        }
-
-function getStageUnitsPerScreenPixel() {
-            const canvas =
-                  getStageCanvas();
-
-            if (!canvas) {
-                return 1;
-            }
-
-            const rect =
-                  canvas.getBoundingClientRect();
-
-            const nativeSize =
-                  vm.runtime.renderer.getNativeSize();
-
-            const stageWidth =
-                  nativeSize[0];
-
-            if (!rect.width) {
-                return 1;
-            }
-
-            return rect.width / stageWidth;
-        }
-
-
-function offsetBounds(bounds, dx, dy) {
-            return {
-                left: bounds.left + dx,
-                right: bounds.right + dx,
-                top: bounds.top + dy,
-                bottom: bounds.bottom + dy
-            };
-        }
-
-        function findSnapPosition(target, desiredX, desiredY) {
-            const renderer =
-                  vm.runtime.renderer;
-
-            const drawable =
-                  renderer._allDrawables[
-                      target.drawableID
-                  ];
-
-            if (!drawable) {
-                return {
-                    x: desiredX,
-                    y: desiredY
-                };
-            }
-
-            const currentBounds =
-                  drawable.getAABB();
-
-            const bounds =
-                  offsetBounds(
-                      currentBounds,
-                      desiredX - target.x,
-                      desiredY - target.y
-                  );
-
-            /* snapScale removed: delta is already in stage units */
-
-            const canvas =
-                  getStageCanvas();
-
-            const rect =
-                  canvas.getBoundingClientRect();
-
-            const nativeSize =
-                  vm.runtime.renderer.getNativeSize();
-
-            const snapDistance =
-                  12 *
-                  (
-                      nativeSize[0] /
-                      rect.width
-                  );
-
-            let snapX =
-                null;
-            let snapXTarget =
-                null;
-            let snapY =
-                null;
-            let snapYTarget =
-                null;
-            vm.runtime.targets.forEach(
-                otherTarget => {
-                    if (
-                        otherTarget === target ||
-                        otherTarget.isStage
-                    ) {
-                        return;
-                    }
-
-                    const otherDrawable =
-                          renderer._allDrawables[
-                              otherTarget.drawableID
-                          ];
-
-                    if (
-                        !otherDrawable ||
-                        otherDrawable._visible === false
-                    ) {
-                        return;
-                    }
-
-                    const otherBounds =
-                          otherDrawable.getAABB();
-
-                    [
-                        otherBounds.left - bounds.left,
-                        otherBounds.right - bounds.left,
-                        otherBounds.left - bounds.right,
-                        otherBounds.right - bounds.right
-                    ].forEach(
-                        delta => {
-                            if (
-                                Math.abs(delta) <= snapDistance &&
-                                (
-                                    snapX === null ||
-                                    Math.abs(delta) < Math.abs(snapX)
-                                )
-                            ) {
-                                snapX =
-                                    delta;
-                                
-                                snapXTarget =
-                                    otherBounds;
-                            }
-                        }
-                    );
-
-                    [
-                        otherBounds.top - bounds.top,
-                        otherBounds.bottom - bounds.top,
-                        otherBounds.top - bounds.bottom,
-                        otherBounds.bottom - bounds.bottom
-                    ].forEach(
-                        delta => {
-                            if (
-                                Math.abs(delta) <= snapDistance &&
-                                (
-                                    snapY === null ||
-                                    Math.abs(delta) < Math.abs(snapY)
-                                )
-                            ) {
-                                snapY =
-                                    delta;
-                                
-                                snapYTarget =
-                                    otherBounds;
-                            }
-                        }
+                    startScaleY =
+                    drawable.scale[1];
+                    startTargetSize =
+                    transformTarget.size;
+                    startSize = Math.abs(drawable.scale[0]);
+                    uniformBaseScale =
+                    Math.max(
+                        Math.abs(
+                            drawable.scale[0]
+                        ),
+                        Math.abs(
+                            drawable.scale[1]
+                        )
                     );
                 }
             );
-            if (
-                snapX !== null &&
-                snapY === null &&
-                snapXTarget
+
+            function normalizeDirection(deg) {
+                while (deg > 180) deg -= 360;
+                while (deg <= -180) deg += 360;
+                return deg;
+            }
+
+            function installShearHook(drawable, target) {
+
+                if (!drawable) return;
+
+                if (drawable.__gandhiShearInstalled)
+                return;
+
+                drawable.__gandhiShearInstalled =
+                true;
+
+                if (target) {
+                    drawable.__gandhiTargetId =
+                    target.id;
+                }
+
+                const oldGetUniforms =
+                drawable.getUniforms.bind(drawable);
+
+                drawable.getUniforms =
+                function () {
+
+                    const uniforms =
+                    oldGetUniforms();
+
+                    const original =
+                    uniforms.u_modelMatrix;
+
+                    const m =
+                    new Float32Array(
+                        original
+                    );
+
+                    let shearX = 0;
+                    let shearY = 0;
+
+                    if (
+                        activeShearBridge &&
+                        activeShearBridge.drawable === this
+                    ) {
+                        shearX = activeShearBridge.shearX || 0;
+                        shearY = activeShearBridge.shearY || 0;
+                    }
+
+                    const a = m[0];
+                    const b = m[1];
+                    const c = m[4];
+                    const d = m[5];
+
+                    m[0] =
+                    a + c * shearY;
+
+                    m[1] =
+                    b + d * shearY;
+
+                    m[4] =
+                    c + a * shearX;
+
+                    m[5] =
+                    d + b * shearX;
+
+                    uniforms.u_modelMatrix = m;
+
+                    return uniforms;
+
+                };
+
+            }
+
+            function createSkewSession(e) {
+                if (activeSkewSession) {
+                    activeSkewSession.destroy();
+                    activeSkewSession = null;
+                }
+
+                const target = vm.editingTarget;
+                if (!target) return null;
+
+                const drawable =
+                vm.runtime.renderer._allDrawables[
+                    target.drawableID
+                ];
+                if (!drawable) return null;
+
+                installShearHook(
+                    drawable,
+                    target
+                );
+
+                activeShearBridge = {
+                    drawable,
+                    shearX: 0,
+                    shearY: 0
+                };
+
+                const session = {
+                    target,
+                    drawable,
+                    startMouseX: e.clientX,
+                    startMouseY: e.clientY,
+                    startShearX: 0,
+                    startShearY: 0,
+
+                    onMove(moveEvent) {
+                        activeShearBridge.shearX =
+                        this.startShearX +
+                        (moveEvent.clientX - this.startMouseX) / 200;
+
+                        activeShearBridge.shearY =
+                        this.startShearY +
+                        (moveEvent.clientY - this.startMouseY) / 200;
+
+                        this.drawable.setTransformDirty();
+                        this.target.emitVisualChange();
+                        vm.runtime.requestRedraw();
+
+                        this.target.setXY(
+                            this.target.x,
+                            this.target.y
+                        );
+
+                        this.target.emitVisualChange();
+                        vm.runtime.requestRedraw();
+                    },
+
+                    onUp(upEvent) {
+                        const finalShearX =
+                        this.startShearX +
+                        (upEvent.clientX - this.startMouseX) / 200;
+
+                        const finalShearY =
+                        this.startShearY +
+                        (upEvent.clientY - this.startMouseY) / 200;
+
+                        if (activeShearBridge) {
+                            activeShearBridge.shearX = finalShearX;
+                            activeShearBridge.shearY = finalShearY;
+                        }
+
+                        window.removeEventListener("mousemove", this.boundMove, true);
+                        window.removeEventListener("mouseup", this.boundUp, true);
+
+                        activeSkewSession = null;
+
+                        AssetBakeEngine.bakeCurrentCostume(
+                            (
+                                canvas,
+                                ctx,
+                                image,
+                                costume
+                            ) => {
+                                bakeSkewToCanvas(
+                                    canvas,
+                                    costume,
+                                    -finalShearX,
+                                    -finalShearY
+                                );
+
+                                canvas.__gandhiBeforeReplace =
+                                () => {
+                                    activeShearBridge = null;
+                                };
+
+                                return updateSelectionBox;
+                            },
+                            this.target
+                        );
+                    },
+
+                    destroy() {
+                        if (
+                            activeShearBridge &&
+                            activeShearBridge.drawable === this.drawable
+                        ) {
+                            activeShearBridge = null;
+                        }
+
+                        window.removeEventListener("mousemove", this.boundMove, true);
+                        window.removeEventListener("mouseup", this.boundUp, true);
+                    }
+                };
+
+                session.boundMove =
+                session.onMove.bind(session);
+
+                session.boundUp =
+                session.onUp.bind(session);
+
+                window.addEventListener("mousemove", session.boundMove, true);
+                window.addEventListener("mouseup", session.boundUp, true);
+
+                activeSkewSession = session;
+
+                return session;
+            }
+
+            function bakeSkewToCanvas(
+                canvas,
+                costume,
+                shearX,
+                shearY
             ) {
-            
-                const topDelta =
+                if (
+                    !shearX &&
+                    !shearY
+                ) {
+                    return;
+                }
+
+                const width =
+                canvas.width;
+
+                const height =
+                canvas.height;
+
+                const source =
+                document.createElement("canvas");
+
+                source.width =
+                width;
+
+                source.height =
+                height;
+
+                const sourceCtx =
+                source.getContext("2d");
+
+                sourceCtx.drawImage(
+                    canvas,
+                    0,
+                    0
+                );
+
+                const cx =
+                width / 2;
+
+                const cy =
+                height / 2;
+
+                const points = [
+                    [0, 0],
+                    [width, 0],
+                    [width, height],
+                    [0, height]
+                ].map(
+                    point => {
+                        const x =
+                        point[0];
+
+                        const y =
+                        point[1];
+
+                        return {
+                            x:
+                            x +
+                            (
+                                y -
+                                cy
+                            ) *
+                            shearX,
+
+                            y:
+                            y +
+                            (
+                                x -
+                                cx
+                            ) *
+                            shearY
+                        };
+                    }
+                );
+
+                const minX =
+                Math.floor(
+                    Math.min(
+                        ...points.map(point => point.x)
+                    )
+                );
+
+                const minY =
+                Math.floor(
+                    Math.min(
+                        ...points.map(point => point.y)
+                    )
+                );
+
+                const maxX =
+                Math.ceil(
+                    Math.max(
+                        ...points.map(point => point.x)
+                    )
+                );
+
+                const maxY =
+                Math.ceil(
+                    Math.max(
+                        ...points.map(point => point.y)
+                    )
+                );
+
+                canvas.width =
+                Math.max(
+                    1,
+                    maxX - minX
+                );
+
+                canvas.height =
+                Math.max(
+                    1,
+                    maxY - minY
+                );
+
+                const ctx =
+                canvas.getContext("2d");
+
+                ctx.clearRect(
+                    0,
+                    0,
+                    canvas.width,
+                    canvas.height
+                );
+
+                ctx.setTransform(
+                    1,
+                    shearY,
+                    shearX,
+                    1,
+                    -shearX * cy - minX,
+                    -shearY * cx - minY
+                );
+
+                ctx.drawImage(
+                    source,
+                    0,
+                    0
+                );
+
+                ctx.setTransform(
+                    1,
+                    0,
+                    0,
+                    1,
+                    0,
+                    0
+                );
+
+                const rotationCenterX =
+                typeof costume.rotationCenterX === "number"
+                ? costume.rotationCenterX
+                : cx;
+
+                const rotationCenterY =
+                typeof costume.rotationCenterY === "number"
+                ? costume.rotationCenterY
+                : cy;
+
+                canvas.__gandhiBakeRotationCenterX =
+                rotationCenterX -
+                minX;
+
+                canvas.__gandhiBakeRotationCenterY =
+                rotationCenterY -
+                minY;
+            }
+
+            function applyTargetVisualFlipX(target) {
+                if (!target) return;
+
+                const drawable =
+                vm.runtime.renderer._allDrawables[
+                    target.drawableID
+                ];
+                installShearHook(
+                    drawable,
+                    target
+                );
+                if (!drawable) return;
+
+                const absX =
+                Math.abs(
+                    drawable.scale[0]
+                );
+
+                drawable.updateScale([
+                        target.__gandhiVisualFlipX ? -absX : absX,
+                        drawable.scale[1]
+                ]);
+            }
+
+            function toggleTargetVisualFlipX(target) {
+                target.__gandhiVisualFlipX =
+                !target.__gandhiVisualFlipX;
+
+                applyTargetVisualFlipX(
+                    target
+                );
+            }
+
+            flipHandle.addEventListener(
+                "click",
+                () => {
+                    const target = vm.editingTarget;
+                    if (!target) return;
+
+                    const oldDirection =
+                    target.direction;
+
+                    target.setDirection(
+                        normalizeDirection(
+                            180 - oldDirection
+                        )
+                    );
+
+                    toggleTargetVisualFlipX(
+                        target
+                    );
+
+                    target.emitVisualChange();
+                    vm.runtime.requestRedraw();
+
+                    updateSelectionBox();
+                }
+            );
+
+            flipVerticalHandle.addEventListener(
+                "click",
+                () => {
+                    const target = vm.editingTarget;
+                    if (!target) return;
+
+                    const oldDirection =
+                    target.direction;
+
+                    target.setDirection(
+                        normalizeDirection(
+                            -oldDirection
+                        )
+                    );
+
+                    toggleTargetVisualFlipX(
+                        target
+                    );
+
+                    target.emitVisualChange();
+                    vm.runtime.requestRedraw();
+
+                    updateSelectionBox();
+                }
+            );
+
+            rotateHandle.addEventListener(
+                "mousedown",
+                e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    transformTarget = vm.editingTarget;
+
+                    const drawable = vm.runtime.renderer._allDrawables[transformTarget.drawableID];
+                    installShearHook(
+                        drawable,
+                        transformTarget
+                    );
+                    rotateScaleX = drawable.scale[0];
+                    rotateScaleY = drawable.scale[1];
+
+                    const rect = overlay.getBoundingClientRect();
+                    rotateCenterX = rect.left + rect.width / 2;
+                    rotateCenterY = rect.top + rect.height / 2;
+
+                    startAngle = Math.atan2(
+                        e.clientY - rotateCenterY,
+                        e.clientX - rotateCenterX
+                    );
+
+                    startDirection = transformTarget.direction;
+                    rotating = true;
+                }
+            );
+
+            moveHandle.addEventListener(
+                "mousedown",
+                e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (activeSkewSession) return;
+                    transformTarget = vm.editingTarget;
+                    dragging = true;
+                    dragStartX = e.clientX;
+                    dragStartY = e.clientY;
+                    spriteStartX = transformTarget.x;
+                    spriteStartY = transformTarget.y;
+                    overlayStartLeft =
+                    parseFloat(
+                        overlay.style.left
+                    );
+
+                    overlayStartTop =
+                    parseFloat(
+                        overlay.style.top
+                    );
+                }
+            );
+
+            window.addEventListener(
+                "mouseup",
+                () => {
+
+                    potentialStageDrag =
+                    false;
+
+                    stageDraggingSprite =
+                    false;
+
+                    if (
+                        resizing &&
+                        resizeMode === "uniform"
+                    ) {
+
+                        const size =
+                        startTargetSize *
+                        lastUniformRatio;
+
+                        transformTarget.setSize(
+                            size
+                        );
+
+                        transformTarget.emitVisualChange();
+
+                        vm.runtime.requestRedraw();
+                    }
+
+                    resizing = false;
+                    dragging = false;
+                    rotating = false;
+                    transformTarget = null;
+
+                    alphaDragging =
+                    false;
+
+                    stageDragActive =
+                    false;
+
+                    overlayDragDX = 0;
+                    overlayDragDY = 0;
+
+                    stageSpriteDrag =
+                    false;
+
+                    dragTarget =
+                    null;
+                }
+            );
+
+            window.addEventListener(
+                "mousemove",
+                e => {
+
+                    if (activeSkewSession) {
+                        return;
+                    }
+
+                    if (
+                        potentialStageDrag &&
+                        !stageDraggingSprite
+                    ) {
+
+                        const dx =
+                        Math.abs(
+                            e.clientX -
+                            stageDragStartX
+                        );
+
+                        const dy =
+                        Math.abs(
+                            e.clientY -
+                            stageDragStartY
+                        );
+
+                        if (
+                            dx > 5 ||
+                            dy > 5
+                        ) {
+
+                            stageDraggingSprite =
+                            true;
+                            if (true){
+
+                                stageSpriteDrag =
+                                true;
+
+                                spriteStartX =
+                                dragTarget.x;
+
+                                spriteStartY =
+                                dragTarget.y;
+
+                                dragStartX =
+                                stageDragStartX;
+
+                                dragStartY =
+                                stageDragStartY;
+                            }
+                            /* Keep transform box visible while dragging */
+                        }
+                    }
+                    if (
+                        stageSpriteDrag &&
+                        dragTarget
+                    ) {
+
+                        const canvas =
+                        getStageCanvas();
+
+                        const rect =
+                        canvas.getBoundingClientRect();
+
+                        const [stageWidth, stageHeight] =
+                        vm.runtime.renderer
+                        .getNativeSize();
+
+                        const dx =
+                        (
+                            e.clientX -
+                            dragStartX
+                        ) /
+                        rect.width *
+                        stageWidth;
+
+                        const dy =
+                        (
+                            e.clientY -
+                            dragStartY
+                        ) /
+                        rect.height *
+                        stageHeight;
+
+                        console.log(
+                            "GANDHI DIRECT DRAG SNAP PATH",
+                            {
+                                target: dragTarget && dragTarget.sprite && dragTarget.sprite.name,
+                                x: spriteStartX + dx,
+                                y: spriteStartY - dy
+                            }
+                        );
+
+                        const snapPosition =
+                        findSnapPosition(
+                            dragTarget,
+                            spriteStartX + dx,
+                            spriteStartY - dy
+                        );
+
+                        dragTarget.setXY(
+                            snapPosition.x,
+                            snapPosition.y
+                        );
+                    }
+                    if (
+                        stageDragActive &&
+                        !dragging &&
+                        !resizing &&
+                        !rotating &&
+                        !alphaDragging
+                    ) {
+
+                        overlay.style.left =
+                        (
+                            overlayStartLeft +
+                            (
+                                e.clientX -
+                                stageDragStartX
+                            )
+                        ) + "px";
+
+                        overlay.style.top =
+                        (
+                            overlayStartTop +
+                            (
+                                e.clientY -
+                                stageDragStartY
+                            )
+                        ) + "px";
+
+                        return;
+                    }
+                    if (
+                        dragging ||
+                        resizing ||
+                        rotating ||
+                        alphaDragging
+                    ) {
+
+                        hideTooltip();
+                    }
+                    if (alphaDragging) {
+
+                        const delta =
+                        Math.floor(
+                            (
+                                e.clientX -
+                                alphaDragStartX
+                            ) / 2
+                        );
+
+                        let value =
+                        alphaStartValue +
+                        delta;
+
+                        value =
+                        Math.max(
+                            0,
+                            Math.min(
+                                100,
+                                value
+                            )
+                        );
+
+                        alphaInput.value =
+                        value;
+                        alphaIcon.style.opacity =
+                        Math.max(
+                            0.15,
+                            value / 100
+                        );
+                        applySpriteAlpha(
+                            value
+                        );
+                        spriteAlphaMap.set(
+                            vm.editingTarget.id,
+                            value
+                        );
+                        vm.editingTarget
+                        .emitVisualChange();
+                    }
+                    if (resizing) {
+                        let delta;
+
+                        if (
+                            resizeMode ===
+                            "height"
+                        ) {
+
+                            delta =
+                            e.clientY -
+                            startY;
+                        }
+                        else {
+
+                            delta =
+                            e.clientX -
+                            startX;
+
+                        }
+
+                        const drawable =
+                        vm.runtime.renderer
+                        ._allDrawables[
+                            transformTarget.drawableID
+                        ];
+                        installShearHook(
+                            drawable,
+                            transformTarget
+                        );
+
+                        const signX =
+                        visualFlipX ? -1 : 1;
+
+                        const signY =
+                        Math.sign(
+                            drawable.scale[1]
+                        ) || 1;
+
+                        const newScale =
+                        Math.max(
+                            0.01,
+                            startSize + delta
+                        );
+                        if (
+                            resizeMode ===
+                            "uniform"
+                        ) {
+
+                            const ratio =
+                            newScale /
+                            uniformBaseScale;
+
+                            lastUniformRatio =
+                            ratio;
+
+                            const oldBounds =
+                            drawable.getAABB();
+
+                            drawable.updateScale([
+                                    signX * Math.abs(
+                                        startScaleX
+                                    ) * ratio,
+                                    startScaleY * ratio
+                            ]);
+
+                            const newBounds =
+                            drawable.getAABB();
+
+                            const oldCenterX =
+                            (
+                                oldBounds.left +
+                                oldBounds.right
+                            ) / 2;
+
+                            const oldCenterY =
+                            (
+                                oldBounds.top +
+                                oldBounds.bottom
+                            ) / 2;
+
+                            const newCenterX =
+                            (
+                                newBounds.left +
+                                newBounds.right
+                            ) / 2;
+
+                            const newCenterY =
+                            (
+                                newBounds.top +
+                                newBounds.bottom
+                            ) / 2;
+
+                            transformTarget.setXY(
+                                transformTarget.x +
+                                oldCenterX -
+                                newCenterX,
+                                transformTarget.y +
+                                oldCenterY -
+                                newCenterY
+                            );
+                        }
+                        else if (
+                            resizeMode ===
+                            "width"
+                        ) {
+
+                            const oldBounds =
+                            drawable.getAABB();
+
+                            drawable.updateScale([
+                                    signX * newScale,
+                                    startScaleY
+                            ]);
+
+                            const newBounds =
+                            drawable.getAABB();
+
+                            const oldCenterX =
+                            (
+                                oldBounds.left +
+                                oldBounds.right
+                            ) / 2;
+
+                            const oldCenterY =
+                            (
+                                oldBounds.top +
+                                oldBounds.bottom
+                            ) / 2;
+
+                            const newCenterX =
+                            (
+                                newBounds.left +
+                                newBounds.right
+                            ) / 2;
+
+                            const newCenterY =
+                            (
+                                newBounds.top +
+                                newBounds.bottom
+                            ) / 2;
+
+                            transformTarget.setXY(
+                                transformTarget.x +
+                                oldCenterX -
+                                newCenterX,
+                                transformTarget.y +
+                                oldCenterY -
+                                newCenterY
+                            );
+                        }
+                        else if (
+                            resizeMode ===
+                            "height"
+                        ) {
+
+                            const oldBounds =
+                            drawable.getAABB();
+
+                            drawable.updateScale([
+                                    signX * Math.abs(
+                                        startScaleX
+                                    ),
+                                    signY * newScale
+                            ]);
+
+                            const newBounds =
+                            drawable.getAABB();
+
+                            const oldCenterX =
+                            (
+                                oldBounds.left +
+                                oldBounds.right
+                            ) / 2;
+
+                            const oldCenterY =
+                            (
+                                oldBounds.top +
+                                oldBounds.bottom
+                            ) / 2;
+
+                            const newCenterX =
+                            (
+                                newBounds.left +
+                                newBounds.right
+                            ) / 2;
+
+                            const newCenterY =
+                            (
+                                newBounds.top +
+                                newBounds.bottom
+                            ) / 2;
+
+                            transformTarget.setXY(
+                                transformTarget.x +
+                                oldCenterX -
+                                newCenterX,
+                                transformTarget.y +
+                                oldCenterY -
+                                newCenterY
+                            );
+                        }
+
+                        transformTarget
+                        .emitVisualChange();
+                    }
+
+                    if (rotating) {
+                        const angle = Math.atan2(
+                            e.clientY - rotateCenterY,
+                            e.clientX - rotateCenterX
+                        );
+
+                        const delta = (angle - startAngle) * 180 / Math.PI;
+                        const newDirection = startDirection + delta;
+
+                        transformTarget.setDirection(newDirection);
+
+                        const drawable = vm.runtime.renderer._allDrawables[transformTarget.drawableID];
+                        installShearHook(
+                            drawable,
+                            transformTarget
+                        );
+                        drawable.updateScale([
+                                rotateScaleX,
+                                rotateScaleY
+                        ]);
+                    }
+
+                    if (dragging) {
+                        const canvas = getStageCanvas();
+                        if (!canvas) return;
+
+                        const rect = canvas.getBoundingClientRect();
+                        const [stageWidth, stageHeight] = vm.runtime.renderer.getNativeSize();
+
+                        const dx = ((e.clientX - dragStartX) / rect.width) * stageWidth;
+                        const dy = ((e.clientY - dragStartY) / rect.height) * stageHeight;
+
+                        console.log(
+                            "GANDHI MOVE HANDLE SNAP PATH",
+                            {
+                                target: transformTarget && transformTarget.sprite && transformTarget.sprite.name,
+                                x: spriteStartX + dx,
+                                y: spriteStartY - dy
+                            }
+                        );
+
+                        const snapPosition =
+                        findSnapPosition(
+                            transformTarget,
+                            spriteStartX + dx,
+                            spriteStartY - dy
+                        );
+
+                        transformTarget.setXY(
+                            snapPosition.x,
+                            snapPosition.y
+                        );
+                    }
+                }
+            );
+
+            function getStageCanvas() {
+                const canvases = document.querySelectorAll("canvas");
+                return canvases[0] || null;
+            }
+
+            function scratchToScreen(x, y, canvas) {
+                const [width, height] = vm.runtime.renderer.getNativeSize();
+                const rect = canvas.getBoundingClientRect();
+
+                return {
+                    x: rect.left + ((x + width / 2) / width) * rect.width,
+                    y: rect.top + ((height / 2 - y) / height) * rect.height
+                };
+            }
+
+            function getStageUnitsPerScreenPixel() {
+                const canvas =
+                getStageCanvas();
+
+                if (!canvas) {
+                    return 1;
+                }
+
+                const rect =
+                canvas.getBoundingClientRect();
+
+                const nativeSize =
+                vm.runtime.renderer.getNativeSize();
+
+                const stageWidth =
+                nativeSize[0];
+
+                if (!rect.width) {
+                    return 1;
+                }
+
+                return rect.width / stageWidth;
+            }
+
+            function offsetBounds(bounds, dx, dy) {
+                return {
+                    left: bounds.left + dx,
+                    right: bounds.right + dx,
+                    top: bounds.top + dy,
+                    bottom: bounds.bottom + dy
+                };
+            }
+
+            function findSnapPosition(target, desiredX, desiredY) {
+                const renderer =
+                vm.runtime.renderer;
+
+                const drawable =
+                renderer._allDrawables[
+                    target.drawableID
+                ];
+
+                if (!drawable) {
+                    return {
+                        x: desiredX,
+                        y: desiredY
+                    };
+                }
+
+                const currentBounds =
+                drawable.getAABB();
+
+                const bounds =
+                offsetBounds(
+                    currentBounds,
+                    desiredX - target.x,
+                    desiredY - target.y
+                );
+
+                /* snapScale removed: delta is already in stage units */
+
+                const canvas =
+                getStageCanvas();
+
+                const rect =
+                canvas.getBoundingClientRect();
+
+                const nativeSize =
+                vm.runtime.renderer.getNativeSize();
+
+                const snapDistance =
+                12 *
+                (
+                    nativeSize[0] /
+                    rect.width
+                );
+
+                let snapX =
+                null;
+                let snapXTarget =
+                null;
+                let snapY =
+                null;
+                let snapYTarget =
+                null;
+                vm.runtime.targets.forEach(
+                    otherTarget => {
+                        if (
+                            otherTarget === target ||
+                            otherTarget.isStage
+                        ) {
+                            return;
+                        }
+
+                        const otherDrawable =
+                        renderer._allDrawables[
+                            otherTarget.drawableID
+                        ];
+
+                        if (
+                            !otherDrawable ||
+                            otherDrawable._visible === false
+                        ) {
+                            return;
+                        }
+
+                        const otherBounds =
+                        otherDrawable.getAABB();
+
+                        [
+                            otherBounds.left - bounds.left,
+                            otherBounds.right - bounds.left,
+                            otherBounds.left - bounds.right,
+                            otherBounds.right - bounds.right
+                        ].forEach(
+                            delta => {
+                                if (
+                                    Math.abs(delta) <= snapDistance &&
+                                    (
+                                        snapX === null ||
+                                        Math.abs(delta) < Math.abs(snapX)
+                                    )
+                                ) {
+                                    snapX =
+                                    delta;
+
+                                    snapXTarget =
+                                    otherBounds;
+                                }
+                            }
+                        );
+
+                        [
+                            otherBounds.top - bounds.top,
+                            otherBounds.bottom - bounds.top,
+                            otherBounds.top - bounds.bottom,
+                            otherBounds.bottom - bounds.bottom
+                        ].forEach(
+                            delta => {
+                                if (
+                                    Math.abs(delta) <= snapDistance &&
+                                    (
+                                        snapY === null ||
+                                        Math.abs(delta) < Math.abs(snapY)
+                                    )
+                                ) {
+                                    snapY =
+                                    delta;
+
+                                    snapYTarget =
+                                    otherBounds;
+                                }
+                            }
+                        );
+                    }
+                );
+                if (
+                    snapX !== null &&
+                    snapY === null &&
+                    snapXTarget
+                ) {
+
+                    const topDelta =
                     snapXTarget.top -
                     bounds.top;
-            
-                const bottomDelta =
+
+                    const bottomDelta =
                     snapXTarget.bottom -
                     bounds.bottom;
-            
-                if (
-                    Math.abs(topDelta) <=
-                    snapDistance
-                ) {
-            
-                    snapY =
+
+                    if (
+                        Math.abs(topDelta) <=
+                        snapDistance
+                    ) {
+
+                        snapY =
                         topDelta;
-            
-                }
-                else if (
-                    Math.abs(bottomDelta) <=
-                    snapDistance
-                ) {
-            
-                    snapY =
+
+                    }
+                    else if (
+                        Math.abs(bottomDelta) <=
+                        snapDistance
+                    ) {
+
+                        snapY =
                         bottomDelta;
-            
+
+                    }
+
                 }
-            
-            }
-            
-            if (
-                snapY !== null &&
-                snapX === null &&
-                snapYTarget
-            ) {
-            
-                const leftDelta =
+
+                if (
+                    snapY !== null &&
+                    snapX === null &&
+                    snapYTarget
+                ) {
+
+                    const leftDelta =
                     snapYTarget.left -
                     bounds.left;
-            
-                const rightDelta =
+
+                    const rightDelta =
                     snapYTarget.right -
                     bounds.right;
-            
-                if (
-                    Math.abs(leftDelta) <=
-                    snapDistance
-                ) {
-            
-                    snapX =
+
+                    if (
+                        Math.abs(leftDelta) <=
+                        snapDistance
+                    ) {
+
+                        snapX =
                         leftDelta;
-            
-                }
-                else if (
-                    Math.abs(rightDelta) <=
-                    snapDistance
-                ) {
-            
-                    snapX =
+
+                    }
+                    else if (
+                        Math.abs(rightDelta) <=
+                        snapDistance
+                    ) {
+
+                        snapX =
                         rightDelta;
-            
+
+                    }
+
                 }
-            
-            }
-            return {
-                x:
+                return {
+                    x:
                     desiredX +
                     (
                         snapX === null
-                            ? 0
-                            : snapX
+                        ? 0
+                        : snapX
                     ),
 
-                y:
+                    y:
                     desiredY +
                     (
                         snapY === null
-                            ? 0
-                            : snapY
+                        ? 0
+                        : snapY
                     )
-            };
-        }
-
-        function getShearAdjustedBounds(
-            bounds,
-            drawable
-        ) {
-            let shearX = 0;
-            let shearY = 0;
-
-            if (
-                activeShearBridge &&
-                activeShearBridge.drawable === drawable
-            ) {
-                shearX = activeShearBridge.shearX || 0;
-                shearY = activeShearBridge.shearY || 0;
+                };
             }
 
-            if (
-                !shearX &&
-                !shearY
+            function getShearAdjustedBounds(
+                bounds,
+                drawable
             ) {
-                return bounds;
-            }
+                let shearX = 0;
+                let shearY = 0;
 
-            const cx =
-                  (
-                      bounds.left +
-                      bounds.right
-                  ) / 2;
+                if (
+                    activeShearBridge &&
+                    activeShearBridge.drawable === drawable
+                ) {
+                    shearX = activeShearBridge.shearX || 0;
+                    shearY = activeShearBridge.shearY || 0;
+                }
 
-            const cy =
-                  (
-                      bounds.top +
-                      bounds.bottom
-                  ) / 2;
+                if (
+                    !shearX &&
+                    !shearY
+                ) {
+                    return bounds;
+                }
 
-            const points = [
-                [bounds.left, bounds.top],
-                [bounds.right, bounds.top],
-                [bounds.right, bounds.bottom],
-                [bounds.left, bounds.bottom]
-            ].map(
-                p => {
-                    const x =
-                          p[0] - cx;
+                const cx =
+                (
+                    bounds.left +
+                    bounds.right
+                ) / 2;
 
-                    const y =
-                          p[1] - cy;
+                const cy =
+                (
+                    bounds.top +
+                    bounds.bottom
+                ) / 2;
 
-                    return {
-                        x:
+                const points = [
+                    [bounds.left, bounds.top],
+                    [bounds.right, bounds.top],
+                    [bounds.right, bounds.bottom],
+                    [bounds.left, bounds.bottom]
+                ].map(
+                    p => {
+                        const x =
+                        p[0] - cx;
+
+                        const y =
+                        p[1] - cy;
+
+                        return {
+                            x:
                             cx +
                             x +
                             y * shearX,
 
-                        y:
+                            y:
                             cy +
                             y +
                             x * shearY
-                    };
-                }
-            );
+                        };
+                    }
+                );
 
-            return {
-                left:
+                return {
+                    left:
                     Math.min(
                         ...points.map(p => p.x)
                     ),
 
-                right:
+                    right:
                     Math.max(
                         ...points.map(p => p.x)
                     ),
 
-                top:
+                    top:
                     Math.max(
                         ...points.map(p => p.y)
                     ),
 
-                bottom:
+                    bottom:
                     Math.min(
                         ...points.map(p => p.y)
                     )
-            };
-        }
+                };
+            }
 
-        function updateSelectionBox() {
-            const canvas = getStageCanvas();
-            if (!canvas) return;
+            function updateSelectionBox() {
+                const canvas = getStageCanvas();
+                if (!canvas) return;
 
-            const target = vm.editingTarget;
-            if (!target) return;
+                const target = vm.editingTarget;
+                if (!target) return;
 
-            const drawable = vm.runtime.renderer._allDrawables[target.drawableID];
-            installShearHook(
-                drawable,
-                target
-            );
-            if (!drawable) return;
+                const drawable = vm.runtime.renderer._allDrawables[target.drawableID];
+                installShearHook(
+                    drawable,
+                    target
+                );
+                if (!drawable) return;
 
-            applyTargetVisualFlipX(
-                target
-            );
+                applyTargetVisualFlipX(
+                    target
+                );
 
-            const rawBounds =
-                  drawable.getAABB();
+                const rawBounds =
+                drawable.getAABB();
 
-            const bounds =
-                  getShearAdjustedBounds(
-                      rawBounds,
-                      drawable
-                  );
-            const tl = scratchToScreen(bounds.left, bounds.top, canvas);
-            const br = scratchToScreen(bounds.right, bounds.bottom, canvas);
+                const bounds =
+                getShearAdjustedBounds(
+                    rawBounds,
+                    drawable
+                );
+                const tl = scratchToScreen(bounds.left, bounds.top, canvas);
+                const br = scratchToScreen(bounds.right, bounds.bottom, canvas);
 
-          overlay.style.left =
-              tl.x + "px";
+                overlay.style.left =
+                tl.x + "px";
 
-            overlay.style.top =
+                overlay.style.top =
                 tl.y + "px";
-           overlay.style.width = (br.x - tl.x) + "px";
-           overlay.style.height = (br.y - tl.y) + "px";
-            if (document.activeElement !== alphaInput) {
-              const alpha =
+                overlay.style.width = (br.x - tl.x) + "px";
+                overlay.style.height = (br.y - tl.y) + "px";
+                if (document.activeElement !== alphaInput) {
+                    const alpha =
                     getSpriteAlpha();
 
-               alphaInput.value =
-                   alpha;
+                    alphaInput.value =
+                    alpha;
 
-               updateAlphaIcon(
-                   alpha
-               );
-           }
-          if (
-              document.activeElement !==
-              nameInput
-          ) {
-
-              nameInput.value =
-                  target.sprite.name;
-
-              updateNameInputWidth();
-          }
-        }
-
-        function isStageVisible() {
-            const canvas = getStageCanvas();
-            if (!canvas) return false;
-
-            const rect = canvas.getBoundingClientRect();
-            return (
-                rect.width > 50 &&
-                rect.height > 50 &&
-                rect.top < window.innerHeight &&
-                rect.left < window.innerWidth
-            );
-        }
-
-        function isCodeTabOpen() {
-            const selectedTab = document.querySelector('[class*="selected"]');
-            if (!selectedTab) return false;
-
-            return selectedTab.textContent
-                .trim()
-                .includes("Code");
-        }
-
-        function isStageOnTop() {
-            const canvas = getStageCanvas();
-            if (!canvas) return false;
-
-            const rect = canvas.getBoundingClientRect();
-            const el = document.elementFromPoint(
-                rect.left + rect.width / 2,
-                rect.top + rect.height / 2
-            );
-
-            if (
-                el &&
-                (
-                    el.id === "gandi-transform-box" ||
-                    el.closest("#gandi-transform-box")
-                )
-            ) {
-                return true;
-            }
-            return (
-                el === canvas ||
-                canvas.contains(el)
-            );
-        }
-
-        function animate() {
-
-            const target =
-                  vm.editingTarget;
-            const running =
-                  vm.runtime.threads.some(
-                      t => !t.isKilled
-                  );
-
-            if (
-                wasRunning &&
-                !running
-            ) {
-
-                restoreEditorAlphas();
-            }
-
-            wasRunning =
-                running;
-            if (
-                transformMode &&
-                isStageOnTop() &&
-                isCodeTabOpen() &&
-                !stageDraggingSprite
-            ) {
-                overlay.style.display = "block";
-                updateSelectionBox();
-            } else {
-                overlay.style.display = "none";
-            }
-            requestAnimationFrame(animate);
-        }
-
-        const originalGreenFlag =
-              vm.greenFlag.bind(vm);
-
-        vm.greenFlag =
-            function () {
-
-            restoreEditorAlphas();
-
-            originalGreenFlag();
-        };
-        const pauseButton =
-              document.querySelector(
-                  '[class*="gandi_controls_pause"]'
-              );
-
-        const stopButton =
-              document.querySelector(
-                  '[class*="gandi_stop-all_stop-all"]'
-              );
-
-       if (pauseButton) {
-
-           pauseButton.addEventListener(
-               "click",
-               () => {
-
-                   if (!runtimePaused) {
-
-                       captureRuntimeGhosts();
-
-                       restoreEditorAlphas();
-
-                       runtimePaused =
-                           true;
-
-
-                   } else {
-
-                       restoreRuntimeGhosts();
-
-                       runtimePaused =
-                           false;
-
-                   }
-               }
-           );
-       }
-
-        if (stopButton) {
-
-            stopButton.addEventListener(
-                "click",
-                () => {
-
-                    setTimeout(
-                        restoreEditorAlphas,
-                        50
+                    updateAlphaIcon(
+                        alpha
                     );
                 }
+                if (
+                    document.activeElement !==
+                    nameInput
+                ) {
+
+                    nameInput.value =
+                    target.sprite.name;
+
+                    updateNameInputWidth();
+                }
+            }
+
+            function isStageVisible() {
+                const canvas = getStageCanvas();
+                if (!canvas) return false;
+
+                const rect = canvas.getBoundingClientRect();
+                return (
+                    rect.width > 50 &&
+                    rect.height > 50 &&
+                    rect.top < window.innerHeight &&
+                    rect.left < window.innerWidth
+                );
+            }
+
+            function isCodeTabOpen() {
+                const selectedTab = document.querySelector('[class*="selected"]');
+                if (!selectedTab) return false;
+
+                return selectedTab.textContent
+                .trim()
+                .includes("Code");
+            }
+
+            function isStageOnTop() {
+                const canvas = getStageCanvas();
+                if (!canvas) return false;
+
+                const rect = canvas.getBoundingClientRect();
+                const el = document.elementFromPoint(
+                    rect.left + rect.width / 2,
+                    rect.top + rect.height / 2
+                );
+
+                if (
+                    el &&
+                    (
+                        el.id === "gandi-transform-box" ||
+                        el.closest("#gandi-transform-box")
+                    )
+                ) {
+                    return true;
+                }
+                return (
+                    el === canvas ||
+                    canvas.contains(el)
+                );
+            }
+
+            function animate() {
+
+                const target =
+                vm.editingTarget;
+                const running =
+                vm.runtime.threads.some(
+                    t => !t.isKilled
+                );
+
+                if (
+                    wasRunning &&
+                    !running
+                ) {
+
+                    restoreEditorAlphas();
+                }
+
+                wasRunning =
+                running;
+                if (
+                    transformMode &&
+                    isStageOnTop() &&
+                    isCodeTabOpen() &&
+                    !stageDraggingSprite
+                ) {
+                    overlay.style.display = "block";
+                    updateSelectionBox();
+                } else {
+                    overlay.style.display = "none";
+                }
+                requestAnimationFrame(animate);
+            }
+
+            const originalGreenFlag =
+            vm.greenFlag.bind(vm);
+
+            vm.greenFlag =
+            function () {
+
+                restoreEditorAlphas();
+
+                originalGreenFlag();
+            };
+            const pauseButton =
+            document.querySelector(
+                '[class*="gandi_controls_pause"]'
             );
+
+            const stopButton =
+            document.querySelector(
+                '[class*="gandi_stop-all_stop-all"]'
+            );
+
+            if (pauseButton) {
+
+                pauseButton.addEventListener(
+                    "click",
+                    () => {
+
+                        if (!runtimePaused) {
+
+                            captureRuntimeGhosts();
+
+                            restoreEditorAlphas();
+
+                            runtimePaused =
+                            true;
+
+                        } else {
+
+                            restoreRuntimeGhosts();
+
+                            runtimePaused =
+                            false;
+
+                        }
+                    }
+                );
+            }
+
+            if (stopButton) {
+
+                stopButton.addEventListener(
+                    "click",
+                    () => {
+
+                        setTimeout(
+                            restoreEditorAlphas,
+                            50
+                        );
+                    }
+                );
+            }
+            animate();
+
         }
-        animate();
 
-    }
-
-    waitForVM();
+        waitForVM();
 
 })();
