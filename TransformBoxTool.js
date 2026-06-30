@@ -1889,11 +1889,13 @@ function createSkewSession(e) {
                     image,
                     costume
                 ) => {
+                    const bakeShearMultiplier = 2;
+
                     bakeSkewToCanvas(
                         canvas,
                         costume,
-                        -finalShearX,
-                        -finalShearY
+                        -finalShearX * bakeShearMultiplier,
+                        -finalShearY * bakeShearMultiplier
                     );
 
                     return updateSelectionBox;
