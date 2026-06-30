@@ -2338,8 +2338,7 @@ flipVerticalHandle.addEventListener(
                             dragStartY =
                                 stageDragStartY;
                         }
-                        overlay.style.display =
-                            "none";
+                        /* Keep transform box visible while dragging */
                     }
                 }
                 if (
@@ -2769,7 +2768,7 @@ function offsetBounds(bounds, dx, dy) {
                   );
 
             const snapDistance =
-                  8;
+                  20;
 
             let snapX =
                 null;
@@ -2781,8 +2780,7 @@ function offsetBounds(bounds, dx, dy) {
                 otherTarget => {
                     if (
                         otherTarget === target ||
-                        otherTarget.isStage ||
-                        otherTarget.visible === false
+                        otherTarget.isStage
                     ) {
                         return;
                     }
