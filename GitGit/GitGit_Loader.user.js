@@ -1,9 +1,8 @@
 // ==UserScript==
 // @name         GitGit Loader
 // @namespace    http://tampermonkey.net/
-// @version      1.0
-// @description  Stable loader for GitGit Big GitHub Editor modules
-// @author       You
+// @version      1.3
+// @description  GitGit Modular Loader
 // @match        https://github.com/*
 // @match        https://raw.githubusercontent.com/*
 // @grant        GM_xmlhttpRequest
@@ -13,42 +12,44 @@
 (function () {
     'use strict';
 
-    const BOOTLOADER_URL =
+    const BOOT =
         'https://raw.githubusercontent.com/JRonCamay/gandhi/main/GitGit/bootloader.js';
 
-    function loadScript(url) {
+    const BASE =
+        BOOT.substring(
+            0,
+            BOOT.lastIndexOf('/') + 1
+        );
+
+    window.__GitGitBaseURL = BASE;
+
+    window.__GitGitLoadText = function (url) {
         return new Promise((resolve, reject) => {
             GM_xmlhttpRequest({
                 method: 'GET',
                 url: url + '?v=' + Date.now(),
                 onload(response) {
-                    if (response.status < 200 || response.status >= 300) {
-                        reject(new Error('Load failed ' + response.status + ': ' + url));
-                        return;
-                    }
-
-                    try {
-                        const script = document.createElement('script');
-                        script.textContent =
-                            response.responseText +
-                            '\n//# sourceURL=' + url;
-
-                        document.documentElement.appendChild(script);
-                        script.remove();
-                        resolve();
-                    } catch (error) {
-                        reject(error);
+                    if (response.status >= 200 && response.status < 300) {
+                        resolve(response.responseText);
+                    } else {
+                        reject(new Error('HTTP ' + response.status));
                     }
                 },
                 onerror() {
-                    reject(new Error('Network error loading: ' + url));
+                    reject(new Error('Network error'));
                 }
             });
         });
-    }
+    };
 
-    loadScript(BOOTLOADER_URL).catch(error => {
-        console.error('[GitGit Loader]', error);
-        alert('GitGit loader failed: ' + error.message);
-    });
+    window.__GitGitRunCode = function (code, url) {
+        new Function(code + '\n//# sourceURL=' + url)();
+    };
+
+    window.__GitGitLoadText(BOOT)
+        .then(code => window.__GitGitRunCode(code, BOOT))
+        .catch(error => {
+            console.error(error);
+            alert('GitGit Loader: ' + error.message);
+        });
 })();
