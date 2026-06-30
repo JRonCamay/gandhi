@@ -619,7 +619,7 @@
         );
 
         skewHandle.innerHTML =
-            "▱";
+            "🛠";
 
         overlay.appendChild(
             skewHandle
@@ -974,7 +974,7 @@
         );
         attachTooltip(
             skewHandle,
-            "Skew"
+            "Asset Tools"
         );
         attachTooltip(
             widthHandle,
