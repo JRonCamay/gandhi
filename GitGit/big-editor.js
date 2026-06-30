@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GitGit Big GitHub Editor
 // @namespace    http://tampermonkey.net/
-// @version      3.7.0
+// @version      3.8.0
 // @description  Full-window JavaScript editor with internal Search/Replace/Function panel and editor undo/redo, colored preview, GitHub accounts, file tree, load, and commit
 // @author       You
 // @match        https://github.com/*
@@ -13,8 +13,8 @@
 (function () {
     'use strict';
 
-    if (window.__gitgitBigEditorModularLoaded === '3.7.0') return;
-    window.__gitgitBigEditorModularLoaded = '3.7.0';
+    if (window.__gitgitBigEditorModularLoaded === '3.8.0') return;
+    window.__gitgitBigEditorModularLoaded = '3.8.0';
 
     function prepareStandalonePage() {
         const style = document.createElement('style');
@@ -35,6 +35,89 @@
         `;
         style.id = 'gitgit-standalone-page-style';
         document.documentElement.appendChild(style);
+
+        const theme = document.createElement('style');
+        theme.id = 'gitgit-readable-theme';
+        theme.textContent = `
+            #gitgit-big-editor,
+            #gitgit-big-editor * {
+                text-shadow: none !important;
+            }
+
+            #gitgit-big-editor {
+                background: #1a1d21 !important;
+                color: #f5f7fa !important;
+            }
+
+            #gitgit-big-editor input,
+            #gitgit-big-editor textarea,
+            #gitgit-big-editor select {
+                background: #111418 !important;
+                color: #ffffff !important;
+                border-color: #4b5563 !important;
+            }
+
+            #gitgit-big-editor input::placeholder,
+            #gitgit-big-editor textarea::placeholder {
+                color: #b8c0cc !important;
+                opacity: 1 !important;
+            }
+
+            #gitgit-big-editor button {
+                color: #ffffff !important;
+                border-color: #4b5563 !important;
+            }
+
+            #gitgit-code-area {
+                background: #1a1d21 !important;
+                color: #f5f7fa !important;
+                caret-color: #ffffff !important;
+            }
+
+            #gitgit-code-area::selection {
+                background: #264f78 !important;
+                color: #ffffff !important;
+            }
+
+            #gitgit-line-gutter {
+                background: #171a1f !important;
+                color: #d5dbe3 !important;
+                border-right-color: #3d4552 !important;
+            }
+
+            #gitgit-big-editor [style*="#010409"] {
+                background: #171a1f !important;
+            }
+
+            #gitgit-big-editor [style*="#0d1117"] {
+                background: #1a1d21 !important;
+            }
+
+            #gitgit-big-editor [style*="#161b22"] {
+                background: #23272e !important;
+            }
+
+            #gitgit-big-editor [style*="#21262d"] {
+                background: #2b313a !important;
+            }
+
+            #gitgit-big-editor [style*="#30363d"] {
+                border-color: #3d4552 !important;
+            }
+
+            #gitgit-big-editor [style*="#8b949e"] {
+                color: #d5dbe3 !important;
+            }
+
+            #gitgit-big-editor [style*="#c9d1d9"] {
+                color: #f5f7fa !important;
+            }
+
+            #gitgit-big-editor [style*="#6e7681"] {
+                color: #c7ced8 !important;
+            }
+        `;
+        document.documentElement.appendChild(theme);
     }
 
 
@@ -197,7 +280,7 @@
 
             #gitgit-code-area::-webkit-scrollbar-track,
             #gitgit-line-gutter::-webkit-scrollbar-track {
-                background: #0d1117;
+                background: #1a1d21;
             }
 
             #gitgit-code-area::-webkit-scrollbar-thumb,
@@ -219,7 +302,7 @@
             }
 
             #gitgit-mini-search-panel textarea::-webkit-scrollbar-track {
-                background: #0d1117;
+                background: #1a1d21;
             }
 
             #gitgit-mini-search-panel textarea::-webkit-scrollbar-thumb {
@@ -251,8 +334,8 @@
             height: 46px;
             border-radius: 50%;
             border: 1px solid #30363d;
-            background: #161b22;
-            color: #c9d1d9;
+            background: #23272e;
+            color: #f5f7fa;
             font-size: 24px;
             cursor: pointer;
             z-index: 999999;
@@ -270,8 +353,8 @@
             inset: 0;
             display: flex;
             flex-direction: column;
-            background: #0d1117;
-            color: #c9d1d9;
+            background: #1a1d21;
+            color: #f5f7fa;
             z-index: 999999;
             font-family: -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif;
         `
@@ -284,14 +367,14 @@
             align-items: center;
             justify-content: space-between;
             padding: 0 12px;
-            background: #161b22;
+            background: #23272e;
             border-bottom: 1px solid #30363d;
             flex-shrink: 0;
         `
     });
 
     const title = createEl('div', {
-        html: '<strong>GitGit Big GitHub Editor v3.7</strong>',
+        html: '<strong>GitGit Big GitHub Editor v3.8</strong>',
         style: `
             font-size: 14px;
             color: #f0f6fc;
@@ -306,7 +389,7 @@
             border: none;
             border-radius: 4px;
             background: #30363d;
-            color: #c9d1d9;
+            color: #f5f7fa;
             cursor: pointer;
             font-size: 14px;
         
@@ -322,7 +405,7 @@
             grid-template-columns: 220px 34px 220px 220px 90px minmax(260px, 1fr) 34px auto auto auto;
             gap: 6px;
             padding: 8px;
-            background: #0d1117;
+            background: #1a1d21;
             border-bottom: 1px solid #30363d;
             flex-shrink: 0;
         `
@@ -335,8 +418,8 @@
             value: value || '',
             style: `
                 height: 30px;
-                background: #010409;
-                color: #c9d1d9;
+                background: #171a1f;
+                color: #f5f7fa;
                 border: 1px solid #30363d;
                 border-radius: 4px;
                 padding: 4px 8px;
@@ -350,8 +433,8 @@
         const select = createEl('select', {
             style: `
                 height: 30px;
-                background: #010409;
-                color: #c9d1d9;
+                background: #171a1f;
+                color: #f5f7fa;
                 border: 1px solid #30363d;
                 border-radius: 4px;
                 padding: 4px 8px;
@@ -426,7 +509,7 @@
             display: none;
             max-height: 260px;
             overflow: auto;
-            background: #010409;
+            background: #171a1f;
             border-bottom: 1px solid #30363d;
             padding: 8px;
             font-family: Consolas, Menlo, Monaco, monospace;
@@ -441,7 +524,7 @@
             grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr) auto auto auto auto auto auto auto;
             gap: 6px;
             padding: 8px;
-            background: #0d1117;
+            background: #1a1d21;
             border-bottom: 1px solid #30363d;
             flex-shrink: 0;
         `
@@ -472,7 +555,7 @@
             display: flex;
             flex: 1;
             min-height: 0;
-            background: #0d1117;
+            background: #1a1d21;
         `
     });
 
@@ -482,8 +565,8 @@
             width: 64px;
             flex-shrink: 0;
             overflow: hidden;
-            background: #010409;
-            color: #6e7681;
+            background: #171a1f;
+            color: #c7ced8;
             border-right: 1px solid #30363d;
             padding: 10px 8px 10px 0;
             text-align: right;
@@ -506,8 +589,8 @@
             border: none;
             outline: none;
             overflow: auto;
-            background: #0d1117;
-            color: #c9d1d9;
+            background: #1a1d21;
+            color: #f5f7fa;
             padding: 10px;
             font-family: Consolas, Menlo, Monaco, monospace;
             font-size: 13px;
@@ -527,9 +610,9 @@
             right: 0;
             top: 0;
             height: 20px;
-            background: rgba(88, 166, 255, 0.030);
-            border-top: 1px solid rgba(88, 166, 255, 0.035);
-            border-bottom: 1px solid rgba(88, 166, 255, 0.035);
+            background: rgba(255, 255, 255, 0.045);
+            border-top: 1px solid rgba(255, 255, 255, 0.055);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.055);
             pointer-events: none;
             display: none;
             z-index: 1;
@@ -546,9 +629,9 @@
             max-width: 360px;
             display: flex;
             flex-direction: column;
-            background: #010409;
+            background: #171a1f;
             border-right: 1px solid #30363d;
-            color: #c9d1d9;
+            color: #f5f7fa;
             flex-shrink: 0;
             order: -3;
         `
@@ -562,7 +645,7 @@
             justify-content: flex-start;
             gap: 6px;
             padding: 6px;
-            background: #161b22;
+            background: #23272e;
             border-bottom: 1px solid #30363d;
             font-size: 12px;
             flex-shrink: 0;
@@ -585,8 +668,8 @@
         style: `
             width: 26px;
             height: 23px;
-            background: #21262d;
-            color: #c9d1d9;
+            background: #2b313a;
+            color: #f5f7fa;
             border: 1px solid #30363d;
             border-radius: 4px;
             cursor: pointer;
@@ -600,8 +683,8 @@
         style: `
             width: 26px;
             height: 23px;
-            background: #21262d;
-            color: #c9d1d9;
+            background: #2b313a;
+            color: #f5f7fa;
             border: 1px solid #30363d;
             border-radius: 4px;
             cursor: pointer;
@@ -620,8 +703,8 @@
         style: `
             height: 28px;
             margin: 6px;
-            background: #0d1117;
-            color: #c9d1d9;
+            background: #1a1d21;
+            color: #f5f7fa;
             border: 1px solid #30363d;
             border-radius: 4px;
             padding: 4px 7px;
@@ -650,8 +733,8 @@
             display: none;
             align-items: center;
             justify-content: center;
-            background: #161b22;
-            color: #8b949e;
+            background: #23272e;
+            color: #d5dbe3;
             border: none;
             border-right: 1px solid #30363d;
             cursor: pointer;
@@ -686,8 +769,8 @@
             width: 28px;
             height: 24px;
             border-radius: 8px;
-            background: #21262d;
-            color: #c9d1d9;
+            background: #2b313a;
+            color: #f5f7fa;
             border: 1px solid #30363d;
             cursor: pointer;
             font-size: 13px;
@@ -701,8 +784,8 @@
             width: 28px;
             height: 24px;
             border-radius: 8px;
-            background: #21262d;
-            color: #c9d1d9;
+            background: #2b313a;
+            color: #f5f7fa;
             border: 1px solid #30363d;
             cursor: pointer;
             font-size: 12px;
@@ -720,8 +803,8 @@
             height: 24px;
             align-items: center;
             justify-content: space-between;
-            background: #161b22;
-            color: #8b949e;
+            background: #23272e;
+            color: #d5dbe3;
             border-top: 1px solid #30363d;
             border-bottom: 1px solid #30363d;
             padding: 0 8px;
@@ -736,14 +819,14 @@
         text: 'Preview',
         style: `
             font-weight: 600;
-            color: #c9d1d9;
+            color: #f5f7fa;
         `
     });
 
     const previewBarIcon = createEl('span', {
         text: '▾',
         style: `
-            color: #8b949e;
+            color: #d5dbe3;
             font-size: 13px;
         `
     });
@@ -758,8 +841,8 @@
             min-height: 160px;
             max-height: 360px;
             overflow: auto;
-            background: #010409;
-            color: #c9d1d9;
+            background: #171a1f;
+            color: #f5f7fa;
             border-top: 1px solid #30363d;
             padding: 10px;
             font-family: Consolas, Menlo, Monaco, monospace;
@@ -775,8 +858,8 @@
         style: `
             min-height: 26px;
             padding: 5px 8px;
-            background: #161b22;
-            color: #8b949e;
+            background: #23272e;
+            color: #d5dbe3;
             border-top: 1px solid #30363d;
             font-size: 12px;
             flex-shrink: 0;
@@ -791,8 +874,8 @@
             right: 18px;
             bottom: 38px;
             width: 455px;
-            background: #0d1117;
-            color: #c9d1d9;
+            background: #1a1d21;
+            color: #f5f7fa;
             border: 1px solid #30363d;
             border-radius: 6px;
             box-shadow: 0 8px 24px rgba(0,0,0,0.55);
@@ -806,7 +889,7 @@
     const miniHeader = createEl('div', {
         style: `
             height: 34px;
-            background: #161b22;
+            background: #23272e;
             color: #f0f6fc;
             border-bottom: 1px solid #30363d;
             display: flex;
@@ -829,7 +912,7 @@
             width: 28px;
             height: 24px;
             background: transparent;
-            color: #c9d1d9;
+            color: #f5f7fa;
             border: none;
             cursor: pointer;
             font-weight: bold;
@@ -861,8 +944,8 @@
         style: `
             width: 100%;
             height: 138px;
-            background: #0d1117;
-            color: #c9d1d9;
+            background: #1a1d21;
+            color: #f5f7fa;
             border: 1px solid #30363d;
             border-radius: 4px;
             resize: vertical;
@@ -883,8 +966,8 @@
             top: 6px;
             width: 26px;
             height: 24px;
-            background: #161b22;
-            color: #c9d1d9;
+            background: #23272e;
+            color: #f5f7fa;
             border: 1px solid #30363d;
             border-radius: 4px;
             cursor: pointer;
@@ -898,11 +981,11 @@
         text: 'Replace Box',
         style: `
             padding: 2px 8px;
-            background: #161b22;
+            background: #23272e;
             border: 1px solid #30363d;
             border-radius: 4px;
             font-size: 12px;
-            color: #8b949e;
+            color: #d5dbe3;
             user-select: none;
             line-height: 16px;
         `
@@ -914,8 +997,8 @@
         style: `
             width: 100%;
             height: 138px;
-            background: #0d1117;
-            color: #c9d1d9;
+            background: #1a1d21;
+            color: #f5f7fa;
             border: 1px solid #30363d;
             border-radius: 4px;
             resize: vertical;
@@ -975,8 +1058,8 @@
             bottom: 4px;
             width: 28px;
             height: 22px;
-            background: #21262d;
-            color: #c9d1d9;
+            background: #2b313a;
+            color: #f5f7fa;
             border: 1px solid #30363d;
             border-radius: 4px;
             cursor: pointer;
@@ -1667,7 +1750,7 @@
         const loading = createEl('div', {
             text: 'Loading repository tree...',
             style: `
-                color: #8b949e;
+                color: #d5dbe3;
                 padding: 6px;
             `
         });
@@ -1733,7 +1816,7 @@
             style: `
                 width: 12px;
                 flex: 0 0 12px;
-                color: #8b949e;
+                color: #d5dbe3;
             `
         });
 
