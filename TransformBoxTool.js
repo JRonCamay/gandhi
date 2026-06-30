@@ -606,7 +606,8 @@ function setNativeSpriteDraggingEnabled(enabled) {
                stageDragStartY =
                    e.clientY;
 
-           }
+           },
+           true
        );
         canvas.addEventListener(
             "click",
