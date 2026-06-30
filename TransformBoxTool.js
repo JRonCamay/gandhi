@@ -1439,44 +1439,6 @@
             heightHandle,
             "Height Scale"
         );
-        const dragControls = [
-            resizeHandle,
-            moveHandle,
-            flipVerticalHandle,
-            rotateHandle,
-            alphaContainer,
-            resizeButton,
-            skewHandle,
-            widthHandle,
-            heightHandle,
-            flipHandle,
-            resetHandle,
-            nameContainer
-        ];
-
-        function setDragBoxMode(active) {
-            dragControls.forEach(
-                control => {
-                    if (
-                        active &&
-                        !control.dataset.gandhiDragDisplay
-                    ) {
-                        control.dataset.gandhiDragDisplay =
-                            control.style.display;
-                    }
-
-                    control.style.display =
-                        active
-                            ? "none"
-                            : control.dataset.gandhiDragDisplay || "";
-
-                    if (!active) {
-                        delete control.dataset.gandhiDragDisplay;
-                    }
-                }
-            );
-        }
-
         let resizing = false;
         let resizeMode =
             "uniform";
@@ -2262,7 +2224,6 @@ flipVerticalHandle.addEventListener(
                 e.stopPropagation();
                 if (activeSkewSession) return;
                 dragging = true;
-                setDragBoxMode(true);
                 dragStartX = e.clientX;
                 dragStartY = e.clientY;
                 spriteStartX = vm.editingTarget.x;
@@ -2310,7 +2271,6 @@ flipVerticalHandle.addEventListener(
               resizing = false;
               dragging = false;
               rotating = false;
-              setDragBoxMode(false);
 
               alphaDragging =
                   false;
@@ -2361,13 +2321,10 @@ flipVerticalHandle.addEventListener(
 
                         stageDraggingSprite =
                             true;
-                        if (true){
+                       if (true){
 
                             stageSpriteDrag =
                                 true;
-                            setDragBoxMode(true);
-                            overlay.style.display =
-                                "block";
 
                             spriteStartX =
                                 dragTarget.x;
@@ -2381,6 +2338,8 @@ flipVerticalHandle.addEventListener(
                             dragStartY =
                                 stageDragStartY;
                         }
+                        overlay.style.display =
+                            "none";
                     }
                 }
                 if (
@@ -2418,18 +2377,6 @@ flipVerticalHandle.addEventListener(
                         spriteStartX + dx,
                         spriteStartY - dy
                     );
-
-                    const snapPosition =
-                          findSnapPosition(
-                              dragTarget
-                          );
-
-                    if (snapPosition) {
-                        dragTarget.setXY(
-                            snapPosition.x,
-                            snapPosition.y
-                        );
-                    }
                 }
                if (
                    stageDragActive &&
@@ -2753,134 +2700,9 @@ flipVerticalHandle.addEventListener(
                         spriteStartX + dx,
                         spriteStartY - dy
                     );
-
-                    const snapPosition =
-                          findSnapPosition(
-                              vm.editingTarget
-                          );
-
-                    if (snapPosition) {
-                        vm.editingTarget.setXY(
-                            snapPosition.x,
-                            snapPosition.y
-                        );
-                    }
                 }
             }
         );
-
-        function findSnapPosition(target) {
-            const renderer =
-                  vm.runtime.renderer;
-
-            const drawable =
-                  renderer._allDrawables[
-                      target.drawableID
-                  ];
-
-            if (!drawable) return null;
-
-            const bounds =
-                  drawable.getAABB();
-
-            const snapDistance =
-                  8;
-
-            let snapX =
-                null;
-
-            let snapY =
-                null;
-
-            vm.runtime.targets.forEach(
-                otherTarget => {
-                    if (
-                        otherTarget === target ||
-                        otherTarget.visible === false
-                    ) {
-                        return;
-                    }
-
-                    const otherDrawable =
-                          renderer._allDrawables[
-                              otherTarget.drawableID
-                          ];
-
-                    if (
-                        !otherDrawable ||
-                        otherDrawable._visible === false
-                    ) {
-                        return;
-                    }
-
-                    const otherBounds =
-                          otherDrawable.getAABB();
-
-                    [
-                        otherBounds.left - bounds.left,
-                        otherBounds.right - bounds.left,
-                        otherBounds.left - bounds.right,
-                        otherBounds.right - bounds.right
-                    ].forEach(
-                        delta => {
-                            if (
-                                Math.abs(delta) <= snapDistance &&
-                                (
-                                    snapX === null ||
-                                    Math.abs(delta) < Math.abs(snapX)
-                                )
-                            ) {
-                                snapX = delta;
-                            }
-                        }
-                    );
-
-                    [
-                        otherBounds.top - bounds.top,
-                        otherBounds.bottom - bounds.top,
-                        otherBounds.top - bounds.bottom,
-                        otherBounds.bottom - bounds.bottom
-                    ].forEach(
-                        delta => {
-                            if (
-                                Math.abs(delta) <= snapDistance &&
-                                (
-                                    snapY === null ||
-                                    Math.abs(delta) < Math.abs(snapY)
-                                )
-                            ) {
-                                snapY = delta;
-                            }
-                        }
-                    );
-                }
-            );
-
-            if (
-                snapX === null &&
-                snapY === null
-            ) {
-                return null;
-            }
-
-            return {
-                x:
-                    target.x +
-                    (
-                        snapX === null
-                            ? 0
-                            : snapX
-                    ),
-
-                y:
-                    target.y +
-                    (
-                        snapY === null
-                            ? 0
-                            : snapY
-                    )
-            };
-        }
 
         function getStageCanvas() {
             const canvases = document.querySelectorAll("canvas");
