@@ -3111,7 +3111,11 @@
                     {
                         target,
                         candidates: snapCandidates,
-                        result: snapResult
+                        result: snapResult,
+                        snapped: [
+                            snapXTarget,
+                            snapYTarget
+                        ].filter(Boolean)
                     }
                 );
 

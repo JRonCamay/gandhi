@@ -2,6 +2,7 @@ window.Transfork = window.Transfork || {};
 
 (function () {
     let container = null;
+    const boxes = [];
 
     function getContainer() {
         if (container) {
@@ -36,8 +37,6 @@ window.Transfork = window.Transfork || {};
         const targetContainer =
             getContainer();
 
-        clear();
-
         const data =
             arguments[0];
 
@@ -69,6 +68,9 @@ window.Transfork = window.Transfork || {};
         const drawn =
             [];
 
+        const snapped =
+            data.snapped || [];
+
         Object.keys(data.candidates)
             .slice(0, 4)
             .forEach(
@@ -86,6 +88,7 @@ window.Transfork = window.Transfork || {};
                     drawn.push(bounds);
 
                     const box =
+                        boxes[drawn.length - 1] ||
                         document.createElement('div');
 
                     const left =
@@ -140,15 +143,34 @@ window.Transfork = window.Transfork || {};
                             top: top + 'px',
                             width: (right - left) + 'px',
                             height: (bottom - top) + 'px',
-                            border: '2px solid orange',
+                            border:
+                                '2px solid ' +
+                                (
+                                    snapped.indexOf(bounds) === -1
+                                        ? 'orange'
+                                        : 'green'
+                                ),
                             boxSizing: 'border-box',
-                            pointerEvents: 'none'
+                            pointerEvents: 'none',
+                            display: 'block'
                         }
                     );
 
-                    targetContainer.appendChild(box);
+                    if (!boxes[drawn.length - 1]) {
+                        targetContainer.appendChild(box);
+                        boxes.push(box);
+                    }
                 }
             );
+
+        boxes.forEach(
+            (box, index) => {
+                if (index >= drawn.length) {
+                    box.style.display =
+                        'none';
+                }
+            }
+        );
 
         if (!drawn.length) {
             clear();
@@ -159,8 +181,12 @@ window.Transfork = window.Transfork || {};
         const targetContainer =
             getContainer();
 
-        targetContainer.textContent =
-            '';
+        boxes.forEach(
+            box => {
+                box.style.display =
+                    'none';
+            }
+        );
     }
 
     window.Transfork.snapVisuals = {
