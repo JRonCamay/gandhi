@@ -1287,7 +1287,25 @@
         return getLineNumberFromIndex(textValue, index);
     }
 
+    function scrollEditorToIndex(index) {
+        const textBefore =
+            codeArea.value.slice(0, index);
+
+        const lineIndex =
+            (textBefore.match(/\n/g) || []).length;
+
+        const lineHeight =
+            parseFloat(getComputedStyle(codeArea).lineHeight) || 20;
+
+        const targetTop =
+            Math.max(0, (lineIndex * lineHeight) - (codeArea.clientHeight / 3));
+
+        codeArea.scrollTop = targetTop;
+        syncScroll();
+    }
+
     function miniSelectRange(start, end, message) {
+        scrollEditorToIndex(start);
         codeArea.focus();
         codeArea.setSelectionRange(start, end);
 
@@ -1749,6 +1767,7 @@
             replacement +
             text.slice(end);
 
+        scrollEditorToIndex(start);
         codeArea.focus();
         codeArea.setSelectionRange(start, start + replacement.length);
         updateLineNumbers();
@@ -1794,6 +1813,7 @@
 
         currentSearchIndex = index;
 
+        scrollEditorToIndex(index);
         codeArea.focus();
         codeArea.setSelectionRange(index, index + query.length);
 
@@ -1837,6 +1857,7 @@
             replacement +
             text.slice(index + query.length);
 
+        scrollEditorToIndex(index);
         codeArea.focus();
         codeArea.setSelectionRange(index, index + replacement.length);
         updateLineNumbers();
