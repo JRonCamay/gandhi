@@ -2886,10 +2886,12 @@ function offsetBounds(bounds, dx, dy) {
 
             let snapX =
                 null;
-
+            let snapXTarget =
+                null;
             let snapY =
                 null;
-
+            let snapYTarget =
+                null;
             vm.runtime.targets.forEach(
                 otherTarget => {
                     if (
@@ -2930,6 +2932,9 @@ function offsetBounds(bounds, dx, dy) {
                             ) {
                                 snapX =
                                     delta;
+                                
+                                snapXTarget =
+                                    otherBounds;
                             }
                         }
                     );
@@ -2950,12 +2955,83 @@ function offsetBounds(bounds, dx, dy) {
                             ) {
                                 snapY =
                                     delta;
+                                
+                                snapYTarget =
+                                    otherBounds;
                             }
                         }
                     );
                 }
             );
-
+            if (
+                snapX !== null &&
+                snapY === null &&
+                snapXTarget
+            ) {
+            
+                const topDelta =
+                    snapXTarget.top -
+                    bounds.top;
+            
+                const bottomDelta =
+                    snapXTarget.bottom -
+                    bounds.bottom;
+            
+                if (
+                    Math.abs(topDelta) <=
+                    snapDistance
+                ) {
+            
+                    snapY =
+                        topDelta;
+            
+                }
+                else if (
+                    Math.abs(bottomDelta) <=
+                    snapDistance
+                ) {
+            
+                    snapY =
+                        bottomDelta;
+            
+                }
+            
+            }
+            
+            if (
+                snapY !== null &&
+                snapX === null &&
+                snapYTarget
+            ) {
+            
+                const leftDelta =
+                    snapYTarget.left -
+                    bounds.left;
+            
+                const rightDelta =
+                    snapYTarget.right -
+                    bounds.right;
+            
+                if (
+                    Math.abs(leftDelta) <=
+                    snapDistance
+                ) {
+            
+                    snapX =
+                        leftDelta;
+            
+                }
+                else if (
+                    Math.abs(rightDelta) <=
+                    snapDistance
+                ) {
+            
+                    snapX =
+                        rightDelta;
+            
+                }
+            
+            }
             return {
                 x:
                     desiredX +
