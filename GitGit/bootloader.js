@@ -1,26 +1,25 @@
 /*
-GitGit bootloader
-Put this file at:
 GitGit/bootloader.js
-
-This file loads the real GitGit app from the same GitGit folder.
-You only install GitGit_Loader.user.js once in Tampermonkey.
-After that, edit files in the GitGit folder on GitHub.
+Only this file knows the module list.
 */
 
 (function () {
     'use strict';
 
-    if (window.__gitgitBootloaderRunning) {
-        return;
-    }
+    if (window.__GitGitBootLoaded) return;
+    window.__GitGitBootLoaded = true;
 
-    window.__gitgitBootloaderRunning = true;
+    const CURRENT_URL =
+        document.currentScript &&
+        document.currentScript.src;
 
     const BASE =
-        'https://raw.githubusercontent.com/JRonCamay/gandhi/main/GitGit/';
+        CURRENT_URL.substring(
+            0,
+            CURRENT_URL.lastIndexOf('/') + 1
+        );
 
-    const FILES = [
+    const MODULES = [
         'config.js',
         'utils.js',
         'github-api.js',
@@ -30,38 +29,28 @@ After that, edit files in the GitGit folder on GitHub.
         'big-editor.js'
     ];
 
-    function loadScript(url) {
-        return fetch(url + '?v=' + Date.now(), {
+    async function load(name) {
+        const url = BASE + name + '?v=' + Date.now();
+
+        const code = await fetch(url, {
             cache: 'no-store'
-        })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Load failed ' + response.status + ': ' + url);
-                }
+        }).then(r => {
+            if (!r.ok) throw new Error('Cannot load ' + name);
+            return r.text();
+        });
 
-                return response.text();
-            })
-            .then(code => {
-                const script = document.createElement('script');
-                script.textContent =
-                    code +
-                    '\n//# sourceURL=' + url;
-
-                document.documentElement.appendChild(script);
-                script.remove();
-            });
+        const s = document.createElement('script');
+        s.textContent = code + '\n//# sourceURL=' + url;
+        document.documentElement.appendChild(s);
+        s.remove();
     }
 
-    async function boot() {
-        for (const file of FILES) {
-            await loadScript(BASE + file);
+    (async () => {
+        for (const file of MODULES) {
+            await load(file);
         }
 
-        console.log('[GitGit] loaded modules:', FILES);
-    }
+        console.log('[GitGit] Modules loaded.');
+    })().catch(console.error);
 
-    boot().catch(error => {
-        console.error('[GitGit bootloader]', error);
-        alert('GitGit bootloader failed: ' + error.message);
-    });
 })();
