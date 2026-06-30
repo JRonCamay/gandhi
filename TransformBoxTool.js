@@ -443,9 +443,6 @@
                                 afterBake();
                             }
 
-                            console.log(
-                                "Asset Bake Engine Ready"
-                            );
                         }
                     );
                 };
