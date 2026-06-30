@@ -10,8 +10,9 @@ Loads all Transfork modules from the same Transfork folder.
     window.__TransforkBootLoaded = true;
 
     const BASE =
-        window.__TransforkBaseURL ||
-        'https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/';
+        typeof TRANSFORK_BASE === 'string'
+            ? TRANSFORK_BASE
+            : 'https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/';
 
     const MODULES = [
         'config.js',
@@ -23,15 +24,37 @@ Loads all Transfork modules from the same Transfork folder.
         'transfork-main.js'
     ];
 
+    async function fallbackFetch(url) {
+        const response = await fetch(url + '?v=' + Date.now(), {
+            cache: 'no-store'
+        });
+
+        if (!response.ok) {
+            throw new Error('HTTP ' + response.status + ' loading ' + url);
+        }
+
+        return response.text();
+    }
+
+    function fallbackRun(code, url) {
+        new Function(code + '\n//# sourceURL=' + url)();
+    }
+
     async function loadModule(name) {
         const url = BASE + name;
 
-        if (!window.__TransforkLoadText || !window.__TransforkRunCode) {
-            throw new Error('Transfork loader helpers are missing. Reinstall Transfork_Loader.user.js.');
-        }
+        const loadText =
+            typeof TRANSFORK_LOAD_TEXT === 'function'
+                ? TRANSFORK_LOAD_TEXT
+                : fallbackFetch;
 
-        const code = await window.__TransforkLoadText(url);
-        window.__TransforkRunCode(code, url);
+        const runCode =
+            typeof TRANSFORK_RUN_CODE === 'function'
+                ? TRANSFORK_RUN_CODE
+                : fallbackRun;
+
+        const code = await loadText(url);
+        runCode(code, url);
     }
 
     async function boot() {
