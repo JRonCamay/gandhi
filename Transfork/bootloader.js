@@ -17,6 +17,7 @@ Loads all Transfork modules from the same Transfork folder.
     const MODULES = [
         'config.js',
         'utils.js',
+        'snap-visuals.js',
         'vm.js',
         'asset-bake-engine.js',
         'overlay-tools.js',
