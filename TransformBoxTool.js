@@ -2732,6 +2732,31 @@ flipVerticalHandle.addEventListener(
             };
         }
 
+function getStageUnitsPerScreenPixel() {
+            const canvas =
+                  getStageCanvas();
+
+            if (!canvas) {
+                return 1;
+            }
+
+            const rect =
+                  canvas.getBoundingClientRect();
+
+            const nativeSize =
+                  vm.runtime.renderer.getNativeSize();
+
+            const stageWidth =
+                  nativeSize[0];
+
+            if (!rect.width) {
+                return 1;
+            }
+
+            return stageWidth / rect.width;
+        }
+
+
 function offsetBounds(bounds, dx, dy) {
             return {
                 left: bounds.left + dx,
@@ -2768,7 +2793,8 @@ function offsetBounds(bounds, dx, dy) {
                   );
 
             const snapDistance =
-                  20;
+                  12 *
+                  getStageUnitsPerScreenPixel();
 
             let snapX =
                 null;
