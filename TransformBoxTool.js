@@ -199,6 +199,140 @@
             return null;
         }
 
+        function getCanvasWidth(image, costume) {
+            return (
+                image.naturalWidth ||
+                image.width ||
+                (
+                    costume &&
+                    costume.size &&
+                    costume.size[0]
+                ) ||
+                1
+            );
+        }
+
+        function getCanvasHeight(image, costume) {
+            return (
+                image.naturalHeight ||
+                image.height ||
+                (
+                    costume &&
+                    costume.size &&
+                    costume.size[1]
+                ) ||
+                1
+            );
+        }
+
+        function exportCanvas(
+            canvas,
+            callback
+        ) {
+            canvas.toBlob(
+                blob => {
+                    if (!blob) return;
+
+                    const reader =
+                          new FileReader();
+
+                    reader.onload =
+                        () => {
+                            callback(
+                                new Uint8Array(
+                                    reader.result
+                                )
+                            );
+                        };
+
+                    reader.readAsArrayBuffer(
+                        blob
+                    );
+                },
+                "image/png"
+            );
+        }
+
+        function createCostumeAsset(data) {
+            const storage =
+                  vm.runtime.storage;
+
+            if (
+                !storage ||
+                typeof storage.createAsset !== "function"
+            ) {
+                return null;
+            }
+
+            const assetType =
+                  (
+                      storage.AssetType &&
+                      storage.AssetType.ImageBitmap
+                  ) ||
+                  "ImageBitmap";
+
+            const dataFormat =
+                  (
+                      storage.DataFormat &&
+                      storage.DataFormat.PNG
+                  ) ||
+                  "png";
+
+            return storage.createAsset(
+                assetType,
+                dataFormat,
+                data,
+                null,
+                true
+            );
+        }
+
+        function replaceCurrentCostume(
+            target,
+            costume,
+            asset
+        ) {
+            if (
+                !target ||
+                !target.sprite ||
+                !target.sprite.costumes ||
+                !asset
+            ) {
+                return;
+            }
+
+            const replacement =
+                  Object.assign(
+                      {},
+                      costume
+                  );
+
+            replacement.asset =
+                asset;
+
+            replacement.assetId =
+                asset.assetId;
+
+            replacement.dataFormat =
+                "png";
+
+            replacement.md5ext =
+                asset.assetId + ".png";
+
+            target.sprite.costumes[
+                target.currentCostume
+            ] = replacement;
+
+            if (
+                typeof target.updateAllDrawableProperties === "function"
+            ) {
+                target.updateAllDrawableProperties();
+            }
+
+            target.emitVisualChange();
+            vm.runtime.requestRedraw();
+        }
+
         function bakeCurrentCostume(callback) {
             const target =
                   vm.editingTarget;
@@ -224,12 +358,16 @@
                           document.createElement("canvas");
 
                     canvas.width =
-                        image.naturalWidth ||
-                        image.width;
+                        getCanvasWidth(
+                            image,
+                            costume
+                        );
 
                     canvas.height =
-                        image.naturalHeight ||
-                        image.height;
+                        getCanvasHeight(
+                            image,
+                            costume
+                        );
 
                     const ctx =
                           canvas.getContext("2d");
@@ -252,10 +390,24 @@
                         );
                     }
 
-                    canvas.toDataURL("image/png");
+                    exportCanvas(
+                        canvas,
+                        data => {
+                            const asset =
+                                  createCostumeAsset(
+                                      data
+                                  );
 
-                    console.log(
-                        "Asset Bake Engine Ready"
+                            replaceCurrentCostume(
+                                target,
+                                costume,
+                                asset
+                            );
+
+                            console.log(
+                                "Asset Bake Engine Ready"
+                            );
+                        }
                     );
                 };
 
