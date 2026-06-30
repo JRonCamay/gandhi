@@ -1,10 +1,21 @@
+// ==UserScript==
+// @name         GitGit Big GitHub Editor
+// @namespace    http://tampermonkey.net/
+// @version      2.8.1
+// @description  Full-window JavaScript editor with fully internal Search/Replace/Function panel, colored preview, GitHub accounts, file tree, load, and commit
+// @author       You
+// @match        https://github.com/*
+// @match        https://raw.githubusercontent.com/*
+// @grant        none
+// ==/UserScript==
+
 (function () {
     'use strict';
 
     if (window.__gitgitBigEditorModularLoaded) return;
     window.__gitgitBigEditorModularLoaded = true;
 
-    const STORAGE_KEY = (window.GitGit && window.GitGit.config && window.GitGit.config.storageKey) || 'gitgit_big_editor_settings_v1';
+    const STORAGE_KEY = 'gitgit_big_editor_settings_v1';
 
     function loadSettings() {
         try {
@@ -207,7 +218,7 @@
 
     const launcher = createEl('button', {
         text: '🐒✍️',
-        title: 'Open GitGit Modular Editor',
+        title: 'Open GitGit Editor',
         style: `
             position: fixed;
             right: 80px;
@@ -1288,6 +1299,8 @@
     }
 
     function scrollEditorToIndex(index) {
+        if (index < 0) return;
+
         const textBefore =
             codeArea.value.slice(0, index);
 
@@ -1297,11 +1310,13 @@
         const lineHeight =
             parseFloat(getComputedStyle(codeArea).lineHeight) || 20;
 
-        const targetTop =
-            Math.max(0, (lineIndex * lineHeight) - (codeArea.clientHeight / 3));
+        codeArea.scrollTop =
+            Math.max(
+                0,
+                (lineIndex * lineHeight) - (codeArea.clientHeight / 3)
+            );
 
-        codeArea.scrollTop = targetTop;
-        syncScroll();
+        lineGutter.scrollTop = codeArea.scrollTop;
     }
 
     function miniSelectRange(start, end, message) {
