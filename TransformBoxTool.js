@@ -453,6 +453,13 @@
                                       data
                                   );
 
+                            if (
+                                canvas &&
+                                typeof canvas.__gandhiBeforeReplace === "function"
+                            ) {
+                                canvas.__gandhiBeforeReplace();
+                            }
+
                             replaceCurrentCostume(
                                 target,
                                 costume,
@@ -1890,10 +1897,12 @@ function createSkewSession(e) {
                         -finalShearY
                     );
 
-                    return () => {
-                        activeShearBridge = null;
-                        updateSelectionBox();
-                    };
+                    canvas.__gandhiBeforeReplace =
+                        () => {
+                            activeShearBridge = null;
+                        };
+
+                    return updateSelectionBox;
                 },
                 this.target
             );
