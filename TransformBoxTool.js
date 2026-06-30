@@ -20,9 +20,55 @@
         false;
     let wasRunning =
     false;
+const originalSpriteDraggableMap =
+          new Map();
+
+function setNativeSpriteDraggingEnabled(enabled) {
+    if (
+        !window.vm ||
+        !window.vm.runtime ||
+        !window.vm.runtime.targets
+    ) {
+        return;
+    }
+
+    for (
+        const target of
+        window.vm.runtime.targets
+    ) {
+        if (
+            !target ||
+            target.isStage
+        ) {
+            continue;
+        }
+
+        if (
+            !originalSpriteDraggableMap.has(
+                target.id
+            )
+        ) {
+            originalSpriteDraggableMap.set(
+                target.id,
+                target.draggable
+            );
+        }
+
+        target.draggable =
+            enabled
+                ? originalSpriteDraggableMap.get(
+                    target.id
+                )
+                : false;
+    }
+}
+
     function toggleTransformMode() {
         transformMode = !transformMode;
 
+        setNativeSpriteDraggingEnabled(
+            !transformMode
+        );
     }
 
     window.addEventListener(
