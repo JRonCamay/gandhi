@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GitGit Big GitHub Editor
 // @namespace    http://tampermonkey.net/
-// @version      3.3.0
+// @version      3.4.0
 // @description  Full-window JavaScript editor with internal Search/Replace/Function panel and editor undo/redo, colored preview, GitHub accounts, file tree, load, and commit
 // @author       You
 // @match        https://github.com/*
@@ -12,8 +12,8 @@
 (function () {
     'use strict';
 
-    if (window.__gitgitBigEditorModularLoaded === '3.3.0') return;
-    window.__gitgitBigEditorModularLoaded = '3.3.0';
+    if (window.__gitgitBigEditorModularLoaded === '3.4.0') return;
+    window.__gitgitBigEditorModularLoaded = '3.4.0';
 
     const STORAGE_KEY = 'gitgit_big_editor_settings_v1';
 
@@ -266,7 +266,7 @@
     });
 
     const title = createEl('div', {
-        html: '<strong>GitGit Big GitHub Editor v3.3</strong>',
+        html: '<strong>GitGit Big GitHub Editor v3.4</strong>',
         style: `
             font-size: 14px;
             color: #f0f6fc;
@@ -489,9 +489,9 @@
             right: 0;
             top: 0;
             height: 20px;
-            background: rgba(88, 166, 255, 0.045);
-            border-top: 1px solid rgba(88, 166, 255, 0.055);
-            border-bottom: 1px solid rgba(88, 166, 255, 0.055);
+            background: rgba(88, 166, 255, 0.030);
+            border-top: 1px solid rgba(88, 166, 255, 0.035);
+            border-bottom: 1px solid rgba(88, 166, 255, 0.035);
             pointer-events: none;
             display: none;
             z-index: 1;
@@ -1213,6 +1213,17 @@
             (lineIndex * lineHeight) -
             codeArea.scrollTop;
 
+        currentLineHighlight.style.left =
+            codeArea.offsetLeft + 'px';
+
+        currentLineHighlight.style.right =
+            Math.max(
+                0,
+                editorWrap.clientWidth -
+                    codeArea.offsetLeft -
+                    codeArea.clientWidth
+            ) + 'px';
+
         currentLineHighlight.style.top =
             top + 'px';
 
@@ -1771,6 +1782,7 @@
     async function openRightTreePanel(forceReload) {
         rightTreePanel.style.display = 'flex';
         leftTreeCollapseBar.style.display = 'none';
+        requestAnimationFrame(updateCurrentLineHighlight);
 
         if (rightTreeRootItems && !forceReload) {
             renderRightTree();
@@ -1802,6 +1814,23 @@
     function collapseRightTreePanel() {
         rightTreePanel.style.display = 'none';
         leftTreeCollapseBar.style.display = 'flex';
+        requestAnimationFrame(updateCurrentLineHighlight);
+    }
+
+    function autoLoadRightTreePanel() {
+        openRightTreePanel(true);
+
+        setTimeout(() => {
+            if (!rightTreeRootItems) {
+                openRightTreePanel(true);
+            }
+        }, 800);
+
+        setTimeout(() => {
+            if (!rightTreeRootItems) {
+                openRightTreePanel(true);
+            }
+        }, 1800);
     }
 
     function toggleRightTreePanel() {
