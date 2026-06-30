@@ -1,0 +1,57 @@
+// ==UserScript==
+// @name         BlokSearch Loader
+// @namespace    http://tampermonkey.net/
+// @version      1.0
+// @description  Stable loader for modular Gandhi Block Search / BlokSearch
+// @match        *://www.cocrea.world/*
+// @grant        GM_xmlhttpRequest
+// @connect      raw.githubusercontent.com
+// ==/UserScript==
+
+(function () {
+    'use strict';
+
+    const BOOT =
+        'https://raw.githubusercontent.com/JRonCamay/gandhi/main/BlokSearch/bootloader.js';
+
+    const BASE =
+        BOOT.substring(0, BOOT.lastIndexOf('/') + 1);
+
+    window.__BlokSearchBaseURL = BASE;
+
+    window.__BlokSearchLoadText = function (url) {
+        return new Promise((resolve, reject) => {
+            GM_xmlhttpRequest({
+                method: 'GET',
+                url: url + '?v=' + Date.now(),
+                onload(response) {
+                    if (response.status >= 200 && response.status < 300) {
+                        resolve(response.responseText);
+                    } else {
+                        reject(new Error('HTTP ' + response.status + ' loading ' + url));
+                    }
+                },
+                onerror() {
+                    reject(new Error('Network error loading ' + url));
+                }
+            });
+        });
+    };
+
+    window.__BlokSearchRunCode = function (code, url) {
+        try {
+            new Function(code + '\n//# sourceURL=' + url)();
+        } catch (error) {
+            console.error('[BlokSearch eval error]', url, error);
+            alert('BlokSearch error in ' + url + ': ' + error.message);
+            throw error;
+        }
+    };
+
+    window.__BlokSearchLoadText(BOOT)
+        .then(code => window.__BlokSearchRunCode(code, BOOT))
+        .catch(error => {
+            console.error('[BlokSearch Loader]', error);
+            alert('BlokSearch Loader: ' + error.message);
+        });
+})();
