@@ -2525,22 +2525,100 @@ flipVerticalHandle.addEventListener(
                         "width"
                     ) {
 
+                        const oldBounds =
+                              drawable.getAABB();
+
                         drawable.updateScale([
                             signX * newScale,
                             startScaleY
                         ]);
+
+                        const newBounds =
+                              drawable.getAABB();
+
+                        const oldCenterX =
+                              (
+                                  oldBounds.left +
+                                  oldBounds.right
+                              ) / 2;
+
+                        const oldCenterY =
+                              (
+                                  oldBounds.top +
+                                  oldBounds.bottom
+                              ) / 2;
+
+                        const newCenterX =
+                              (
+                                  newBounds.left +
+                                  newBounds.right
+                              ) / 2;
+
+                        const newCenterY =
+                              (
+                                  newBounds.top +
+                                  newBounds.bottom
+                              ) / 2;
+
+                        vm.editingTarget.setXY(
+                            vm.editingTarget.x +
+                                oldCenterX -
+                                newCenterX,
+                            vm.editingTarget.y +
+                                oldCenterY -
+                                newCenterY
+                        );
                     }
                     else if (
                         resizeMode ===
                         "height"
                     ) {
 
-                      drawable.updateScale([
-                          signX * Math.abs(
-                              startScaleX
-                          ),
-                          signY * newScale
-                      ]);
+                        const oldBounds =
+                              drawable.getAABB();
+
+                        drawable.updateScale([
+                            signX * Math.abs(
+                                startScaleX
+                            ),
+                            signY * newScale
+                        ]);
+
+                        const newBounds =
+                              drawable.getAABB();
+
+                        const oldCenterX =
+                              (
+                                  oldBounds.left +
+                                  oldBounds.right
+                              ) / 2;
+
+                        const oldCenterY =
+                              (
+                                  oldBounds.top +
+                                  oldBounds.bottom
+                              ) / 2;
+
+                        const newCenterX =
+                              (
+                                  newBounds.left +
+                                  newBounds.right
+                              ) / 2;
+
+                        const newCenterY =
+                              (
+                                  newBounds.top +
+                                  newBounds.bottom
+                              ) / 2;
+
+                        vm.editingTarget.setXY(
+                            vm.editingTarget.x +
+                                oldCenterX -
+                                newCenterX,
+                            vm.editingTarget.y +
+                                oldCenterY -
+                                newCenterY
+                        );
                     }
 
                     vm.editingTarget
