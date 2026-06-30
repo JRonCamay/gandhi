@@ -2795,9 +2795,21 @@ function offsetBounds(bounds, dx, dy) {
             const snapScale =
                   getStageUnitsPerScreenPixel();
 
+            const canvas =
+                  getStageCanvas();
+
+            const rect =
+                  canvas.getBoundingClientRect();
+
+            const nativeSize =
+                  vm.runtime.renderer.getNativeSize();
+
             const snapDistance =
-                  18 *
-                  snapScale;
+                  12 *
+                  (
+                      nativeSize[0] /
+                      rect.width
+                  );
 
             let snapX =
                 null;
