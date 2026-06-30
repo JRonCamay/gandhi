@@ -2329,6 +2329,8 @@
 
                     dragTarget =
                     null;
+
+                    window.Transfork.snapVisuals.clear();
                 }
             );
 
@@ -2875,6 +2877,18 @@
                 null;
                 let snapYTarget =
                 null;
+                const snapCandidates = {
+                    left: null,
+                    right: null,
+                    top: null,
+                    bottom: null
+                };
+                const candidateDeltas = {
+                    left: null,
+                    right: null,
+                    top: null,
+                    bottom: null
+                };
                 vm.runtime.targets.forEach(
                     otherTarget => {
                         if (
@@ -2900,12 +2914,42 @@
                         otherDrawable.getAABB();
 
                         [
-                            otherBounds.left - bounds.left,
-                            otherBounds.right - bounds.left,
-                            otherBounds.left - bounds.right,
-                            otherBounds.right - bounds.right
+                            {
+                                side: "left",
+                                delta: otherBounds.left - bounds.left
+                            },
+                            {
+                                side: "left",
+                                delta: otherBounds.right - bounds.left
+                            },
+                            {
+                                side: "right",
+                                delta: otherBounds.left - bounds.right
+                            },
+                            {
+                                side: "right",
+                                delta: otherBounds.right - bounds.right
+                            }
                         ].forEach(
-                            delta => {
+                            candidate => {
+                                const delta =
+                                candidate.delta;
+
+                                if (
+                                    Math.abs(delta) <= snapDistance &&
+                                    (
+                                        candidateDeltas[candidate.side] === null ||
+                                        Math.abs(delta) <
+                                        Math.abs(candidateDeltas[candidate.side])
+                                    )
+                                ) {
+                                    candidateDeltas[candidate.side] =
+                                    delta;
+
+                                    snapCandidates[candidate.side] =
+                                    otherBounds;
+                                }
+
                                 if (
                                     Math.abs(delta) <= snapDistance &&
                                     (
@@ -2923,12 +2967,42 @@
                         );
 
                         [
-                            otherBounds.top - bounds.top,
-                            otherBounds.bottom - bounds.top,
-                            otherBounds.top - bounds.bottom,
-                            otherBounds.bottom - bounds.bottom
+                            {
+                                side: "top",
+                                delta: otherBounds.top - bounds.top
+                            },
+                            {
+                                side: "top",
+                                delta: otherBounds.bottom - bounds.top
+                            },
+                            {
+                                side: "bottom",
+                                delta: otherBounds.top - bounds.bottom
+                            },
+                            {
+                                side: "bottom",
+                                delta: otherBounds.bottom - bounds.bottom
+                            }
                         ].forEach(
-                            delta => {
+                            candidate => {
+                                const delta =
+                                candidate.delta;
+
+                                if (
+                                    Math.abs(delta) <= snapDistance &&
+                                    (
+                                        candidateDeltas[candidate.side] === null ||
+                                        Math.abs(delta) <
+                                        Math.abs(candidateDeltas[candidate.side])
+                                    )
+                                ) {
+                                    candidateDeltas[candidate.side] =
+                                    delta;
+
+                                    snapCandidates[candidate.side] =
+                                    otherBounds;
+                                }
+
                                 if (
                                     Math.abs(delta) <= snapDistance &&
                                     (
@@ -3015,7 +3089,7 @@
                     }
 
                 }
-                return {
+                const snapResult = {
                     x:
                     desiredX +
                     (
@@ -3032,6 +3106,16 @@
                         : snapY
                     )
                 };
+
+                window.Transfork.snapVisuals.update(
+                    {
+                        target,
+                        candidates: snapCandidates,
+                        result: snapResult
+                    }
+                );
+
+                return snapResult;
             }
 
             function getShearAdjustedBounds(
