@@ -1857,16 +1857,14 @@ function createSkewSession(e) {
             vm.runtime.requestRedraw();
         },
 
-        onUp() {
+        onUp(upEvent) {
             const finalShearX =
-                  activeShearBridge
-                      ? activeShearBridge.shearX
-                      : 0;
+                this.startShearX +
+                (upEvent.clientX - this.startMouseX) / 200;
 
             const finalShearY =
-                  activeShearBridge
-                      ? activeShearBridge.shearY
-                      : 0;
+                this.startShearY +
+                (upEvent.clientY - this.startMouseY) / 200;
 
             this.destroy();
             activeSkewSession = null;
@@ -1879,13 +1877,11 @@ function createSkewSession(e) {
                     image,
                     costume
                 ) => {
-                    const bakeShearMultiplier = 1.25;
-
                     bakeSkewToCanvas(
                         canvas,
                         costume,
-                        -finalShearX * bakeShearMultiplier,
-                        -finalShearY * bakeShearMultiplier
+                        -finalShearX,
+                        -finalShearY
                     );
 
                     return updateSelectionBox;
