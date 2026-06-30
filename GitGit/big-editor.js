@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GitGit Big GitHub Editor
 // @namespace    http://tampermonkey.net/
-// @version      4.1.0
+// @version      4.2.0
 // @description  Full-window JavaScript editor with internal Search/Replace/Function panel and editor undo/redo, colored preview, GitHub accounts, file tree, load, and commit
 // @author       You
 // @match        https://github.com/*
@@ -13,187 +13,8 @@
 (function () {
     'use strict';
 
-    if (window.__gitgitBigEditorModularLoaded === '4.1.0') return;
-    window.__gitgitBigEditorModularLoaded = '4.1.0';
-
-    const GITGIT_THEME = {
-        app: '#1e1e1e',
-        panel: '#252526',
-        panel2: '#2d2d30',
-        panel3: '#333842',
-        editor: '#1e1e1e',
-        editorLine: '#252526',
-        input: '#1f1f1f',
-        inputFocus: '#252526',
-        button: '#2d2d30',
-        buttonHover: '#3a3d41',
-        border: '#4a4f58',
-        text: '#ffffff',
-        text2: '#e6e8eb',
-        muted: '#c8ced8',
-        hint: '#aeb7c4',
-        blue: '#0e639c',
-        green: '#16825d',
-        purple: '#7e57c2',
-        red: '#b94a48',
-        selection: '#264f78'
-    };
-
-    function installReadableTheme() {
-        const old =
-            document.getElementById('gitgit-readable-theme');
-
-        if (old) {
-            old.remove();
-        }
-
-        const theme = document.createElement('style');
-        theme.id = 'gitgit-readable-theme';
-
-        theme.textContent = `
-            #gitgit-big-editor,
-            #gitgit-big-editor * {
-                opacity: 1 !important;
-                filter: none !important;
-                text-shadow: none !important;
-                box-shadow: none;
-            }
-
-            #gitgit-big-editor {
-                background: ${GITGIT_THEME.app} !important;
-                color: ${GITGIT_THEME.text} !important;
-            }
-
-            #gitgit-big-editor div,
-            #gitgit-big-editor span,
-            #gitgit-big-editor label,
-            #gitgit-big-editor summary {
-                color: ${GITGIT_THEME.text2} !important;
-            }
-
-            #gitgit-big-editor input,
-            #gitgit-big-editor textarea,
-            #gitgit-big-editor select {
-                background: ${GITGIT_THEME.input} !important;
-                color: ${GITGIT_THEME.text} !important;
-                border: 1px solid ${GITGIT_THEME.border} !important;
-                opacity: 1 !important;
-            }
-
-            #gitgit-big-editor input:focus,
-            #gitgit-big-editor textarea:focus,
-            #gitgit-big-editor select:focus {
-                background: ${GITGIT_THEME.inputFocus} !important;
-                outline: 1px solid #6aa9ff !important;
-            }
-
-            #gitgit-big-editor input::placeholder,
-            #gitgit-big-editor textarea::placeholder {
-                color: ${GITGIT_THEME.hint} !important;
-                opacity: 1 !important;
-            }
-
-            #gitgit-big-editor button {
-                background: ${GITGIT_THEME.button} !important;
-                color: ${GITGIT_THEME.text} !important;
-                border: 1px solid ${GITGIT_THEME.border} !important;
-                opacity: 1 !important;
-                font-weight: 600 !important;
-            }
-
-            #gitgit-big-editor button:hover {
-                background: ${GITGIT_THEME.buttonHover} !important;
-            }
-
-            #gitgit-code-area {
-                background: ${GITGIT_THEME.editor} !important;
-                color: ${GITGIT_THEME.text} !important;
-                caret-color: ${GITGIT_THEME.text} !important;
-                opacity: 1 !important;
-            }
-
-            #gitgit-code-area::selection {
-                background: ${GITGIT_THEME.selection} !important;
-                color: ${GITGIT_THEME.text} !important;
-            }
-
-            #gitgit-line-gutter {
-                background: #202124 !important;
-                color: #d7dce5 !important;
-                border-right: 1px solid ${GITGIT_THEME.border} !important;
-                opacity: 1 !important;
-            }
-
-            #gitgit-mini-search-panel,
-            #gitgit-mini-search-panel * {
-                opacity: 1 !important;
-            }
-
-            #gitgit-mini-search-panel textarea {
-                background: ${GITGIT_THEME.input} !important;
-                color: ${GITGIT_THEME.text} !important;
-            }
-
-            #gitgit-big-editor [style*="background: #010409"],
-            #gitgit-big-editor [style*="background:#010409"] {
-                background: ${GITGIT_THEME.panel} !important;
-            }
-
-            #gitgit-big-editor [style*="background: #0d1117"],
-            #gitgit-big-editor [style*="background:#0d1117"],
-            #gitgit-big-editor [style*="background: #1a1d21"],
-            #gitgit-big-editor [style*="background:#1a1d21"] {
-                background: ${GITGIT_THEME.editor} !important;
-            }
-
-            #gitgit-big-editor [style*="background: #161b22"],
-            #gitgit-big-editor [style*="background:#161b22"],
-            #gitgit-big-editor [style*="background: #23272e"],
-            #gitgit-big-editor [style*="background:#23272e"] {
-                background: ${GITGIT_THEME.panel} !important;
-            }
-
-            #gitgit-big-editor [style*="background: #21262d"],
-            #gitgit-big-editor [style*="background:#21262d"],
-            #gitgit-big-editor [style*="background: #2b313a"],
-            #gitgit-big-editor [style*="background:#2b313a"] {
-                background: ${GITGIT_THEME.button} !important;
-            }
-
-            #gitgit-big-editor [style*="color: #8b949e"],
-            #gitgit-big-editor [style*="color:#8b949e"],
-            #gitgit-big-editor [style*="color: #6e7681"],
-            #gitgit-big-editor [style*="color:#6e7681"],
-            #gitgit-big-editor [style*="color: #c7ced8"],
-            #gitgit-big-editor [style*="color:#c7ced8"] {
-                color: ${GITGIT_THEME.muted} !important;
-            }
-
-            #gitgit-big-editor [style*="color: #c9d1d9"],
-            #gitgit-big-editor [style*="color:#c9d1d9"],
-            #gitgit-big-editor [style*="color: #f5f7fa"],
-            #gitgit-big-editor [style*="color:#f5f7fa"],
-            #gitgit-big-editor [style*="color: #d5dbe3"],
-            #gitgit-big-editor [style*="color:#d5dbe3"] {
-                color: ${GITGIT_THEME.text} !important;
-            }
-
-            #gitgit-big-editor [style*="border: 1px solid #30363d"],
-            #gitgit-big-editor [style*="border-color: #30363d"],
-            #gitgit-big-editor [style*="border-color:#30363d"] {
-                border-color: ${GITGIT_THEME.border} !important;
-            }
-
-            #gitgit-big-editor .gitgit-muted,
-            #gitgit-big-editor .gitgit-muted * {
-                color: ${GITGIT_THEME.muted} !important;
-            }
-        `;
-
-        document.documentElement.appendChild(theme);
-    }
-
-
+    if (window.__gitgitBigEditorModularLoaded === '4.2.0') return;
+    window.__gitgitBigEditorModularLoaded = '4.2.0';
 
     function prepareStandalonePage() {
         const style = document.createElement('style');
@@ -214,7 +35,6 @@
         `;
         style.id = 'gitgit-standalone-page-style';
         document.documentElement.appendChild(style);
-        installReadableTheme();
 
         const theme = document.createElement('style');
         theme.id = 'gitgit-readable-theme';
@@ -460,7 +280,7 @@
 
             #gitgit-code-area::-webkit-scrollbar-track,
             #gitgit-line-gutter::-webkit-scrollbar-track {
-                background: #1e1e1e;
+                background: #1a1d21;
             }
 
             #gitgit-code-area::-webkit-scrollbar-thumb,
@@ -482,7 +302,7 @@
             }
 
             #gitgit-mini-search-panel textarea::-webkit-scrollbar-track {
-                background: #1e1e1e;
+                background: #1a1d21;
             }
 
             #gitgit-mini-search-panel textarea::-webkit-scrollbar-thumb {
@@ -514,13 +334,14 @@
             height: 46px;
             border-radius: 50%;
             border: 1px solid #30363d;
-            background: #252526;
-            color: #ffffff;
+            background: #23272e;
+            color: #f5f7fa;
             font-size: 24px;
             cursor: pointer;
             z-index: 999999;
             box-shadow: 0 6px 18px rgba(0,0,0,0.45);
         
+            display: none !important;
             display: none !important;`
     });
 
@@ -533,8 +354,8 @@
             inset: 0;
             display: flex;
             flex-direction: column;
-            background: #1e1e1e;
-            color: #ffffff;
+            background: #1a1d21;
+            color: #f5f7fa;
             z-index: 999999;
             font-family: -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif;
         `
@@ -547,14 +368,14 @@
             align-items: center;
             justify-content: space-between;
             padding: 0 12px;
-            background: #252526;
+            background: #23272e;
             border-bottom: 1px solid #30363d;
             flex-shrink: 0;
         `
     });
 
     const title = createEl('div', {
-        html: '<strong>GitGit Big GitHub Editor v4.1</strong>',
+        html: '<strong>GitGit Big GitHub Editor v4.2 SAFE</strong>',
         style: `
             font-size: 14px;
             color: #f0f6fc;
@@ -569,7 +390,7 @@
             border: none;
             border-radius: 4px;
             background: #30363d;
-            color: #ffffff;
+            color: #f5f7fa;
             cursor: pointer;
             font-size: 14px;
         
@@ -585,7 +406,7 @@
             grid-template-columns: 220px 34px 220px 220px 90px minmax(260px, 1fr) 34px auto auto auto;
             gap: 6px;
             padding: 8px;
-            background: #1e1e1e;
+            background: #1a1d21;
             border-bottom: 1px solid #30363d;
             flex-shrink: 0;
         `
@@ -598,8 +419,8 @@
             value: value || '',
             style: `
                 height: 30px;
-                background: #252526;
-                color: #ffffff;
+                background: #171a1f;
+                color: #f5f7fa;
                 border: 1px solid #30363d;
                 border-radius: 4px;
                 padding: 4px 8px;
@@ -613,8 +434,8 @@
         const select = createEl('select', {
             style: `
                 height: 30px;
-                background: #252526;
-                color: #ffffff;
+                background: #171a1f;
+                color: #f5f7fa;
                 border: 1px solid #30363d;
                 border-radius: 4px;
                 padding: 4px 8px;
@@ -689,7 +510,7 @@
             display: none;
             max-height: 260px;
             overflow: auto;
-            background: #252526;
+            background: #171a1f;
             border-bottom: 1px solid #30363d;
             padding: 8px;
             font-family: Consolas, Menlo, Monaco, monospace;
@@ -704,7 +525,7 @@
             grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr) auto auto auto auto auto auto auto;
             gap: 6px;
             padding: 8px;
-            background: #1e1e1e;
+            background: #1a1d21;
             border-bottom: 1px solid #30363d;
             flex-shrink: 0;
         `
@@ -727,13 +548,15 @@
     toolBar.appendChild(replaceAllBtn);
     toolBar.appendChild(syntaxBtn);
     toolBar.appendChild(robotBtn);
+    toolBar.appendChild(undoBtn);
+    toolBar.appendChild(redoBtn);
 
     const editorWrap = createEl('div', {
         style: `
             display: flex;
             flex: 1;
             min-height: 0;
-            background: #1e1e1e;
+            background: #1a1d21;
         `
     });
 
@@ -743,8 +566,8 @@
             width: 64px;
             flex-shrink: 0;
             overflow: hidden;
-            background: #252526;
-            color: #d7dce5;
+            background: #171a1f;
+            color: #c7ced8;
             border-right: 1px solid #30363d;
             padding: 10px 8px 10px 0;
             text-align: right;
@@ -767,8 +590,8 @@
             border: none;
             outline: none;
             overflow: auto;
-            background: #1e1e1e;
-            color: #ffffff;
+            background: #1a1d21;
+            color: #f5f7fa;
             padding: 10px;
             font-family: Consolas, Menlo, Monaco, monospace;
             font-size: 13px;
@@ -788,9 +611,9 @@
             right: 0;
             top: 0;
             height: 20px;
-            background: #252526;
-            border-top: 1px solid #2a2d2e;
-            border-bottom: 1px solid #2a2d2e;
+            background: rgba(255, 255, 255, 0.045);
+            border-top: 1px solid rgba(255, 255, 255, 0.055);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.055);
             pointer-events: none;
             display: none;
             z-index: 1;
@@ -807,9 +630,9 @@
             max-width: 360px;
             display: flex;
             flex-direction: column;
-            background: #252526;
+            background: #171a1f;
             border-right: 1px solid #30363d;
-            color: #ffffff;
+            color: #f5f7fa;
             flex-shrink: 0;
             order: -3;
         `
@@ -823,7 +646,7 @@
             justify-content: flex-start;
             gap: 6px;
             padding: 6px;
-            background: #252526;
+            background: #23272e;
             border-bottom: 1px solid #30363d;
             font-size: 12px;
             flex-shrink: 0;
@@ -846,8 +669,8 @@
         style: `
             width: 26px;
             height: 23px;
-            background: #2d2d30;
-            color: #ffffff;
+            background: #2b313a;
+            color: #f5f7fa;
             border: 1px solid #30363d;
             border-radius: 4px;
             cursor: pointer;
@@ -861,8 +684,8 @@
         style: `
             width: 26px;
             height: 23px;
-            background: #2d2d30;
-            color: #ffffff;
+            background: #2b313a;
+            color: #f5f7fa;
             border: 1px solid #30363d;
             border-radius: 4px;
             cursor: pointer;
@@ -881,8 +704,8 @@
         style: `
             height: 28px;
             margin: 6px;
-            background: #1e1e1e;
-            color: #ffffff;
+            background: #1a1d21;
+            color: #f5f7fa;
             border: 1px solid #30363d;
             border-radius: 4px;
             padding: 4px 7px;
@@ -911,8 +734,8 @@
             display: none;
             align-items: center;
             justify-content: center;
-            background: #252526;
-            color: #e6e8eb;
+            background: #23272e;
+            color: #d5dbe3;
             border: none;
             border-right: 1px solid #30363d;
             cursor: pointer;
@@ -947,8 +770,8 @@
             width: 28px;
             height: 24px;
             border-radius: 8px;
-            background: #2d2d30;
-            color: #ffffff;
+            background: #2b313a;
+            color: #f5f7fa;
             border: 1px solid #30363d;
             cursor: pointer;
             font-size: 13px;
@@ -962,8 +785,8 @@
             width: 28px;
             height: 24px;
             border-radius: 8px;
-            background: #2d2d30;
-            color: #ffffff;
+            background: #2b313a;
+            color: #f5f7fa;
             border: 1px solid #30363d;
             cursor: pointer;
             font-size: 12px;
@@ -972,8 +795,6 @@
 
     editorCopyCorner.appendChild(editorCopyAllBtn);
     editorCopyCorner.appendChild(editorCopySelectionBtn);
-    editorCopyCorner.appendChild(editorUndoBtn);
-    editorCopyCorner.appendChild(editorRedoBtn);
     editorWrap.appendChild(editorCopyCorner);
 
 
@@ -983,8 +804,8 @@
             height: 24px;
             align-items: center;
             justify-content: space-between;
-            background: #252526;
-            color: #e6e8eb;
+            background: #23272e;
+            color: #d5dbe3;
             border-top: 1px solid #30363d;
             border-bottom: 1px solid #30363d;
             padding: 0 8px;
@@ -999,14 +820,14 @@
         text: 'Preview',
         style: `
             font-weight: 600;
-            color: #ffffff;
+            color: #f5f7fa;
         `
     });
 
     const previewBarIcon = createEl('span', {
         text: '▾',
         style: `
-            color: #e6e8eb;
+            color: #d5dbe3;
             font-size: 13px;
         `
     });
@@ -1021,8 +842,8 @@
             min-height: 160px;
             max-height: 360px;
             overflow: auto;
-            background: #252526;
-            color: #ffffff;
+            background: #171a1f;
+            color: #f5f7fa;
             border-top: 1px solid #30363d;
             padding: 10px;
             font-family: Consolas, Menlo, Monaco, monospace;
@@ -1038,8 +859,8 @@
         style: `
             min-height: 26px;
             padding: 5px 8px;
-            background: #252526;
-            color: #e6e8eb;
+            background: #23272e;
+            color: #d5dbe3;
             border-top: 1px solid #30363d;
             font-size: 12px;
             flex-shrink: 0;
@@ -1054,8 +875,8 @@
             right: 18px;
             bottom: 38px;
             width: 455px;
-            background: #1e1e1e;
-            color: #ffffff;
+            background: #1a1d21;
+            color: #f5f7fa;
             border: 1px solid #30363d;
             border-radius: 6px;
             box-shadow: 0 8px 24px rgba(0,0,0,0.55);
@@ -1069,7 +890,7 @@
     const miniHeader = createEl('div', {
         style: `
             height: 34px;
-            background: #252526;
+            background: #23272e;
             color: #f0f6fc;
             border-bottom: 1px solid #30363d;
             display: flex;
@@ -1092,7 +913,7 @@
             width: 28px;
             height: 24px;
             background: transparent;
-            color: #ffffff;
+            color: #f5f7fa;
             border: none;
             cursor: pointer;
             font-weight: bold;
@@ -1124,8 +945,8 @@
         style: `
             width: 100%;
             height: 138px;
-            background: #1e1e1e;
-            color: #ffffff;
+            background: #1a1d21;
+            color: #f5f7fa;
             border: 1px solid #30363d;
             border-radius: 4px;
             resize: vertical;
@@ -1146,8 +967,8 @@
             top: 6px;
             width: 26px;
             height: 24px;
-            background: #252526;
-            color: #ffffff;
+            background: #23272e;
+            color: #f5f7fa;
             border: 1px solid #30363d;
             border-radius: 4px;
             cursor: pointer;
@@ -1161,11 +982,11 @@
         text: 'Replace Box',
         style: `
             padding: 2px 8px;
-            background: #252526;
+            background: #23272e;
             border: 1px solid #30363d;
             border-radius: 4px;
             font-size: 12px;
-            color: #e6e8eb;
+            color: #d5dbe3;
             user-select: none;
             line-height: 16px;
         `
@@ -1177,8 +998,8 @@
         style: `
             width: 100%;
             height: 138px;
-            background: #1e1e1e;
-            color: #ffffff;
+            background: #1a1d21;
+            color: #f5f7fa;
             border: 1px solid #30363d;
             border-radius: 4px;
             resize: vertical;
@@ -1238,8 +1059,8 @@
             bottom: 4px;
             width: 28px;
             height: 22px;
-            background: #2d2d30;
-            color: #ffffff;
+            background: #2b313a;
+            color: #f5f7fa;
             border: 1px solid #30363d;
             border-radius: 4px;
             cursor: pointer;
@@ -1930,7 +1751,7 @@
         const loading = createEl('div', {
             text: 'Loading repository tree...',
             style: `
-                color: #e6e8eb;
+                color: #d5dbe3;
                 padding: 6px;
             `
         });
@@ -1996,7 +1817,7 @@
             style: `
                 width: 12px;
                 flex: 0 0 12px;
-                color: #e6e8eb;
+                color: #d5dbe3;
             `
         });
 
@@ -3225,6 +3046,10 @@
         }
 
         overlay.style.display = 'flex';
+        overlay.style.inset = '0';
+        overlay.style.background = '#1e1e1e';
+        overlay.style.border = 'none';
+        overlay.style.borderRadius = '0';
         updateLineNumbers();
         resetEditorHistory();
         codeArea.focus();
@@ -3279,6 +3104,16 @@
 
     launcher.addEventListener('click', openEditor);
 
+    console.log('GitGit v4.2 SAFE autostart');
+    setTimeout(() => {
+        try {
+            openEditor();
+        } catch (error) {
+            console.error('GitGit openEditor failed:', error);
+            alert('GitGit open failed: ' + error.message);
+        }
+    }, 300);
+
     prepareStandalonePage();
     requestAnimationFrame(() => {
         openEditor();
@@ -3295,10 +3130,10 @@
         replaceAllBtn,
         syntaxBtn,
         robotBtn,
+        undoBtn,
+        redoBtn,
         editorCopyAllBtn,
         editorCopySelectionBtn,
-        editorUndoBtn,
-        editorRedoBtn,
         rightTreeRefreshBtn,
         rightTreeCloseBtn,
         leftTreeCollapseBar
@@ -3325,6 +3160,8 @@
     replaceAllBtn.addEventListener('click', replaceAll);
     syntaxBtn.addEventListener('click', syntaxCheck);
     robotBtn.addEventListener('click', robotClean);
+    undoBtn.addEventListener('click', editorUndo);
+    redoBtn.addEventListener('click', editorRedo);
     rightTreeRefreshBtn.addEventListener('click', () => openRightTreePanel(true));
     rightTreeCloseBtn.addEventListener('click', collapseRightTreePanel);
     leftTreeCollapseBar.addEventListener('click', () => openRightTreePanel(false));
@@ -3352,9 +3189,6 @@
         await navigator.clipboard.writeText(selected);
         setStatus('Selection copied', 'success');
     });
-
-    editorUndoBtn.addEventListener('click', editorUndo);
-    editorRedoBtn.addEventListener('click', editorRedo);
     miniLauncher.addEventListener('click', toggleMiniPanel);
     miniCloseBtn.addEventListener('click', toggleMiniPanel);
     miniSearchBtn.addEventListener('click', miniSearchExact);
