@@ -631,8 +631,8 @@
             assetToolsPanel.style,
             {
                 position: "absolute",
-                right: "-170px",
-                bottom: "66px",
+                left: "calc(100% + 35px)",
+                top: "calc(100% - 86px)",
                 width: "150px",
                 background: "#2c3e50",
                 border: "1px solid #5d7a94",
@@ -657,8 +657,40 @@
             button.type =
                 "button";
 
-            button.textContent =
-                label;
+            if (
+                label.includes("Skew")
+            ) {
+                button.textContent =
+                    "↗ Skew";
+            }
+            else if (
+                label.includes("Perspective")
+            ) {
+                button.textContent =
+                    "◰ Perspective (Disabled)";
+            }
+            else if (
+                label.includes("Wave")
+            ) {
+                button.textContent =
+                    "〰 Wave (Disabled)";
+            }
+            else if (
+                label.includes("Twirl")
+            ) {
+                button.textContent =
+                    "🌀 Twirl (Disabled)";
+            }
+            else if (
+                label.includes("Bulge")
+            ) {
+                button.textContent =
+                    "⬤ Bulge (Disabled)";
+            }
+            else {
+                button.textContent =
+                    label;
+            }
 
             Object.assign(
                 button.style,
