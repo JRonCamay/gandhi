@@ -2373,7 +2373,7 @@ flipVerticalHandle.addEventListener(
                           rect.height *
                           stageHeight;
 
-                    const snapped =
+                    const snapPosition =
                           findSnapPosition(
                               dragTarget,
                               spriteStartX + dx,
@@ -2381,8 +2381,8 @@ flipVerticalHandle.addEventListener(
                           );
 
                     dragTarget.setXY(
-                        snapped.x,
-                        snapped.y
+                        snapPosition.x,
+                        snapPosition.y
                     );
                 }
                if (
@@ -2703,7 +2703,7 @@ flipVerticalHandle.addEventListener(
                     const dx = ((e.clientX - dragStartX) / rect.width) * stageWidth;
                     const dy = ((e.clientY - dragStartY) / rect.height) * stageHeight;
 
-                    const snapped =
+                    const snapPosition =
                           findSnapPosition(
                               vm.editingTarget,
                               spriteStartX + dx,
@@ -2711,8 +2711,8 @@ flipVerticalHandle.addEventListener(
                           );
 
                     vm.editingTarget.setXY(
-                        snapped.x,
-                        snapped.y
+                        snapPosition.x,
+                        snapPosition.y
                     );
                 }
             }
@@ -2734,184 +2734,132 @@ flipVerticalHandle.addEventListener(
         }
 
 function offsetBounds(bounds, dx, dy) {
-    return {
-        left: bounds.left + dx,
-        right: bounds.right + dx,
-        top: bounds.top + dy,
-        bottom: bounds.bottom + dy
-    };
-}
-
-function getBoundsCenter(bounds) {
-    return {
-        x: (bounds.left + bounds.right) / 2,
-        y: (bounds.top + bounds.bottom) / 2
-    };
-}
-
-function isSnappableTarget(target, movingTarget) {
-    if (!target) return false;
-    if (target === movingTarget) return false;
-    if (target.isStage) return false;
-    if (!target.visible) return false;
-    if (target.drawableID === undefined) return false;
-
-    const drawable =
-          vm.runtime.renderer._allDrawables[
-              target.drawableID
-          ];
-
-    if (!drawable) return false;
-    if (drawable._visible === false) return false;
-
-    return true;
-}
-
-function findSnapPosition(target, desiredX, desiredY) {
-    const threshold = 8;
-
-    const renderer =
-          vm.runtime.renderer;
-
-    const movingDrawable =
-          renderer._allDrawables[
-              target.drawableID
-          ];
-
-    if (!movingDrawable) {
-        return {
-            x: desiredX,
-            y: desiredY
-        };
-    }
-
-    const currentBounds =
-          movingDrawable.getAABB();
-
-    const predictedBounds =
-          offsetBounds(
-              currentBounds,
-              desiredX - target.x,
-              desiredY - target.y
-          );
-
-    let bestX = null;
-    let bestY = null;
-
-    const movingXEdges = [
-        predictedBounds.left,
-        predictedBounds.right
-    ];
-
-    const movingYEdges = [
-        predictedBounds.top,
-        predictedBounds.bottom
-    ];
-
-    for (
-        const otherTarget of
-        vm.runtime.targets
-    ) {
-        if (
-            !isSnappableTarget(
-                otherTarget,
-                target
-            )
-        ) {
-            continue;
+            return {
+                left: bounds.left + dx,
+                right: bounds.right + dx,
+                top: bounds.top + dy,
+                bottom: bounds.bottom + dy
+            };
         }
 
-        const otherDrawable =
-              renderer._allDrawables[
-                  otherTarget.drawableID
-              ];
+        function findSnapPosition(target, desiredX, desiredY) {
+            const renderer =
+                  vm.runtime.renderer;
 
-        if (!otherDrawable) continue;
+            const drawable =
+                  renderer._allDrawables[
+                      target.drawableID
+                  ];
 
-        const otherBounds =
-              otherDrawable.getAABB();
-
-        const otherXEdges = [
-            otherBounds.left,
-            otherBounds.right
-        ];
-
-        const otherYEdges = [
-            otherBounds.top,
-            otherBounds.bottom
-        ];
-
-        for (
-            const movingEdge of
-            movingXEdges
-        ) {
-            for (
-                const otherEdge of
-                otherXEdges
-            ) {
-                const delta =
-                      otherEdge -
-                      movingEdge;
-
-                if (
-                    Math.abs(delta) <= threshold &&
-                    (
-                        bestX === null ||
-                        Math.abs(delta) <
-                        Math.abs(bestX)
-                    )
-                ) {
-                    bestX =
-                        delta;
-                }
+            if (!drawable) {
+                return {
+                    x: desiredX,
+                    y: desiredY
+                };
             }
-        }
 
-        for (
-            const movingEdge of
-            movingYEdges
-        ) {
-            for (
-                const otherEdge of
-                otherYEdges
-            ) {
-                const delta =
-                      otherEdge -
-                      movingEdge;
+            const currentBounds =
+                  drawable.getAABB();
 
-                if (
-                    Math.abs(delta) <= threshold &&
-                    (
-                        bestY === null ||
-                        Math.abs(delta) <
-                        Math.abs(bestY)
-                    )
-                ) {
-                    bestY =
-                        delta;
+            const bounds =
+                  offsetBounds(
+                      currentBounds,
+                      desiredX - target.x,
+                      desiredY - target.y
+                  );
+
+            const snapDistance =
+                  8;
+
+            let snapX =
+                null;
+
+            let snapY =
+                null;
+
+            vm.runtime.targets.forEach(
+                otherTarget => {
+                    if (
+                        otherTarget === target ||
+                        otherTarget.isStage ||
+                        otherTarget.visible === false
+                    ) {
+                        return;
+                    }
+
+                    const otherDrawable =
+                          renderer._allDrawables[
+                              otherTarget.drawableID
+                          ];
+
+                    if (
+                        !otherDrawable ||
+                        otherDrawable._visible === false
+                    ) {
+                        return;
+                    }
+
+                    const otherBounds =
+                          otherDrawable.getAABB();
+
+                    [
+                        otherBounds.left - bounds.left,
+                        otherBounds.right - bounds.left,
+                        otherBounds.left - bounds.right,
+                        otherBounds.right - bounds.right
+                    ].forEach(
+                        delta => {
+                            if (
+                                Math.abs(delta) <= snapDistance &&
+                                (
+                                    snapX === null ||
+                                    Math.abs(delta) < Math.abs(snapX)
+                                )
+                            ) {
+                                snapX = delta;
+                            }
+                        }
+                    );
+
+                    [
+                        otherBounds.top - bounds.top,
+                        otherBounds.bottom - bounds.top,
+                        otherBounds.top - bounds.bottom,
+                        otherBounds.bottom - bounds.bottom
+                    ].forEach(
+                        delta => {
+                            if (
+                                Math.abs(delta) <= snapDistance &&
+                                (
+                                    snapY === null ||
+                                    Math.abs(delta) < Math.abs(snapY)
+                                )
+                            ) {
+                                snapY = delta;
+                            }
+                        }
+                    );
                 }
-            }
+            );
+
+            return {
+                x:
+                    desiredX +
+                    (
+                        snapX === null
+                            ? 0
+                            : snapX
+                    ),
+
+                y:
+                    desiredY +
+                    (
+                        snapY === null
+                            ? 0
+                            : snapY
+                    )
+            };
         }
-    }
-
-    return {
-        x:
-            desiredX +
-            (
-                bestX === null
-                    ? 0
-                    : bestX
-            ),
-
-        y:
-            desiredY +
-            (
-                bestY === null
-                    ? 0
-                    : bestY
-            )
-    };
-}
 
         function getShearAdjustedBounds(
             bounds,
