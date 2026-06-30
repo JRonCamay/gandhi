@@ -68,9 +68,6 @@ window.Transfork = window.Transfork || {};
         const drawn =
             [];
 
-        const snapped =
-            data.snapped || [];
-
         Object.keys(data.candidates)
             .slice(0, 4)
             .forEach(
@@ -144,12 +141,7 @@ window.Transfork = window.Transfork || {};
                             width: (right - left) + 'px',
                             height: (bottom - top) + 'px',
                             border:
-                                '2px solid ' +
-                                (
-                                    snapped.indexOf(bounds) === -1
-                                        ? 'orange'
-                                        : 'green'
-                                ),
+                                '2px solid orange',
                             boxSizing: 'border-box',
                             pointerEvents: 'none',
                             display: 'block'
