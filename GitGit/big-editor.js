@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GitGit Big GitHub Editor
 // @namespace    http://tampermonkey.net/
-// @version      3.4.0
+// @version      3.5.0
 // @description  Full-window JavaScript editor with internal Search/Replace/Function panel and editor undo/redo, colored preview, GitHub accounts, file tree, load, and commit
 // @author       You
 // @match        https://github.com/*
@@ -12,8 +12,8 @@
 (function () {
     'use strict';
 
-    if (window.__gitgitBigEditorModularLoaded === '3.4.0') return;
-    window.__gitgitBigEditorModularLoaded = '3.4.0';
+    if (window.__gitgitBigEditorModularLoaded === '3.5.0') return;
+    window.__gitgitBigEditorModularLoaded = '3.5.0';
 
     const STORAGE_KEY = 'gitgit_big_editor_settings_v1';
 
@@ -266,7 +266,7 @@
     });
 
     const title = createEl('div', {
-        html: '<strong>GitGit Big GitHub Editor v3.4</strong>',
+        html: '<strong>GitGit Big GitHub Editor v3.5</strong>',
         style: `
             font-size: 14px;
             color: #f0f6fc;
@@ -293,7 +293,7 @@
     const githubBar = createEl('div', {
         style: `
             display: grid;
-            grid-template-columns: 1fr 1.1fr 1fr 0.75fr 1.5fr 1.4fr auto auto auto auto;
+            grid-template-columns: 1fr auto 1.1fr 1fr 0.75fr 1.5fr auto auto auto auto;
             gap: 6px;
             padding: 8px;
             background: #0d1117;
@@ -344,6 +344,13 @@
     const branchInput = smallInput('branch', currentAccount.branch || 'main');
     const pathInput = smallInput('file path', currentAccount.path || 'TransformBoxTool.js');
     const tokenInput = smallInput('GitHub token for commit', currentAccount.token || '', 'password');
+    tokenInput.style.display = 'none';
+
+    const tokenLockBtn = barButton('🔒', '#30363d');
+    tokenLockBtn.title = 'Show/hide GitHub token';
+    tokenLockBtn.style.width = '32px';
+    tokenLockBtn.style.minWidth = '32px';
+    tokenLockBtn.style.padding = '0';
 
     function barButton(label, color) {
         return createEl('button', {
@@ -364,22 +371,28 @@
     }
 
     const saveAccountBtn = barButton('Save Account', '#30363d');
-    const newAccountBtn = barButton('New', '#30363d');
+    const newAccountBtn = barButton('👤', '#30363d');
+    newAccountBtn.title = 'New account';
+    newAccountBtn.style.width = '32px';
+    newAccountBtn.style.minWidth = '32px';
+    newAccountBtn.style.padding = '0';
+
     const loadBtn = barButton('Load', '#1f6feb');
     const filesBtn = barButton('Files', '#30363d');
     const commitBtn = barButton('Commit', '#238636');
 
     githubBar.appendChild(accountSelect);
+    githubBar.appendChild(newAccountBtn);
     githubBar.appendChild(ownerInput);
     githubBar.appendChild(repoInput);
     githubBar.appendChild(branchInput);
     githubBar.appendChild(pathInput);
+    githubBar.appendChild(tokenLockBtn);
     githubBar.appendChild(tokenInput);
     githubBar.appendChild(loadBtn);
     githubBar.appendChild(filesBtn);
     githubBar.appendChild(commitBtn);
     githubBar.appendChild(saveAccountBtn);
-    githubBar.appendChild(newAccountBtn);
 
     const fileTreePanel = createEl('div', {
         style: `
@@ -398,7 +411,7 @@
     const toolBar = createEl('div', {
         style: `
             display: grid;
-            grid-template-columns: 1fr 1fr auto auto auto auto auto auto auto;
+            grid-template-columns: 1fr 1fr auto auto auto auto auto auto;
             gap: 6px;
             padding: 8px;
             background: #0d1117;
@@ -427,7 +440,6 @@
     toolBar.appendChild(robotBtn);
     toolBar.appendChild(undoBtn);
     toolBar.appendChild(redoBtn);
-    toolBar.appendChild(copyBtn);
 
     const editorWrap = createEl('div', {
         style: `
@@ -541,7 +553,7 @@
     });
 
     const rightTreeRefreshBtn = createEl('button', {
-        text: '↻',
+        text: '⟳',
         title: 'Refresh file tree',
         style: `
             width: 26px;
@@ -572,8 +584,8 @@
     });
 
     rightTreeHeader.appendChild(rightTreeTitle);
-    rightTreeHeader.appendChild(rightTreeCloseBtn);
     rightTreeHeader.appendChild(rightTreeRefreshBtn);
+    rightTreeHeader.appendChild(rightTreeCloseBtn);
 
     const rightTreeSearch = createEl('input', {
         type: 'text',
@@ -626,6 +638,52 @@
     rightTreePanel.appendChild(rightTreeList);
     editorWrap.insertBefore(rightTreePanel, lineGutter);
     editorWrap.insertBefore(leftTreeCollapseBar, lineGutter);
+
+    const editorCopyCorner = createEl('div', {
+        style: `
+            position: absolute;
+            top: 8px;
+            right: 28px;
+            display: flex;
+            gap: 6px;
+            z-index: 4;
+            pointer-events: auto;
+        `
+    });
+
+    const editorCopyAllBtn = createEl('button', {
+        text: '⧉',
+        title: 'Copy all editor text',
+        style: `
+            width: 28px;
+            height: 24px;
+            border-radius: 8px;
+            background: #21262d;
+            color: #c9d1d9;
+            border: 1px solid #30363d;
+            cursor: pointer;
+            font-size: 13px;
+        `
+    });
+
+    const editorCopySelectionBtn = createEl('button', {
+        text: '▣',
+        title: 'Copy selection',
+        style: `
+            width: 28px;
+            height: 24px;
+            border-radius: 8px;
+            background: #21262d;
+            color: #c9d1d9;
+            border: 1px solid #30363d;
+            cursor: pointer;
+            font-size: 12px;
+        `
+    });
+
+    editorCopyCorner.appendChild(editorCopyAllBtn);
+    editorCopyCorner.appendChild(editorCopySelectionBtn);
+    editorWrap.appendChild(editorCopyCorner);
 
 
     const previewBar = createEl('div', {
@@ -2874,6 +2932,11 @@
     accountSelect.addEventListener('change', () => {
         loadAccountIntoFields(accountSelect.value);
         currentContentSha = '';
+        rightTreeRootItems = null;
+        rightTreeHasAutoLoaded = false;
+        if (overlay.style.display === 'flex') {
+            openRightTreePanel(true);
+        }
         setStatus('Account loaded: ' + accountSelect.value, 'success');
     });
 
@@ -2920,7 +2983,8 @@
         robotBtn,
         undoBtn,
         redoBtn,
-        copyBtn,
+        editorCopyAllBtn,
+        editorCopySelectionBtn,
         rightTreeRefreshBtn,
         rightTreeCloseBtn,
         leftTreeCollapseBar
@@ -2928,6 +2992,15 @@
         button.addEventListener('mousedown', event => {
             event.preventDefault();
         });
+    });
+
+    tokenLockBtn.addEventListener('click', () => {
+        const showing = tokenInput.style.display !== 'none';
+        tokenInput.style.display = showing ? 'none' : 'block';
+        tokenLockBtn.textContent = showing ? '🔒' : '🔓';
+        if (!showing) {
+            tokenInput.focus();
+        }
     });
 
     loadBtn.addEventListener('click', loadFromGithub);
@@ -2951,7 +3024,22 @@
         });
     });
     previewBar.addEventListener('click', togglePreviewPanel);
-    copyBtn.addEventListener('click', copyEditor);
+    editorCopyAllBtn.addEventListener('click', copyEditor);
+    editorCopySelectionBtn.addEventListener('click', async () => {
+        const selected =
+            codeArea.value.substring(
+                codeArea.selectionStart || 0,
+                codeArea.selectionEnd || 0
+            );
+
+        if (!selected) {
+            setStatus('No selection to copy', 'error');
+            return;
+        }
+
+        await navigator.clipboard.writeText(selected);
+        setStatus('Selection copied', 'success');
+    });
     miniLauncher.addEventListener('click', toggleMiniPanel);
     miniCloseBtn.addEventListener('click', toggleMiniPanel);
     miniSearchBtn.addEventListener('click', miniSearchExact);
