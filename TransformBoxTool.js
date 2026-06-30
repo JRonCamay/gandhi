@@ -2753,7 +2753,7 @@ function getStageUnitsPerScreenPixel() {
                 return 1;
             }
 
-            return stageWidth / rect.width;
+            return rect.width / stageWidth;
         }
 
 
@@ -2793,7 +2793,7 @@ function offsetBounds(bounds, dx, dy) {
                   );
 
             const snapDistance =
-                  12 *
+                  80 /
                   getStageUnitsPerScreenPixel();
 
             let snapX =
