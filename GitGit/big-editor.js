@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GitGit Big GitHub Editor
 // @namespace    http://tampermonkey.net/
-// @version      3.1.0
+// @version      3.2.0
 // @description  Full-window JavaScript editor with internal Search/Replace/Function panel and editor undo/redo, colored preview, GitHub accounts, file tree, load, and commit
 // @author       You
 // @match        https://github.com/*
@@ -398,7 +398,7 @@
     const toolBar = createEl('div', {
         style: `
             display: grid;
-            grid-template-columns: 1fr 1fr auto auto auto auto auto auto auto auto;
+            grid-template-columns: 1fr 1fr auto auto auto auto auto auto auto;
             gap: 6px;
             padding: 8px;
             background: #0d1117;
@@ -416,7 +416,6 @@
     const robotBtn = barButton('🤖', '#0969da');
     const undoBtn = barButton('Undo', '#30363d');
     const redoBtn = barButton('Redo', '#30363d');
-    const previewBtn = barButton('Preview', '#30363d');
     const copyBtn = barButton('Copy', '#30363d');
 
     toolBar.appendChild(searchInput);
@@ -428,7 +427,6 @@
     toolBar.appendChild(robotBtn);
     toolBar.appendChild(undoBtn);
     toolBar.appendChild(redoBtn);
-    toolBar.appendChild(previewBtn);
     toolBar.appendChild(copyBtn);
 
     const editorWrap = createEl('div', {
@@ -491,9 +489,9 @@
             right: 0;
             top: 0;
             height: 20px;
-            background: rgba(88, 166, 255, 0.10);
-            border-top: 1px solid rgba(88, 166, 255, 0.12);
-            border-bottom: 1px solid rgba(88, 166, 255, 0.12);
+            background: rgba(88, 166, 255, 0.045);
+            border-top: 1px solid rgba(88, 166, 255, 0.055);
+            border-bottom: 1px solid rgba(88, 166, 255, 0.055);
             pointer-events: none;
             display: none;
             z-index: 1;
@@ -574,8 +572,8 @@
     });
 
     rightTreeHeader.appendChild(rightTreeTitle);
-    rightTreeHeader.appendChild(rightTreeRefreshBtn);
     rightTreeHeader.appendChild(rightTreeCloseBtn);
+    rightTreeHeader.appendChild(rightTreeRefreshBtn);
 
     const rightTreeSearch = createEl('input', {
         type: 'text',
@@ -629,6 +627,43 @@
     editorWrap.insertBefore(rightTreePanel, lineGutter);
     editorWrap.insertBefore(leftTreeCollapseBar, lineGutter);
 
+
+    const previewBar = createEl('div', {
+        style: `
+            display: flex;
+            height: 24px;
+            align-items: center;
+            justify-content: space-between;
+            background: #161b22;
+            color: #8b949e;
+            border-top: 1px solid #30363d;
+            border-bottom: 1px solid #30363d;
+            padding: 0 8px;
+            font-size: 12px;
+            cursor: pointer;
+            user-select: none;
+            flex-shrink: 0;
+        `
+    });
+
+    const previewBarTitle = createEl('span', {
+        text: 'Preview',
+        style: `
+            font-weight: 600;
+            color: #c9d1d9;
+        `
+    });
+
+    const previewBarIcon = createEl('span', {
+        text: '▾',
+        style: `
+            color: #8b949e;
+            font-size: 13px;
+        `
+    });
+
+    previewBar.appendChild(previewBarTitle);
+    previewBar.appendChild(previewBarIcon);
 
     const previewPanel = createEl('div', {
         style: `
@@ -869,6 +904,7 @@
     overlay.appendChild(fileTreePanel);
     overlay.appendChild(toolBar);
     overlay.appendChild(editorWrap);
+    overlay.appendChild(previewBar);
     overlay.appendChild(previewPanel);
     overlay.appendChild(miniPanel);
     overlay.appendChild(miniLauncher);
@@ -1552,6 +1588,7 @@
     }
 
     let rightTreeRootItems = null;
+    let rightTreeHasAutoLoaded = false;
 
     function shouldShowTreeItem(item, filter) {
         if (!filter) return true;
@@ -1814,6 +1851,10 @@
             codeArea.value = fromBase64Unicode(data.content);
             updateLineNumbers();
             resetEditorHistory();
+            codeArea.scrollTop = 0;
+            codeArea.scrollLeft = 0;
+            lineGutter.scrollTop = 0;
+            codeArea.setSelectionRange(0, 0);
             updateCurrentLineHighlight();
 
             if (previewPanel.style.display === 'block') {
@@ -2760,12 +2801,14 @@
     function togglePreviewPanel() {
         if (previewPanel.style.display === 'block') {
             previewPanel.style.display = 'none';
+            previewBarIcon.textContent = '▾';
             setStatus('Preview closed');
             return;
         }
 
         updatePreviewPanel();
         previewPanel.style.display = 'block';
+        previewBarIcon.textContent = '▴';
         setStatus('Preview opened', 'success');
     }
 
@@ -2848,7 +2891,6 @@
         robotBtn,
         undoBtn,
         redoBtn,
-        previewBtn,
         copyBtn,
         rightTreeRefreshBtn,
         rightTreeCloseBtn,
@@ -2873,7 +2915,13 @@
     rightTreeCloseBtn.addEventListener('click', collapseRightTreePanel);
     leftTreeCollapseBar.addEventListener('click', () => openRightTreePanel(false));
     rightTreeSearch.addEventListener('input', renderRightTree);
-    previewBtn.addEventListener('click', togglePreviewPanel);
+    [ownerInput, repoInput, branchInput].forEach(input => {
+        input.addEventListener('change', () => {
+            rightTreeRootItems = null;
+            rightTreeHasAutoLoaded = false;
+        });
+    });
+    previewBar.addEventListener('click', togglePreviewPanel);
     copyBtn.addEventListener('click', copyEditor);
     miniLauncher.addEventListener('click', toggleMiniPanel);
     miniCloseBtn.addEventListener('click', toggleMiniPanel);
@@ -2904,6 +2952,21 @@
     codeArea.addEventListener('click', updateCurrentLineHighlight);
     codeArea.addEventListener('keyup', updateCurrentLineHighlight);
     codeArea.addEventListener('select', updateCurrentLineHighlight);
+    codeArea.addEventListener('paste', () => {
+        setTimeout(() => {
+            const lineCount =
+                codeArea.value.split('\n').length;
+
+            if (lineCount > 80) {
+                codeArea.scrollTop = 0;
+                codeArea.scrollLeft = 0;
+                lineGutter.scrollTop = 0;
+                codeArea.setSelectionRange(0, 0);
+                updateCurrentLineHighlight();
+                setStatus('Pasted whole file — scrolled to top', 'success');
+            }
+        }, 30);
+    });
     codeArea.addEventListener('scroll', () => {
         syncScroll();
         updateCurrentLineHighlight();
