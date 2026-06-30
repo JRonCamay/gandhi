@@ -2419,6 +2419,15 @@ flipVerticalHandle.addEventListener(
                           rect.height *
                           stageHeight;
 
+console.log(
+                        "GANDHI DIRECT DRAG SNAP PATH",
+                        {
+                            target: dragTarget && dragTarget.sprite && dragTarget.sprite.name,
+                            x: spriteStartX + dx,
+                            y: spriteStartY - dy
+                        }
+                    );
+
                     const snapPosition =
                           findSnapPosition(
                               dragTarget,
@@ -2748,6 +2757,15 @@ flipVerticalHandle.addEventListener(
 
                     const dx = ((e.clientX - dragStartX) / rect.width) * stageWidth;
                     const dy = ((e.clientY - dragStartY) / rect.height) * stageHeight;
+
+console.log(
+                        "GANDHI MOVE HANDLE SNAP PATH",
+                        {
+                            target: vm.editingTarget && vm.editingTarget.sprite && vm.editingTarget.sprite.name,
+                            x: spriteStartX + dx,
+                            y: spriteStartY - dy
+                        }
+                    );
 
                     const snapPosition =
                           findSnapPosition(
