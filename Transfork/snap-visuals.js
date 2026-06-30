@@ -149,6 +149,10 @@ window.Transfork = window.Transfork || {};
                     targetContainer.appendChild(box);
                 }
             );
+
+        if (!drawn.length) {
+            clear();
+        }
     }
 
     function clear() {

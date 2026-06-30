@@ -3330,8 +3330,7 @@
                 if (
                     transformMode &&
                     isStageOnTop() &&
-                    isCodeTabOpen() &&
-                    !stageDraggingSprite
+                    isCodeTabOpen()
                 ) {
                     overlay.style.display = "block";
                     updateSelectionBox();
