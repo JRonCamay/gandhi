@@ -302,6 +302,12 @@
                 return;
             }
 
+            const index =
+                  target.currentCostume;
+
+            const skinId =
+                  costume.skinId;
+
             const replacement =
                   Object.assign(
                       {},
@@ -319,6 +325,9 @@
 
             replacement.md5ext =
                 asset.assetId + ".png";
+
+            replacement.skinId =
+                skinId;
 
             if (
                 canvas &&
@@ -344,8 +353,22 @@
             }
 
             target.sprite.costumes[
-                target.currentCostume
+                index
             ] = replacement;
+
+            vm.runtime.renderer.updateBitmapSkin(
+                skinId,
+                canvas,
+                replacement.bitmapResolution || 1,
+                [
+                    replacement.rotationCenterX,
+                    replacement.rotationCenterY
+                ]
+            );
+
+            target.setCostume(
+                index
+            );
 
             if (
                 typeof target.updateAllDrawableProperties === "function"
