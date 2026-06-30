@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GitGit Big GitHub Editor
 // @namespace    http://tampermonkey.net/
-// @version      3.2.0
+// @version      3.3.0
 // @description  Full-window JavaScript editor with internal Search/Replace/Function panel and editor undo/redo, colored preview, GitHub accounts, file tree, load, and commit
 // @author       You
 // @match        https://github.com/*
@@ -12,8 +12,8 @@
 (function () {
     'use strict';
 
-    if (window.__gitgitBigEditorModularLoaded) return;
-    window.__gitgitBigEditorModularLoaded = true;
+    if (window.__gitgitBigEditorModularLoaded === '3.3.0') return;
+    window.__gitgitBigEditorModularLoaded = '3.3.0';
 
     const STORAGE_KEY = 'gitgit_big_editor_settings_v1';
 
@@ -266,7 +266,7 @@
     });
 
     const title = createEl('div', {
-        html: '<strong>GitGit Big GitHub Editor</strong>',
+        html: '<strong>GitGit Big GitHub Editor v3.3</strong>',
         style: `
             font-size: 14px;
             color: #f0f6fc;
