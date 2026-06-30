@@ -1866,9 +1866,13 @@ function createSkewSession(e) {
                 this.startShearY +
                 (upEvent.clientY - this.startMouseY) / 200;
 
-            this.destroy();
+            activeShearBridge.shearX = finalShearX;
+            activeShearBridge.shearY = finalShearY;
+
+            window.removeEventListener("mousemove", this.boundMove, true);
+            window.removeEventListener("mouseup", this.boundUp, true);
+
             activeSkewSession = null;
-            activeShearBridge = null;
 
             AssetBakeEngine.bakeCurrentCostume(
                 (
@@ -1884,7 +1888,10 @@ function createSkewSession(e) {
                         -finalShearY
                     );
 
-                    return updateSelectionBox;
+                    return () => {
+                        activeShearBridge = null;
+                        updateSelectionBox();
+                    };
                 },
                 this.target
             );
