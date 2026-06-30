@@ -2790,8 +2790,7 @@ function offsetBounds(bounds, dx, dy) {
                       desiredY - target.y
                   );
 
-            const snapScale =
-                  getStageUnitsPerScreenPixel();
+            /* snapScale removed: delta is already in stage units */
 
             const canvas =
                   getStageCanvas();
@@ -2854,8 +2853,7 @@ function offsetBounds(bounds, dx, dy) {
                                 )
                             ) {
                                 snapX =
-                                    delta *
-                                    snapScale;
+                                    delta;
                             }
                         }
                     );
@@ -2875,8 +2873,7 @@ function offsetBounds(bounds, dx, dy) {
                                 )
                             ) {
                                 snapY =
-                                    delta *
-                                    snapScale;
+                                    delta;
                             }
                         }
                     );
