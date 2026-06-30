@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         GitGit Big GitHub Editor
 // @namespace    http://tampermonkey.net/
-// @version      3.5.0
+// @version      3.7.0
 // @description  Full-window JavaScript editor with internal Search/Replace/Function panel and editor undo/redo, colored preview, GitHub accounts, file tree, load, and commit
 // @author       You
 // @match        https://github.com/*
+// @match        https://example.com/*
 // @match        https://raw.githubusercontent.com/*
 // @grant        none
 // ==/UserScript==
@@ -12,8 +13,31 @@
 (function () {
     'use strict';
 
-    if (window.__gitgitBigEditorModularLoaded === '3.5.0') return;
-    window.__gitgitBigEditorModularLoaded = '3.5.0';
+    if (window.__gitgitBigEditorModularLoaded === '3.7.0') return;
+    window.__gitgitBigEditorModularLoaded = '3.7.0';
+
+    function prepareStandalonePage() {
+        const style = document.createElement('style');
+        style.textContent = `
+            html,
+            body {
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                overflow: hidden !important;
+                background: #0d1117 !important;
+            }
+
+            body > *:not(#gitgit-big-editor):not(#gitgit-style):not(#gitgit-mini-launcher) {
+                display: none !important;
+            }
+        `;
+        style.id = 'gitgit-standalone-page-style';
+        document.documentElement.appendChild(style);
+    }
+
+
 
     const STORAGE_KEY = 'gitgit_big_editor_settings_v1';
 
@@ -233,7 +257,8 @@
             cursor: pointer;
             z-index: 999999;
             box-shadow: 0 6px 18px rgba(0,0,0,0.45);
-        `
+        
+            display: none !important;`
     });
 
     document.body.appendChild(launcher);
@@ -243,7 +268,7 @@
         style: `
             position: fixed;
             inset: 0;
-            display: none;
+            display: flex;
             flex-direction: column;
             background: #0d1117;
             color: #c9d1d9;
@@ -266,7 +291,7 @@
     });
 
     const title = createEl('div', {
-        html: '<strong>GitGit Big GitHub Editor v3.5</strong>',
+        html: '<strong>GitGit Big GitHub Editor v3.7</strong>',
         style: `
             font-size: 14px;
             color: #f0f6fc;
@@ -284,7 +309,8 @@
             color: #c9d1d9;
             cursor: pointer;
             font-size: 14px;
-        `
+        
+            display: none !important;`
     });
 
     header.appendChild(title);
@@ -293,7 +319,7 @@
     const githubBar = createEl('div', {
         style: `
             display: grid;
-            grid-template-columns: 1fr auto 1.1fr 1fr 0.75fr 1.5fr auto auto auto auto;
+            grid-template-columns: 220px 34px 220px 220px 90px minmax(260px, 1fr) 34px auto auto auto;
             gap: 6px;
             padding: 8px;
             background: #0d1117;
@@ -345,6 +371,7 @@
     const pathInput = smallInput('file path', currentAccount.path || 'TransformBoxTool.js');
     const tokenInput = smallInput('GitHub token for commit', currentAccount.token || '', 'password');
     tokenInput.style.display = 'none';
+    tokenInput.style.maxWidth = '260px';
 
     const tokenLockBtn = barButton('🔒', '#30363d');
     tokenLockBtn.title = 'Show/hide GitHub token';
@@ -370,7 +397,7 @@
         });
     }
 
-    const saveAccountBtn = barButton('Save Account', '#30363d');
+    const saveAccountBtn = barButton('Save', '#30363d');
     const newAccountBtn = barButton('👤', '#30363d');
     newAccountBtn.title = 'New account';
     newAccountBtn.style.width = '32px';
@@ -411,7 +438,7 @@
     const toolBar = createEl('div', {
         style: `
             display: grid;
-            grid-template-columns: 1fr 1fr auto auto auto auto auto auto;
+            grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr) auto auto auto auto auto auto auto;
             gap: 6px;
             padding: 8px;
             background: #0d1117;
@@ -429,7 +456,6 @@
     const robotBtn = barButton('🤖', '#0969da');
     const undoBtn = barButton('Undo', '#30363d');
     const redoBtn = barButton('Redo', '#30363d');
-    const copyBtn = barButton('Copy', '#30363d');
 
     toolBar.appendChild(searchInput);
     toolBar.appendChild(replaceInput);
@@ -533,7 +559,7 @@
             height: 34px;
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: flex-start;
             gap: 6px;
             padding: 6px;
             background: #161b22;
@@ -549,6 +575,7 @@
             font-weight: 600;
             color: #f0f6fc;
             white-space: nowrap;
+            margin-right: auto;
         `
     });
 
@@ -610,7 +637,8 @@
             padding: 4px;
             font-family: Consolas, Menlo, Monaco, monospace;
             font-size: 12px;
-        `
+        `,
+        html: '<div style="color:#8b949e;padding:8px;">Loading tree...</div>'
     });
 
     const leftTreeCollapseBar = createEl('button', {
@@ -643,7 +671,7 @@
         style: `
             position: absolute;
             top: 8px;
-            right: 28px;
+            right: 42px;
             display: flex;
             gap: 6px;
             z-index: 4;
@@ -1876,19 +1904,37 @@
     }
 
     function autoLoadRightTreePanel() {
+        rightTreePanel.style.display = 'flex';
+        leftTreeCollapseBar.style.display = 'none';
+
+        if (!ownerInput.value.trim()) {
+            ownerInput.value = 'JRonCamay';
+        }
+
+        if (!repoInput.value.trim()) {
+            repoInput.value = 'gandhi';
+        }
+
+        if (!branchInput.value.trim()) {
+            branchInput.value = 'main';
+        }
+
+        rightTreeList.innerHTML =
+            '<div style="color:#8b949e; padding:8px;">Loading tree...</div>';
+
         openRightTreePanel(true);
 
         setTimeout(() => {
             if (!rightTreeRootItems) {
                 openRightTreePanel(true);
             }
-        }, 800);
+        }, 700);
 
         setTimeout(() => {
             if (!rightTreeRootItems) {
                 openRightTreePanel(true);
             }
-        }, 1800);
+        }, 1700);
     }
 
     function toggleRightTreePanel() {
@@ -2969,7 +3015,12 @@
     });
 
     launcher.addEventListener('click', openEditor);
-    closeBtn.addEventListener('click', closeEditor);
+
+    prepareStandalonePage();
+    requestAnimationFrame(() => {
+        openEditor();
+    });
+    closeBtn.addEventListener('click', event => event.preventDefault());
     [
         loadBtn,
         filesBtn,
