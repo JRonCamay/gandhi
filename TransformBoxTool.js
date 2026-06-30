@@ -547,12 +547,10 @@
                    parseFloat(
                    overlay.style.top
                ) || 0;
-              if (
-                  !isStageMaximized()
-              ) {
-                  stageDragActive =
-                      true;
-              }
+              /* TEMP TEST:
+                 Disable stageDragActive to verify whether it is
+                 preventing the snapping pipeline on the normal stage.
+              */
                stageDragStartX =
                    e.clientX;
 
