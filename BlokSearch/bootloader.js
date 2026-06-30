@@ -10,8 +10,9 @@ Loads all BlokSearch modules from the same BlokSearch folder.
     window.__BlokSearchBootLoaded = true;
 
     const BASE =
-        window.__BlokSearchBaseURL ||
-        'https://raw.githubusercontent.com/JRonCamay/gandhi/main/BlokSearch/';
+        typeof BLOKSEARCH_BASE === 'string'
+            ? BLOKSEARCH_BASE
+            : 'https://raw.githubusercontent.com/JRonCamay/gandhi/main/BlokSearch/';
 
     const MODULES = [
         'config.js',
@@ -23,15 +24,37 @@ Loads all BlokSearch modules from the same BlokSearch folder.
         'bloksearch-main.js'
     ];
 
+    async function fallbackFetch(url) {
+        const response = await fetch(url + '?v=' + Date.now(), {
+            cache: 'no-store'
+        });
+
+        if (!response.ok) {
+            throw new Error('HTTP ' + response.status + ' loading ' + url);
+        }
+
+        return response.text();
+    }
+
+    function fallbackRun(code, url) {
+        new Function(code + '\n//# sourceURL=' + url)();
+    }
+
     async function loadModule(name) {
         const url = BASE + name;
 
-        if (!window.__BlokSearchLoadText || !window.__BlokSearchRunCode) {
-            throw new Error('BlokSearch loader helpers are missing. Reinstall BlokSearch_Loader.user.js.');
-        }
+        const loadText =
+            typeof BLOKSEARCH_LOAD_TEXT === 'function'
+                ? BLOKSEARCH_LOAD_TEXT
+                : fallbackFetch;
 
-        const code = await window.__BlokSearchLoadText(url);
-        window.__BlokSearchRunCode(code, url);
+        const runCode =
+            typeof BLOKSEARCH_RUN_CODE === 'function'
+                ? BLOKSEARCH_RUN_CODE
+                : fallbackRun;
+
+        const code = await loadText(url);
+        runCode(code, url);
     }
 
     async function boot() {
