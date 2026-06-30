@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GitGit Big GitHub Editor
 // @namespace    http://tampermonkey.net/
-// @version      3.0.0
+// @version      3.1.0
 // @description  Full-window JavaScript editor with internal Search/Replace/Function panel and editor undo/redo, colored preview, GitHub accounts, file tree, load, and commit
 // @author       You
 // @match        https://github.com/*
@@ -398,7 +398,7 @@
     const toolBar = createEl('div', {
         style: `
             display: grid;
-            grid-template-columns: 1fr 1fr auto auto auto auto auto auto auto auto auto;
+            grid-template-columns: 1fr 1fr auto auto auto auto auto auto auto auto;
             gap: 6px;
             padding: 8px;
             background: #0d1117;
@@ -414,7 +414,6 @@
     const replaceAllBtn = barButton('Replace All', '#8957e5');
     const syntaxBtn = barButton('🐵', '#6f42c1');
     const robotBtn = barButton('🤖', '#0969da');
-    const treeBtn = barButton('Tree', '#30363d');
     const undoBtn = barButton('Undo', '#30363d');
     const redoBtn = barButton('Redo', '#30363d');
     const previewBtn = barButton('Preview', '#30363d');
@@ -427,7 +426,6 @@
     toolBar.appendChild(replaceAllBtn);
     toolBar.appendChild(syntaxBtn);
     toolBar.appendChild(robotBtn);
-    toolBar.appendChild(treeBtn);
     toolBar.appendChild(undoBtn);
     toolBar.appendChild(redoBtn);
     toolBar.appendChild(previewBtn);
@@ -507,15 +505,16 @@
 
     const rightTreePanel = createEl('div', {
         style: `
-            width: 300px;
-            min-width: 240px;
-            max-width: 420px;
-            display: none;
+            width: 280px;
+            min-width: 220px;
+            max-width: 360px;
+            display: flex;
             flex-direction: column;
             background: #010409;
-            border-left: 1px solid #30363d;
+            border-right: 1px solid #30363d;
             color: #c9d1d9;
             flex-shrink: 0;
+            order: -3;
         `
     });
 
@@ -535,7 +534,7 @@
     });
 
     const rightTreeTitle = createEl('div', {
-        text: 'Repository Files',
+        text: 'Files',
         style: `
             font-weight: 600;
             color: #f0f6fc;
@@ -544,29 +543,32 @@
     });
 
     const rightTreeRefreshBtn = createEl('button', {
-        text: 'Refresh',
+        text: '↻',
+        title: 'Refresh file tree',
         style: `
+            width: 26px;
             height: 23px;
             background: #21262d;
             color: #c9d1d9;
             border: 1px solid #30363d;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 11px;
+            font-size: 12px;
         `
     });
 
     const rightTreeCloseBtn = createEl('button', {
-        text: '×',
+        text: '‹',
+        title: 'Collapse file tree',
         style: `
-            width: 24px;
+            width: 26px;
             height: 23px;
             background: #21262d;
             color: #c9d1d9;
             border: 1px solid #30363d;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 15px;
             line-height: 18px;
         `
     });
@@ -601,10 +603,32 @@
         `
     });
 
+    const leftTreeCollapseBar = createEl('button', {
+        text: '›',
+        title: 'Open file tree',
+        style: `
+            width: 16px;
+            min-width: 16px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: #161b22;
+            color: #8b949e;
+            border: none;
+            border-right: 1px solid #30363d;
+            cursor: pointer;
+            font-size: 16px;
+            order: -3;
+            flex-shrink: 0;
+        `
+    });
+
     rightTreePanel.appendChild(rightTreeHeader);
     rightTreePanel.appendChild(rightTreeSearch);
     rightTreePanel.appendChild(rightTreeList);
-    editorWrap.appendChild(rightTreePanel);
+    editorWrap.insertBefore(rightTreePanel, lineGutter);
+    editorWrap.insertBefore(leftTreeCollapseBar, lineGutter);
+
 
     const previewPanel = createEl('div', {
         style: `
@@ -1527,59 +1551,124 @@
         }
     }
 
-    let rightTreeFlatFiles = [];
+    let rightTreeRootItems = null;
 
-    function renderRightTreeFiles(files) {
+    function shouldShowTreeItem(item, filter) {
+        if (!filter) return true;
+
+        if (
+            item.path &&
+            item.path.toLowerCase().includes(filter)
+        ) {
+            return true;
+        }
+
+        if (item.children) {
+            return item.children.some(child =>
+                shouldShowTreeItem(child, filter)
+            );
+        }
+
+        return false;
+    }
+
+    function renderRightTreeNode(item, level, parentEl, filter) {
+        if (!shouldShowTreeItem(item, filter)) {
+            return;
+        }
+
+        const row = createEl('div', {
+            style: `
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                padding: 3px 6px 3px ${6 + (level * 15)}px;
+                border-radius: 4px;
+                cursor: pointer;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                color: ${item.type === 'dir' ? '#79c0ff' : '#c9d1d9'};
+            `
+        });
+
+        const icon = createEl('span', {
+            text: item.type === 'dir'
+                ? (item.expanded ? '▾' : '▸')
+                : '·',
+            style: `
+                width: 12px;
+                flex: 0 0 12px;
+                color: #8b949e;
+            `
+        });
+
+        const label = createEl('span', {
+            text: (item.type === 'dir' ? '📁 ' : '📄 ') + item.name,
+            style: `
+                overflow: hidden;
+                text-overflow: ellipsis;
+            `
+        });
+
+        row.appendChild(icon);
+        row.appendChild(label);
+
+        row.addEventListener('mouseenter', () => {
+            row.style.background = '#161b22';
+        });
+
+        row.addEventListener('mouseleave', () => {
+            row.style.background = 'transparent';
+        });
+
+        row.addEventListener('click', async () => {
+            if (item.type === 'file') {
+                pathInput.value = item.path;
+                await loadFromGithub();
+                return;
+            }
+
+            item.expanded = !item.expanded;
+            renderRightTree();
+        });
+
+        parentEl.appendChild(row);
+
+        if (
+            item.type === 'dir' &&
+            item.expanded &&
+            item.children
+        ) {
+            item.children.forEach(child => {
+                renderRightTreeNode(child, level + 1, parentEl, filter);
+            });
+        }
+    }
+
+    function renderRightTree() {
         const filter =
             rightTreeSearch.value.trim().toLowerCase();
 
         rightTreeList.innerHTML = '';
 
-        const shown =
-            files.filter(file =>
-                !filter ||
-                file.path.toLowerCase().includes(filter)
-            );
-
-        if (!shown.length) {
+        if (!rightTreeRootItems) {
             rightTreeList.innerHTML =
-                '<div style="color:#8b949e; padding:8px;">No files found.</div>';
+                '<div style="color:#8b949e; padding:8px;">Loading...</div>';
             return;
         }
 
-        shown.forEach(file => {
-            const row = createEl('div', {
-                style: `
-                    padding: 4px 6px;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    color: #c9d1d9;
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                `
-            });
-
-            row.textContent = '📄 ' + file.path;
-
-            row.addEventListener('mouseenter', () => {
-                row.style.background = '#161b22';
-            });
-
-            row.addEventListener('mouseleave', () => {
-                row.style.background = 'transparent';
-            });
-
-            row.addEventListener('click', () => {
-                pathInput.value = file.path;
-                loadFromGithub();
-            });
-
-            rightTreeList.appendChild(row);
+        rightTreeRootItems.forEach(item => {
+            renderRightTreeNode(item, 0, rightTreeList, filter);
         });
+
+        if (!rightTreeList.children.length) {
+            rightTreeList.innerHTML =
+                '<div style="color:#8b949e; padding:8px;">No files found.</div>';
+        }
     }
 
-    async function loadRightTreeRecursive(dirPath, output) {
+    async function loadTreeDirectory(dirPath) {
         rememberGithubFields();
 
         const owner = ownerInput.value.trim();
@@ -1606,7 +1695,7 @@
         });
 
         if (!Array.isArray(items)) {
-            return;
+            return [];
         }
 
         const sorted =
@@ -1620,39 +1709,49 @@
                     return a.name.localeCompare(b.name);
                 });
 
+        const output = [];
+
         for (const item of sorted) {
-            if (item.type === 'file') {
-                output.push({
-                    name: item.name,
-                    path: item.path
-                });
-                continue;
-            }
+            const node = {
+                name: item.name,
+                path: item.path,
+                type: item.type,
+                expanded: false,
+                children: null
+            };
 
             if (item.type === 'dir') {
-                await loadRightTreeRecursive(item.path, output);
+                node.children =
+                    await loadTreeDirectory(item.path);
             }
+
+            output.push(node);
         }
+
+        return output;
     }
 
     async function openRightTreePanel(forceReload) {
         rightTreePanel.style.display = 'flex';
+        leftTreeCollapseBar.style.display = 'none';
 
-        if (rightTreeFlatFiles.length && !forceReload) {
-            renderRightTreeFiles(rightTreeFlatFiles);
+        if (rightTreeRootItems && !forceReload) {
+            renderRightTree();
             return;
         }
 
         rightTreeList.innerHTML =
-            '<div style="color:#8b949e; padding:8px;">Loading files...</div>';
+            '<div style="color:#8b949e; padding:8px;">Loading tree...</div>';
 
         try {
-            const files = [];
-            await loadRightTreeRecursive('', files);
-            rightTreeFlatFiles = files;
-            renderRightTreeFiles(rightTreeFlatFiles);
-            setStatus('File tree loaded: ' + files.length + ' files', 'success');
+            rightTreeRootItems =
+                await loadTreeDirectory('');
+
+            renderRightTree();
+            setStatus('File tree loaded', 'success');
         } catch (error) {
+            rightTreeRootItems = null;
+
             rightTreeList.innerHTML =
                 '<div style="color:#ffb4b4; padding:8px;">' +
                 'Tree load failed: ' +
@@ -1663,9 +1762,14 @@
         }
     }
 
+    function collapseRightTreePanel() {
+        rightTreePanel.style.display = 'none';
+        leftTreeCollapseBar.style.display = 'flex';
+    }
+
     function toggleRightTreePanel() {
         if (rightTreePanel.style.display === 'flex') {
-            rightTreePanel.style.display = 'none';
+            collapseRightTreePanel();
             return;
         }
 
@@ -2731,6 +2835,30 @@
 
     launcher.addEventListener('click', openEditor);
     closeBtn.addEventListener('click', closeEditor);
+    [
+        loadBtn,
+        filesBtn,
+        commitBtn,
+        saveAccountBtn,
+        newAccountBtn,
+        searchBtn,
+        replaceBtn,
+        replaceAllBtn,
+        syntaxBtn,
+        robotBtn,
+        undoBtn,
+        redoBtn,
+        previewBtn,
+        copyBtn,
+        rightTreeRefreshBtn,
+        rightTreeCloseBtn,
+        leftTreeCollapseBar
+    ].forEach(button => {
+        button.addEventListener('mousedown', event => {
+            event.preventDefault();
+        });
+    });
+
     loadBtn.addEventListener('click', loadFromGithub);
     filesBtn.addEventListener('click', toggleFileTree);
     commitBtn.addEventListener('click', commitToGithub);
@@ -2739,12 +2867,12 @@
     replaceAllBtn.addEventListener('click', replaceAll);
     syntaxBtn.addEventListener('click', syntaxCheck);
     robotBtn.addEventListener('click', robotClean);
-    treeBtn.addEventListener('click', toggleRightTreePanel);
     undoBtn.addEventListener('click', editorUndo);
     redoBtn.addEventListener('click', editorRedo);
     rightTreeRefreshBtn.addEventListener('click', () => openRightTreePanel(true));
-    rightTreeCloseBtn.addEventListener('click', () => rightTreePanel.style.display = 'none');
-    rightTreeSearch.addEventListener('input', () => renderRightTreeFiles(rightTreeFlatFiles));
+    rightTreeCloseBtn.addEventListener('click', collapseRightTreePanel);
+    leftTreeCollapseBar.addEventListener('click', () => openRightTreePanel(false));
+    rightTreeSearch.addEventListener('input', renderRightTree);
     previewBtn.addEventListener('click', togglePreviewPanel);
     copyBtn.addEventListener('click', copyEditor);
     miniLauncher.addEventListener('click', toggleMiniPanel);
