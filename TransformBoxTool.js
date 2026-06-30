@@ -1892,8 +1892,8 @@ function createSkewSession(e) {
                     bakeSkewToCanvas(
                         canvas,
                         costume,
-                        finalShearX,
-                        finalShearY
+                        -finalShearX,
+                        -finalShearY
                     );
 
                     return updateSelectionBox;
