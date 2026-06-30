@@ -1868,19 +1868,9 @@ function createSkewSession(e) {
                       ? activeShearBridge.shearY
                       : 0;
 
-            activeShearBridge = null;
             this.destroy();
             activeSkewSession = null;
-
-            this.drawable.setTransformDirty();
-
-            this.target.setXY(
-                this.target.x,
-                this.target.y
-            );
-
-            this.target.emitVisualChange();
-            vm.runtime.requestRedraw();
+            activeShearBridge = null;
 
             AssetBakeEngine.bakeCurrentCostume(
                 (
@@ -1889,13 +1879,11 @@ function createSkewSession(e) {
                     image,
                     costume
                 ) => {
-                    const bakeShearMultiplier = 2;
-
                     bakeSkewToCanvas(
                         canvas,
                         costume,
-                        -finalShearX * bakeShearMultiplier,
-                        -finalShearY * bakeShearMultiplier
+                        -finalShearX,
+                        -finalShearY
                     );
 
                     return updateSelectionBox;
