@@ -2792,9 +2792,12 @@ function offsetBounds(bounds, dx, dy) {
                       desiredY - target.y
                   );
 
-            const snapDistance =
-                  80 /
+            const snapScale =
                   getStageUnitsPerScreenPixel();
+
+            const snapDistance =
+                  18 *
+                  snapScale;
 
             let snapX =
                 null;
@@ -2840,7 +2843,9 @@ function offsetBounds(bounds, dx, dy) {
                                     Math.abs(delta) < Math.abs(snapX)
                                 )
                             ) {
-                                snapX = delta;
+                                snapX =
+                                    delta *
+                                    snapScale;
                             }
                         }
                     );
@@ -2859,7 +2864,9 @@ function offsetBounds(bounds, dx, dy) {
                                     Math.abs(delta) < Math.abs(snapY)
                                 )
                             ) {
-                                snapY = delta;
+                                snapY =
+                                    delta *
+                                    snapScale;
                             }
                         }
                     );
