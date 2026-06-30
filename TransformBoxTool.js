@@ -167,6 +167,110 @@
         return 100 - ghost;
     }
 
+    const AssetBakeEngine = (() => {
+        function getCurrentCostume(target) {
+            if (
+                !target ||
+                !target.sprite ||
+                !target.sprite.costumes
+            ) {
+                return null;
+            }
+
+            return target.sprite.costumes[
+                target.currentCostume
+            ];
+        }
+
+        function getCostumeSource(costume) {
+            if (
+                !costume ||
+                !costume.asset
+            ) {
+                return null;
+            }
+
+            if (
+                typeof costume.asset.encodeDataURI === "function"
+            ) {
+                return costume.asset.encodeDataURI();
+            }
+
+            return null;
+        }
+
+        function bakeCurrentCostume(callback) {
+            const target =
+                  vm.editingTarget;
+
+            const costume =
+                  getCurrentCostume(
+                      target
+                  );
+
+            const source =
+                  getCostumeSource(
+                      costume
+                  );
+
+            if (!source) return;
+
+            const image =
+                  new Image();
+
+            image.onload =
+                () => {
+                    const canvas =
+                          document.createElement("canvas");
+
+                    canvas.width =
+                        image.naturalWidth ||
+                        image.width;
+
+                    canvas.height =
+                        image.naturalHeight ||
+                        image.height;
+
+                    const ctx =
+                          canvas.getContext("2d");
+
+                    ctx.drawImage(
+                        image,
+                        0,
+                        0
+                    );
+
+                    if (
+                        typeof callback === "function"
+                    ) {
+                        callback(
+                            canvas,
+                            ctx,
+                            image,
+                            costume,
+                            target
+                        );
+                    }
+
+                    canvas.toDataURL("image/png");
+
+                    console.log(
+                        "Asset Bake Engine Ready"
+                    );
+                };
+
+            image.src =
+                source;
+        }
+
+        return {
+            bakeCurrentCostume
+        };
+    })();
+
+    window.AssetBakeEngine =
+        AssetBakeEngine;
+
     function init() {
         const canvas = getStageCanvas();
 
