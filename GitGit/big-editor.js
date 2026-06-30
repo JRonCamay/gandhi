@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GitGit Big GitHub Editor
 // @namespace    http://tampermonkey.net/
-// @version      2.9.0
+// @version      3.0.0
 // @description  Full-window JavaScript editor with internal Search/Replace/Function panel and editor undo/redo, colored preview, GitHub accounts, file tree, load, and commit
 // @author       You
 // @match        https://github.com/*
@@ -398,7 +398,7 @@
     const toolBar = createEl('div', {
         style: `
             display: grid;
-            grid-template-columns: 1fr 1fr auto auto auto auto auto auto auto auto;
+            grid-template-columns: 1fr 1fr auto auto auto auto auto auto auto auto auto;
             gap: 6px;
             padding: 8px;
             background: #0d1117;
@@ -414,6 +414,7 @@
     const replaceAllBtn = barButton('Replace All', '#8957e5');
     const syntaxBtn = barButton('🐵', '#6f42c1');
     const robotBtn = barButton('🤖', '#0969da');
+    const treeBtn = barButton('Tree', '#30363d');
     const undoBtn = barButton('Undo', '#30363d');
     const redoBtn = barButton('Redo', '#30363d');
     const previewBtn = barButton('Preview', '#30363d');
@@ -426,6 +427,7 @@
     toolBar.appendChild(replaceAllBtn);
     toolBar.appendChild(syntaxBtn);
     toolBar.appendChild(robotBtn);
+    toolBar.appendChild(treeBtn);
     toolBar.appendChild(undoBtn);
     toolBar.appendChild(redoBtn);
     toolBar.appendChild(previewBtn);
@@ -483,6 +485,126 @@
 
     editorWrap.appendChild(lineGutter);
     editorWrap.appendChild(codeArea);
+
+    const currentLineHighlight = createEl('div', {
+        style: `
+            position: absolute;
+            left: 64px;
+            right: 0;
+            top: 0;
+            height: 20px;
+            background: rgba(88, 166, 255, 0.10);
+            border-top: 1px solid rgba(88, 166, 255, 0.12);
+            border-bottom: 1px solid rgba(88, 166, 255, 0.12);
+            pointer-events: none;
+            display: none;
+            z-index: 1;
+        `
+    });
+
+    editorWrap.style.position = 'relative';
+    editorWrap.appendChild(currentLineHighlight);
+
+    const rightTreePanel = createEl('div', {
+        style: `
+            width: 300px;
+            min-width: 240px;
+            max-width: 420px;
+            display: none;
+            flex-direction: column;
+            background: #010409;
+            border-left: 1px solid #30363d;
+            color: #c9d1d9;
+            flex-shrink: 0;
+        `
+    });
+
+    const rightTreeHeader = createEl('div', {
+        style: `
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            padding: 6px;
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            font-size: 12px;
+            flex-shrink: 0;
+        `
+    });
+
+    const rightTreeTitle = createEl('div', {
+        text: 'Repository Files',
+        style: `
+            font-weight: 600;
+            color: #f0f6fc;
+            white-space: nowrap;
+        `
+    });
+
+    const rightTreeRefreshBtn = createEl('button', {
+        text: 'Refresh',
+        style: `
+            height: 23px;
+            background: #21262d;
+            color: #c9d1d9;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        `
+    });
+
+    const rightTreeCloseBtn = createEl('button', {
+        text: '×',
+        style: `
+            width: 24px;
+            height: 23px;
+            background: #21262d;
+            color: #c9d1d9;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 18px;
+        `
+    });
+
+    rightTreeHeader.appendChild(rightTreeTitle);
+    rightTreeHeader.appendChild(rightTreeRefreshBtn);
+    rightTreeHeader.appendChild(rightTreeCloseBtn);
+
+    const rightTreeSearch = createEl('input', {
+        type: 'text',
+        placeholder: 'Filter files...',
+        style: `
+            height: 28px;
+            margin: 6px;
+            background: #0d1117;
+            color: #c9d1d9;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            padding: 4px 7px;
+            font-size: 12px;
+            flex-shrink: 0;
+        `
+    });
+
+    const rightTreeList = createEl('div', {
+        style: `
+            flex: 1;
+            overflow: auto;
+            padding: 4px;
+            font-family: Consolas, Menlo, Monaco, monospace;
+            font-size: 12px;
+        `
+    });
+
+    rightTreePanel.appendChild(rightTreeHeader);
+    rightTreePanel.appendChild(rightTreeSearch);
+    rightTreePanel.appendChild(rightTreeList);
+    editorWrap.appendChild(rightTreePanel);
 
     const previewPanel = createEl('div', {
         style: `
@@ -795,9 +917,8 @@
 
     let editorUndoStack = [];
     let editorRedoStack = [];
-    let editorHistoryTimer = null;
     let editorHistoryLocked = false;
-    let lastEditorHistoryValue = '';
+    let editorLastSnapshot = null;
 
     function getEditorSnapshot() {
         return {
@@ -809,6 +930,16 @@
         };
     }
 
+    function sameSnapshot(a, b) {
+        return (
+            a &&
+            b &&
+            a.value === b.value &&
+            a.selectionStart === b.selectionStart &&
+            a.selectionEnd === b.selectionEnd
+        );
+    }
+
     function restoreEditorSnapshot(snapshot) {
         if (!snapshot) return;
 
@@ -816,6 +947,7 @@
 
         codeArea.value = snapshot.value;
         updateLineNumbers();
+        updateCurrentLineHighlight();
 
         codeArea.scrollTop = snapshot.scrollTop || 0;
         codeArea.scrollLeft = snapshot.scrollLeft || 0;
@@ -831,52 +963,50 @@
             updatePreviewPanel();
         }
 
+        editorLastSnapshot = getEditorSnapshot();
         editorHistoryLocked = false;
     }
 
     function resetEditorHistory() {
         editorUndoStack = [];
         editorRedoStack = [];
-        lastEditorHistoryValue = codeArea.value;
+        editorLastSnapshot = getEditorSnapshot();
     }
 
-    function pushEditorHistory() {
+    function pushEditorHistorySnapshot(snapshot) {
         if (editorHistoryLocked) return;
 
-        const snapshot = getEditorSnapshot();
+        const snap =
+            snapshot || getEditorSnapshot();
+
+        const last =
+            editorUndoStack[editorUndoStack.length - 1];
 
         if (
-            editorUndoStack.length &&
-            editorUndoStack[editorUndoStack.length - 1].value === snapshot.value
+            sameSnapshot(last, snap) ||
+            sameSnapshot(editorLastSnapshot, snap)
         ) {
             return;
         }
 
-        editorUndoStack.push(snapshot);
-
-        if (editorUndoStack.length > 80) {
-            editorUndoStack.shift();
-        }
-
+        editorUndoStack.push(snap);
         editorRedoStack = [];
-        lastEditorHistoryValue = snapshot.value;
+        editorLastSnapshot = snap;
     }
 
-    function scheduleEditorHistory() {
+    function recordBeforeEditorChange() {
         if (editorHistoryLocked) return;
 
-        clearTimeout(editorHistoryTimer);
+        const snap = getEditorSnapshot();
+        const last = editorUndoStack[editorUndoStack.length - 1];
 
-        editorHistoryTimer = setTimeout(() => {
-            if (codeArea.value !== lastEditorHistoryValue) {
-                pushEditorHistory();
-            }
-        }, 450);
+        if (!sameSnapshot(last, snap)) {
+            editorUndoStack.push(snap);
+            editorRedoStack = [];
+        }
     }
 
     function editorUndo() {
-        clearTimeout(editorHistoryTimer);
-
         if (!editorUndoStack.length) {
             setStatus('Nothing to undo');
             return;
@@ -887,14 +1017,11 @@
 
         editorRedoStack.push(current);
         restoreEditorSnapshot(previous);
-        lastEditorHistoryValue = codeArea.value;
 
         setStatus('Undo', 'success');
     }
 
     function editorRedo() {
-        clearTimeout(editorHistoryTimer);
-
         if (!editorRedoStack.length) {
             setStatus('Nothing to redo');
             return;
@@ -905,7 +1032,6 @@
 
         editorUndoStack.push(current);
         restoreEditorSnapshot(next);
-        lastEditorHistoryValue = codeArea.value;
 
         setStatus('Redo', 'success');
     }
@@ -915,10 +1041,12 @@
         const oldScrollTop = codeArea.scrollTop;
         const oldScrollLeft = codeArea.scrollLeft;
 
-        pushEditorHistory();
+        recordBeforeEditorChange();
 
+        editorHistoryLocked = true;
         codeArea.value = nextValue;
         updateLineNumbers();
+        updateCurrentLineHighlight();
 
         if (previewPanel.style.display === 'block') {
             updatePreviewPanel();
@@ -941,7 +1069,8 @@
             revealEditorRange(selectionStart, selectionEnd || selectionStart);
         }
 
-        lastEditorHistoryValue = codeArea.value;
+        editorHistoryLocked = false;
+        editorLastSnapshot = getEditorSnapshot();
     }
 
     function getEditorIndexLineAndColumn(index) {
@@ -992,6 +1121,7 @@
         codeArea.scrollTop = targetTop;
         codeArea.scrollLeft = targetLeft;
         lineGutter.scrollTop = codeArea.scrollTop;
+        updateCurrentLineHighlight();
 
         requestAnimationFrame(() => {
             codeArea.focus();
@@ -1000,7 +1130,39 @@
             codeArea.scrollTop = targetTop;
             codeArea.scrollLeft = targetLeft;
             lineGutter.scrollTop = codeArea.scrollTop;
+            updateCurrentLineHighlight();
         });
+    }
+
+    function updateCurrentLineHighlight() {
+        if (!currentLineHighlight || overlay.style.display !== 'flex') {
+            return;
+        }
+
+        const lineHeight =
+            parseFloat(getComputedStyle(codeArea).lineHeight) || 20;
+
+        const index =
+            codeArea.selectionStart || 0;
+
+        const lineIndex =
+            (codeArea.value.slice(0, index).match(/\n/g) || []).length;
+
+        const top =
+            10 +
+            (lineIndex * lineHeight) -
+            codeArea.scrollTop;
+
+        currentLineHighlight.style.top =
+            top + 'px';
+
+        currentLineHighlight.style.height =
+            lineHeight + 'px';
+
+        currentLineHighlight.style.display =
+            top >= 0 && top <= codeArea.clientHeight
+                ? 'block'
+                : 'none';
     }
 
     function getLineNumberFromIndex(textValue, index) {
@@ -1365,6 +1527,151 @@
         }
     }
 
+    let rightTreeFlatFiles = [];
+
+    function renderRightTreeFiles(files) {
+        const filter =
+            rightTreeSearch.value.trim().toLowerCase();
+
+        rightTreeList.innerHTML = '';
+
+        const shown =
+            files.filter(file =>
+                !filter ||
+                file.path.toLowerCase().includes(filter)
+            );
+
+        if (!shown.length) {
+            rightTreeList.innerHTML =
+                '<div style="color:#8b949e; padding:8px;">No files found.</div>';
+            return;
+        }
+
+        shown.forEach(file => {
+            const row = createEl('div', {
+                style: `
+                    padding: 4px 6px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    color: #c9d1d9;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                `
+            });
+
+            row.textContent = '📄 ' + file.path;
+
+            row.addEventListener('mouseenter', () => {
+                row.style.background = '#161b22';
+            });
+
+            row.addEventListener('mouseleave', () => {
+                row.style.background = 'transparent';
+            });
+
+            row.addEventListener('click', () => {
+                pathInput.value = file.path;
+                loadFromGithub();
+            });
+
+            rightTreeList.appendChild(row);
+        });
+    }
+
+    async function loadRightTreeRecursive(dirPath, output) {
+        rememberGithubFields();
+
+        const owner = ownerInput.value.trim();
+        const repo = repoInput.value.trim();
+        const branch = branchInput.value.trim() || 'main';
+
+        const apiPath =
+            dirPath
+                ? dirPath.split('/').map(encodeURIComponent).join('/')
+                : '';
+
+        const url =
+            'https://api.github.com/repos/' +
+            encodeURIComponent(owner) +
+            '/' +
+            encodeURIComponent(repo) +
+            '/contents/' +
+            apiPath +
+            '?ref=' +
+            encodeURIComponent(branch);
+
+        const items = await githubRequest(url, {
+            method: 'GET'
+        });
+
+        if (!Array.isArray(items)) {
+            return;
+        }
+
+        const sorted =
+            items
+                .slice()
+                .sort((a, b) => {
+                    if (a.type !== b.type) {
+                        return a.type === 'dir' ? -1 : 1;
+                    }
+
+                    return a.name.localeCompare(b.name);
+                });
+
+        for (const item of sorted) {
+            if (item.type === 'file') {
+                output.push({
+                    name: item.name,
+                    path: item.path
+                });
+                continue;
+            }
+
+            if (item.type === 'dir') {
+                await loadRightTreeRecursive(item.path, output);
+            }
+        }
+    }
+
+    async function openRightTreePanel(forceReload) {
+        rightTreePanel.style.display = 'flex';
+
+        if (rightTreeFlatFiles.length && !forceReload) {
+            renderRightTreeFiles(rightTreeFlatFiles);
+            return;
+        }
+
+        rightTreeList.innerHTML =
+            '<div style="color:#8b949e; padding:8px;">Loading files...</div>';
+
+        try {
+            const files = [];
+            await loadRightTreeRecursive('', files);
+            rightTreeFlatFiles = files;
+            renderRightTreeFiles(rightTreeFlatFiles);
+            setStatus('File tree loaded: ' + files.length + ' files', 'success');
+        } catch (error) {
+            rightTreeList.innerHTML =
+                '<div style="color:#ffb4b4; padding:8px;">' +
+                'Tree load failed: ' +
+                error.message +
+                '</div>';
+
+            setStatus('File tree failed: ' + error.message, 'error');
+        }
+    }
+
+    function toggleRightTreePanel() {
+        if (rightTreePanel.style.display === 'flex') {
+            rightTreePanel.style.display = 'none';
+            return;
+        }
+
+        openRightTreePanel(false);
+    }
+
     async function loadFromGithub() {
         rememberGithubFields();
 
@@ -1403,6 +1710,7 @@
             codeArea.value = fromBase64Unicode(data.content);
             updateLineNumbers();
             resetEditorHistory();
+            updateCurrentLineHighlight();
 
             if (previewPanel.style.display === 'block') {
                 updatePreviewPanel();
@@ -1910,6 +2218,17 @@
         const query = miniSearchBox.value.trim();
         if (!query) return;
 
+        if (
+            query.startsWith('function ') ||
+            query.startsWith('const ') ||
+            query.startsWith('let ') ||
+            query.startsWith('var ') ||
+            query.startsWith('Info:')
+        ) {
+            setStatus('Body of Functions already found.', 'success');
+            return;
+        }
+
         const found = miniFindSmartBlock(query);
 
         if (!found) {
@@ -2366,6 +2685,7 @@
         updateLineNumbers();
         resetEditorHistory();
         codeArea.focus();
+        updateCurrentLineHighlight();
     }
 
     function closeEditor() {
@@ -2419,8 +2739,12 @@
     replaceAllBtn.addEventListener('click', replaceAll);
     syntaxBtn.addEventListener('click', syntaxCheck);
     robotBtn.addEventListener('click', robotClean);
+    treeBtn.addEventListener('click', toggleRightTreePanel);
     undoBtn.addEventListener('click', editorUndo);
     redoBtn.addEventListener('click', editorRedo);
+    rightTreeRefreshBtn.addEventListener('click', () => openRightTreePanel(true));
+    rightTreeCloseBtn.addEventListener('click', () => rightTreePanel.style.display = 'none');
+    rightTreeSearch.addEventListener('input', () => renderRightTreeFiles(rightTreeFlatFiles));
     previewBtn.addEventListener('click', togglePreviewPanel);
     copyBtn.addEventListener('click', copyEditor);
     miniLauncher.addEventListener('click', toggleMiniPanel);
@@ -2434,15 +2758,28 @@
         setTimeout(() => miniCopyBtn.innerHTML = '⧉', 1000);
     });
 
+    codeArea.addEventListener('beforeinput', () => {
+        recordBeforeEditorChange();
+    });
+
     codeArea.addEventListener('input', () => {
         updateLineNumbers();
-        scheduleEditorHistory();
+        updateCurrentLineHighlight();
 
         if (previewPanel.style.display === 'block') {
             updatePreviewPanel();
         }
+
+        editorLastSnapshot = getEditorSnapshot();
     });
-    codeArea.addEventListener('scroll', syncScroll);
+
+    codeArea.addEventListener('click', updateCurrentLineHighlight);
+    codeArea.addEventListener('keyup', updateCurrentLineHighlight);
+    codeArea.addEventListener('select', updateCurrentLineHighlight);
+    codeArea.addEventListener('scroll', () => {
+        syncScroll();
+        updateCurrentLineHighlight();
+    });
 
     codeArea.addEventListener('keydown', event => {
         if (event.key === 'Tab') {
