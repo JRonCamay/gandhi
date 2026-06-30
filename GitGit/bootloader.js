@@ -1,6 +1,6 @@
 /*
 GitGit/bootloader.js
-Only this file knows the module list.
+Loads all GitGit modules from the same GitGit folder.
 */
 
 (function () {
@@ -9,15 +9,9 @@ Only this file knows the module list.
     if (window.__GitGitBootLoaded) return;
     window.__GitGitBootLoaded = true;
 
-    const CURRENT_URL =
-        document.currentScript &&
-        document.currentScript.src;
-
     const BASE =
-        CURRENT_URL.substring(
-            0,
-            CURRENT_URL.lastIndexOf('/') + 1
-        );
+        window.__GitGitBaseURL ||
+        'https://raw.githubusercontent.com/JRonCamay/gandhi/main/GitGit/';
 
     const MODULES = [
         'config.js',
@@ -35,7 +29,10 @@ Only this file knows the module list.
         const code = await fetch(url, {
             cache: 'no-store'
         }).then(r => {
-            if (!r.ok) throw new Error('Cannot load ' + name);
+            if (!r.ok) {
+                throw new Error('Cannot load ' + name + ' from ' + url);
+            }
+
             return r.text();
         });
 
@@ -50,7 +47,10 @@ Only this file knows the module list.
             await load(file);
         }
 
-        console.log('[GitGit] Modules loaded.');
-    })().catch(console.error);
+        console.log('[GitGit] Modules loaded from:', BASE);
+    })().catch(error => {
+        console.error('[GitGit bootloader]', error);
+        alert('GitGit bootloader failed: ' + error.message);
+    });
 
 })();
