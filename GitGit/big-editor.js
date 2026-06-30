@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         GitGit Big GitHub Editor
 // @namespace    http://tampermonkey.net/
-// @version      2.8.1
-// @description  Full-window JavaScript editor with fully internal Search/Replace/Function panel, colored preview, GitHub accounts, file tree, load, and commit
+// @version      2.9.0
+// @description  Full-window JavaScript editor with internal Search/Replace/Function panel and editor undo/redo, colored preview, GitHub accounts, file tree, load, and commit
 // @author       You
 // @match        https://github.com/*
 // @match        https://raw.githubusercontent.com/*
@@ -398,7 +398,7 @@
     const toolBar = createEl('div', {
         style: `
             display: grid;
-            grid-template-columns: 1fr 1fr auto auto auto auto auto auto;
+            grid-template-columns: 1fr 1fr auto auto auto auto auto auto auto auto;
             gap: 6px;
             padding: 8px;
             background: #0d1117;
@@ -414,6 +414,8 @@
     const replaceAllBtn = barButton('Replace All', '#8957e5');
     const syntaxBtn = barButton('🐵', '#6f42c1');
     const robotBtn = barButton('🤖', '#0969da');
+    const undoBtn = barButton('Undo', '#30363d');
+    const redoBtn = barButton('Redo', '#30363d');
     const previewBtn = barButton('Preview', '#30363d');
     const copyBtn = barButton('Copy', '#30363d');
 
@@ -424,6 +426,8 @@
     toolBar.appendChild(replaceAllBtn);
     toolBar.appendChild(syntaxBtn);
     toolBar.appendChild(robotBtn);
+    toolBar.appendChild(undoBtn);
+    toolBar.appendChild(redoBtn);
     toolBar.appendChild(previewBtn);
     toolBar.appendChild(copyBtn);
 
@@ -786,6 +790,217 @@
 
     function syncScroll() {
         lineGutter.scrollTop = codeArea.scrollTop;
+    }
+
+
+    let editorUndoStack = [];
+    let editorRedoStack = [];
+    let editorHistoryTimer = null;
+    let editorHistoryLocked = false;
+    let lastEditorHistoryValue = '';
+
+    function getEditorSnapshot() {
+        return {
+            value: codeArea.value,
+            selectionStart: codeArea.selectionStart || 0,
+            selectionEnd: codeArea.selectionEnd || 0,
+            scrollTop: codeArea.scrollTop || 0,
+            scrollLeft: codeArea.scrollLeft || 0
+        };
+    }
+
+    function restoreEditorSnapshot(snapshot) {
+        if (!snapshot) return;
+
+        editorHistoryLocked = true;
+
+        codeArea.value = snapshot.value;
+        updateLineNumbers();
+
+        codeArea.scrollTop = snapshot.scrollTop || 0;
+        codeArea.scrollLeft = snapshot.scrollLeft || 0;
+        lineGutter.scrollTop = codeArea.scrollTop;
+
+        codeArea.focus();
+        codeArea.setSelectionRange(
+            snapshot.selectionStart || 0,
+            snapshot.selectionEnd || 0
+        );
+
+        if (previewPanel.style.display === 'block') {
+            updatePreviewPanel();
+        }
+
+        editorHistoryLocked = false;
+    }
+
+    function resetEditorHistory() {
+        editorUndoStack = [];
+        editorRedoStack = [];
+        lastEditorHistoryValue = codeArea.value;
+    }
+
+    function pushEditorHistory() {
+        if (editorHistoryLocked) return;
+
+        const snapshot = getEditorSnapshot();
+
+        if (
+            editorUndoStack.length &&
+            editorUndoStack[editorUndoStack.length - 1].value === snapshot.value
+        ) {
+            return;
+        }
+
+        editorUndoStack.push(snapshot);
+
+        if (editorUndoStack.length > 80) {
+            editorUndoStack.shift();
+        }
+
+        editorRedoStack = [];
+        lastEditorHistoryValue = snapshot.value;
+    }
+
+    function scheduleEditorHistory() {
+        if (editorHistoryLocked) return;
+
+        clearTimeout(editorHistoryTimer);
+
+        editorHistoryTimer = setTimeout(() => {
+            if (codeArea.value !== lastEditorHistoryValue) {
+                pushEditorHistory();
+            }
+        }, 450);
+    }
+
+    function editorUndo() {
+        clearTimeout(editorHistoryTimer);
+
+        if (!editorUndoStack.length) {
+            setStatus('Nothing to undo');
+            return;
+        }
+
+        const current = getEditorSnapshot();
+        const previous = editorUndoStack.pop();
+
+        editorRedoStack.push(current);
+        restoreEditorSnapshot(previous);
+        lastEditorHistoryValue = codeArea.value;
+
+        setStatus('Undo', 'success');
+    }
+
+    function editorRedo() {
+        clearTimeout(editorHistoryTimer);
+
+        if (!editorRedoStack.length) {
+            setStatus('Nothing to redo');
+            return;
+        }
+
+        const current = getEditorSnapshot();
+        const next = editorRedoStack.pop();
+
+        editorUndoStack.push(current);
+        restoreEditorSnapshot(next);
+        lastEditorHistoryValue = codeArea.value;
+
+        setStatus('Redo', 'success');
+    }
+
+    function replaceEditorValue(nextValue, selectionStart, selectionEnd, options) {
+        const opts = options || {};
+        const oldScrollTop = codeArea.scrollTop;
+        const oldScrollLeft = codeArea.scrollLeft;
+
+        pushEditorHistory();
+
+        codeArea.value = nextValue;
+        updateLineNumbers();
+
+        if (previewPanel.style.display === 'block') {
+            updatePreviewPanel();
+        }
+
+        codeArea.focus();
+
+        if (
+            typeof selectionStart === 'number' &&
+            typeof selectionEnd === 'number'
+        ) {
+            codeArea.setSelectionRange(selectionStart, selectionEnd);
+        }
+
+        if (opts.keepScroll) {
+            codeArea.scrollTop = oldScrollTop;
+            codeArea.scrollLeft = oldScrollLeft;
+            lineGutter.scrollTop = codeArea.scrollTop;
+        } else if (typeof selectionStart === 'number') {
+            revealEditorRange(selectionStart, selectionEnd || selectionStart);
+        }
+
+        lastEditorHistoryValue = codeArea.value;
+    }
+
+    function getEditorIndexLineAndColumn(index) {
+        const before = codeArea.value.slice(0, index);
+        const parts = before.split('\n');
+
+        return {
+            lineIndex: parts.length - 1,
+            columnIndex: parts[parts.length - 1].length
+        };
+    }
+
+    function isEditorIndexVisible(index) {
+        const pos = getEditorIndexLineAndColumn(index);
+        const lineHeight =
+            parseFloat(getComputedStyle(codeArea).lineHeight) || 20;
+
+        const y = pos.lineIndex * lineHeight;
+
+        return (
+            y >= codeArea.scrollTop &&
+            y <= codeArea.scrollTop + codeArea.clientHeight - lineHeight
+        );
+    }
+
+    function revealEditorRange(start, end) {
+        if (start < 0) return;
+
+        const pos = getEditorIndexLineAndColumn(start);
+
+        const lineHeight =
+            parseFloat(getComputedStyle(codeArea).lineHeight) || 20;
+
+        const approximateCharWidth = 8;
+
+        const targetTop =
+            Math.max(
+                0,
+                (pos.lineIndex * lineHeight) - (codeArea.clientHeight * 0.35)
+            );
+
+        const targetLeft =
+            Math.max(
+                0,
+                (pos.columnIndex * approximateCharWidth) - 80
+            );
+
+        codeArea.scrollTop = targetTop;
+        codeArea.scrollLeft = targetLeft;
+        lineGutter.scrollTop = codeArea.scrollTop;
+
+        requestAnimationFrame(() => {
+            codeArea.focus();
+            codeArea.setSelectionRange(start, end);
+
+            codeArea.scrollTop = targetTop;
+            codeArea.scrollLeft = targetLeft;
+            lineGutter.scrollTop = codeArea.scrollTop;
+        });
     }
 
     function getLineNumberFromIndex(textValue, index) {
@@ -1187,6 +1402,7 @@
             currentContentSha = data.sha || '';
             codeArea.value = fromBase64Unicode(data.content);
             updateLineNumbers();
+            resetEditorHistory();
 
             if (previewPanel.style.display === 'block') {
                 updatePreviewPanel();
@@ -1299,30 +1515,13 @@
     }
 
     function scrollEditorToIndex(index) {
-        if (index < 0) return;
-
-        const textBefore =
-            codeArea.value.slice(0, index);
-
-        const lineIndex =
-            (textBefore.match(/\n/g) || []).length;
-
-        const lineHeight =
-            parseFloat(getComputedStyle(codeArea).lineHeight) || 20;
-
-        codeArea.scrollTop =
-            Math.max(
-                0,
-                (lineIndex * lineHeight) - (codeArea.clientHeight / 3)
-            );
-
-        lineGutter.scrollTop = codeArea.scrollTop;
+        revealEditorRange(index, index);
     }
 
     function miniSelectRange(start, end, message) {
-        scrollEditorToIndex(start);
         codeArea.focus();
         codeArea.setSelectionRange(start, end);
+        revealEditorRange(start, end);
 
         setStatus(
             message || ('Selected line ' + miniLineNumberOf(codeArea.value, start)),
@@ -1777,19 +1976,21 @@
             return;
         }
 
-        codeArea.value =
+        const selectedAlready =
+            start === codeArea.selectionStart &&
+            end === codeArea.selectionEnd &&
+            isEditorIndexVisible(start);
+
+        replaceEditorValue(
             text.slice(0, start) +
-            replacement +
-            text.slice(end);
-
-        scrollEditorToIndex(start);
-        codeArea.focus();
-        codeArea.setSelectionRange(start, start + replacement.length);
-        updateLineNumbers();
-
-        if (previewPanel.style.display === 'block') {
-            updatePreviewPanel();
-        }
+                replacement +
+                text.slice(end),
+            start,
+            start + replacement.length,
+            {
+                keepScroll: selectedAlready
+            }
+        );
 
         setStatus('Replace success inside GitGit editor', 'success');
     }
@@ -1828,9 +2029,9 @@
 
         currentSearchIndex = index;
 
-        scrollEditorToIndex(index);
         codeArea.focus();
         codeArea.setSelectionRange(index, index + query.length);
+        revealEditorRange(index, index + query.length);
 
         const line =
             getLineNumberFromIndex(text, index);
@@ -1867,19 +2068,21 @@
             return;
         }
 
-        codeArea.value =
+        const selectedAlready =
+            index === codeArea.selectionStart &&
+            codeArea.selectionEnd === index + query.length &&
+            isEditorIndexVisible(index);
+
+        replaceEditorValue(
             text.slice(0, index) +
-            replacement +
-            text.slice(index + query.length);
-
-        scrollEditorToIndex(index);
-        codeArea.focus();
-        codeArea.setSelectionRange(index, index + replacement.length);
-        updateLineNumbers();
-
-        if (previewPanel.style.display === 'block') {
-            updatePreviewPanel();
-        }
+                replacement +
+                text.slice(index + query.length),
+            index,
+            index + replacement.length,
+            {
+                keepScroll: selectedAlready
+            }
+        );
 
         setStatus('Replace success', 'success');
     }
@@ -1898,14 +2101,14 @@
             return;
         }
 
-        codeArea.value =
-            codeArea.value.split(query).join(replacement);
-
-        updateLineNumbers();
-
-        if (previewPanel.style.display === 'block') {
-            updatePreviewPanel();
-        }
+        replaceEditorValue(
+            codeArea.value.split(query).join(replacement),
+            codeArea.selectionStart,
+            codeArea.selectionEnd,
+            {
+                keepScroll: true
+            }
+        );
 
         setStatus('Replace All success: ' + count + ' replaced', 'success');
     }
@@ -1938,12 +2141,14 @@
         }
 
         const before = codeArea.value.length;
-        codeArea.value = cleanJavaScriptFormatting(codeArea.value);
-        updateLineNumbers();
-
-        if (previewPanel.style.display === 'block') {
-            updatePreviewPanel();
-        }
+        replaceEditorValue(
+            cleanJavaScriptFormatting(codeArea.value),
+            codeArea.selectionStart,
+            codeArea.selectionEnd,
+            {
+                keepScroll: true
+            }
+        );
 
         setStatus('Robot Cleaned: checked editor ' + before + ' chars', 'success');
     }
@@ -2159,6 +2364,7 @@
 
         overlay.style.display = 'flex';
         updateLineNumbers();
+        resetEditorHistory();
         codeArea.focus();
     }
 
@@ -2213,6 +2419,8 @@
     replaceAllBtn.addEventListener('click', replaceAll);
     syntaxBtn.addEventListener('click', syntaxCheck);
     robotBtn.addEventListener('click', robotClean);
+    undoBtn.addEventListener('click', editorUndo);
+    redoBtn.addEventListener('click', editorRedo);
     previewBtn.addEventListener('click', togglePreviewPanel);
     copyBtn.addEventListener('click', copyEditor);
     miniLauncher.addEventListener('click', toggleMiniPanel);
@@ -2228,6 +2436,7 @@
 
     codeArea.addEventListener('input', () => {
         updateLineNumbers();
+        scheduleEditorHistory();
 
         if (previewPanel.style.display === 'block') {
             updatePreviewPanel();
@@ -2242,15 +2451,37 @@
             const start = codeArea.selectionStart;
             const end = codeArea.selectionEnd;
 
-            codeArea.value =
+            replaceEditorValue(
                 codeArea.value.slice(0, start) +
-                '    ' +
-                codeArea.value.slice(end);
+                    '    ' +
+                    codeArea.value.slice(end),
+                start + 4,
+                start + 4,
+                {
+                    keepScroll: true
+                }
+            );
+        }
 
-            codeArea.selectionStart = start + 4;
-            codeArea.selectionEnd = start + 4;
+        if (event.ctrlKey && event.key.toLowerCase() === 'z') {
+            event.preventDefault();
+            editorUndo();
+            return;
+        }
 
-            updateLineNumbers();
+        if (
+            event.ctrlKey &&
+            (
+                event.key.toLowerCase() === 'y' ||
+                (
+                    event.shiftKey &&
+                    event.key.toLowerCase() === 'z'
+                )
+            )
+        ) {
+            event.preventDefault();
+            editorRedo();
+            return;
         }
 
         if (event.ctrlKey && event.key.toLowerCase() === 'f') {
