@@ -624,6 +624,106 @@
         overlay.appendChild(
             skewHandle
         );
+        const assetToolsPanel =
+              document.createElement("div");
+
+        Object.assign(
+            assetToolsPanel.style,
+            {
+                position: "absolute",
+                right: "-170px",
+                bottom: "66px",
+                width: "150px",
+                background: "#2c3e50",
+                border: "1px solid #5d7a94",
+                borderRadius: "4px",
+                padding: "4px",
+                display: "none",
+                flexDirection: "column",
+                gap: "4px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
+                pointerEvents: "auto",
+                zIndex: "10000"
+            }
+        );
+
+        function createAssetToolButton(
+            label,
+            disabled
+        ) {
+            const button =
+                  document.createElement("button");
+
+            button.type =
+                "button";
+
+            button.textContent =
+                label;
+
+            Object.assign(
+                button.style,
+                {
+                    width: "100%",
+                    background: disabled ? "#3f5364" : "#00A2FF",
+                    color: "white",
+                    border: "1px solid #5d7a94",
+                    borderRadius: "4px",
+                    padding: "4px 6px",
+                    fontSize: "11px",
+                    textAlign: "left",
+                    cursor: disabled ? "not-allowed" : "pointer",
+                    opacity: disabled ? "0.55" : "1",
+                    pointerEvents: "auto"
+                }
+            );
+
+            button.disabled =
+                disabled;
+
+            return button;
+        }
+
+        const assetSkewButton =
+              createAssetToolButton(
+                  "↗ Skew (Coming Soon)",
+                  false
+              );
+
+        assetToolsPanel.appendChild(
+            assetSkewButton
+        );
+
+        assetToolsPanel.appendChild(
+            createAssetToolButton(
+                "◰ Perspective (Disabled)",
+                true
+            )
+        );
+
+        assetToolsPanel.appendChild(
+            createAssetToolButton(
+                "〰 Wave (Disabled)",
+                true
+            )
+        );
+
+        assetToolsPanel.appendChild(
+            createAssetToolButton(
+                "🌀 Twirl (Disabled)",
+                true
+            )
+        );
+
+        assetToolsPanel.appendChild(
+            createAssetToolButton(
+                "⬤ Bulge (Disabled)",
+                true
+            )
+        );
+
+        overlay.appendChild(
+            assetToolsPanel
+        );
         const widthHandle =
               document.createElement("div");
 
@@ -988,19 +1088,73 @@
         let resizing = false;
         let resizeMode =
             "uniform";
-       skewHandle.addEventListener(
-           "mousedown",
-           e => {
-               e.preventDefault();
-               e.stopPropagation();
+        function closeAssetToolsPanel() {
+            assetToolsPanel.style.display =
+                "none";
+        }
 
-               createSkewSession(e);
-           }
-       );
-       skewHandle.addEventListener(
-           "click",
-           () => {}
-       );
+        function toggleAssetToolsPanel() {
+            assetToolsPanel.style.display =
+                assetToolsPanel.style.display === "none"
+                    ? "flex"
+                    : "none";
+        }
+
+        skewHandle.addEventListener(
+            "mousedown",
+            e => {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        );
+
+        skewHandle.addEventListener(
+            "click",
+            e => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                toggleAssetToolsPanel();
+            }
+        );
+
+        assetToolsPanel.addEventListener(
+            "mousedown",
+            e => {
+                e.stopPropagation();
+            }
+        );
+
+        assetSkewButton.addEventListener(
+            "mousedown",
+            e => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                closeAssetToolsPanel();
+                createSkewSession(e);
+            }
+        );
+
+        document.addEventListener(
+            "mousedown",
+            e => {
+                if (
+                    assetToolsPanel.style.display === "none"
+                ) {
+                    return;
+                }
+
+                if (
+                    overlay.contains(e.target)
+                ) {
+                    return;
+                }
+
+                closeAssetToolsPanel();
+            },
+            true
+        );
        widthHandle.addEventListener(
            "mousedown",
            e => {
