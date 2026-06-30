@@ -1973,14 +1973,10 @@ function bakeSkewToCanvas(
     );
 
     const cx =
-        typeof costume.rotationCenterX === "number"
-            ? costume.rotationCenterX
-            : width / 2;
+          width / 2;
 
     const cy =
-        typeof costume.rotationCenterY === "number"
-            ? costume.rotationCenterY
-            : height / 2;
+          height / 2;
 
     const points = [
         [0, 0],
