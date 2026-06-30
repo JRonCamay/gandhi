@@ -1866,8 +1866,10 @@ function createSkewSession(e) {
                 this.startShearY +
                 (upEvent.clientY - this.startMouseY) / 200;
 
-            activeShearBridge.shearX = finalShearX;
-            activeShearBridge.shearY = finalShearY;
+            if (activeShearBridge) {
+                activeShearBridge.shearX = finalShearX;
+                activeShearBridge.shearY = finalShearY;
+            }
 
             window.removeEventListener("mousemove", this.boundMove, true);
             window.removeEventListener("mouseup", this.boundUp, true);
