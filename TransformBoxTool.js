@@ -1879,7 +1879,7 @@ function createSkewSession(e) {
                     image,
                     costume
                 ) => {
-                    const bakeShearMultiplier = 1.15;
+                    const bakeShearMultiplier = 1.25;
 
                     bakeSkewToCanvas(
                         canvas,
