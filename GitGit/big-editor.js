@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GitGit Big GitHub Editor
 // @namespace    http://tampermonkey.net/
-// @version      3.9.0
+// @version      4.0.0
 // @description  Full-window JavaScript editor with internal Search/Replace/Function panel and editor undo/redo, colored preview, GitHub accounts, file tree, load, and commit
 // @author       You
 // @match        https://github.com/*
@@ -13,8 +13,8 @@
 (function () {
     'use strict';
 
-    if (window.__gitgitBigEditorModularLoaded === '3.9.0') return;
-    window.__gitgitBigEditorModularLoaded = '3.9.0';
+    if (window.__gitgitBigEditorModularLoaded === '4.0.0') return;
+    window.__gitgitBigEditorModularLoaded = '4.0.0';
 
     const GITGIT_THEME = {
         app: '#1e1e1e',
@@ -110,6 +110,10 @@
                 color: ${GITGIT_THEME.text} !important;
                 caret-color: ${GITGIT_THEME.text} !important;
                 opacity: 1 !important;
+                pointer-events: auto !important;
+                user-select: text !important;
+                -webkit-user-select: text !important;
+                z-index: 2 !important;
             }
 
             #gitgit-code-area::selection {
@@ -554,7 +558,7 @@
     });
 
     const title = createEl('div', {
-        html: '<strong>GitGit Big GitHub Editor v3.9</strong>',
+        html: '<strong>GitGit Big GitHub Editor v4.0</strong>',
         style: `
             font-size: 14px;
             color: #f0f6fc;
@@ -701,7 +705,7 @@
     const toolBar = createEl('div', {
         style: `
             display: grid;
-            grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr) auto auto auto auto auto auto auto;
+            grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr) auto auto auto auto auto;
             gap: 6px;
             padding: 8px;
             background: #1e1e1e;
@@ -717,8 +721,7 @@
     const replaceAllBtn = barButton('Replace All', '#8957e5');
     const syntaxBtn = barButton('🐵', '#6f42c1');
     const robotBtn = barButton('🤖', '#0969da');
-    const undoBtn = barButton('Undo', '#30363d');
-    const redoBtn = barButton('Redo', '#30363d');
+
 
     toolBar.appendChild(searchInput);
     toolBar.appendChild(replaceInput);
@@ -727,8 +730,6 @@
     toolBar.appendChild(replaceAllBtn);
     toolBar.appendChild(syntaxBtn);
     toolBar.appendChild(robotBtn);
-    toolBar.appendChild(undoBtn);
-    toolBar.appendChild(redoBtn);
 
     const editorWrap = createEl('div', {
         style: `
@@ -795,7 +796,7 @@
             border-bottom: 1px solid #2a2d2e;
             pointer-events: none;
             display: none;
-            z-index: 1;
+            z-index: 0;
         `
     });
 
@@ -974,6 +975,8 @@
 
     editorCopyCorner.appendChild(editorCopyAllBtn);
     editorCopyCorner.appendChild(editorCopySelectionBtn);
+    editorCopyCorner.appendChild(editorUndoBtn);
+    editorCopyCorner.appendChild(editorRedoBtn);
     editorWrap.appendChild(editorCopyCorner);
 
 
@@ -3295,10 +3298,10 @@
         replaceAllBtn,
         syntaxBtn,
         robotBtn,
-        undoBtn,
-        redoBtn,
         editorCopyAllBtn,
         editorCopySelectionBtn,
+        editorUndoBtn,
+        editorRedoBtn,
         rightTreeRefreshBtn,
         rightTreeCloseBtn,
         leftTreeCollapseBar
@@ -3325,8 +3328,6 @@
     replaceAllBtn.addEventListener('click', replaceAll);
     syntaxBtn.addEventListener('click', syntaxCheck);
     robotBtn.addEventListener('click', robotClean);
-    undoBtn.addEventListener('click', editorUndo);
-    redoBtn.addEventListener('click', editorRedo);
     rightTreeRefreshBtn.addEventListener('click', () => openRightTreePanel(true));
     rightTreeCloseBtn.addEventListener('click', collapseRightTreePanel);
     leftTreeCollapseBar.addEventListener('click', () => openRightTreePanel(false));
@@ -3354,6 +3355,9 @@
         await navigator.clipboard.writeText(selected);
         setStatus('Selection copied', 'success');
     });
+
+    editorUndoBtn.addEventListener('click', editorUndo);
+    editorRedoBtn.addEventListener('click', editorRedo);
     miniLauncher.addEventListener('click', toggleMiniPanel);
     miniCloseBtn.addEventListener('click', toggleMiniPanel);
     miniSearchBtn.addEventListener('click', miniSearchExact);
