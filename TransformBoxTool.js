@@ -2373,9 +2373,16 @@ flipVerticalHandle.addEventListener(
                           rect.height *
                           stageHeight;
 
+                    const snapped =
+                          findSnapPosition(
+                              dragTarget,
+                              spriteStartX + dx,
+                              spriteStartY - dy
+                          );
+
                     dragTarget.setXY(
-                        spriteStartX + dx,
-                        spriteStartY - dy
+                        snapped.x,
+                        snapped.y
                     );
                 }
                if (
@@ -2696,9 +2703,16 @@ flipVerticalHandle.addEventListener(
                     const dx = ((e.clientX - dragStartX) / rect.width) * stageWidth;
                     const dy = ((e.clientY - dragStartY) / rect.height) * stageHeight;
 
+                    const snapped =
+                          findSnapPosition(
+                              vm.editingTarget,
+                              spriteStartX + dx,
+                              spriteStartY - dy
+                          );
+
                     vm.editingTarget.setXY(
-                        spriteStartX + dx,
-                        spriteStartY - dy
+                        snapped.x,
+                        snapped.y
                     );
                 }
             }
@@ -2718,6 +2732,186 @@ flipVerticalHandle.addEventListener(
                 y: rect.top + ((height / 2 - y) / height) * rect.height
             };
         }
+
+function offsetBounds(bounds, dx, dy) {
+    return {
+        left: bounds.left + dx,
+        right: bounds.right + dx,
+        top: bounds.top + dy,
+        bottom: bounds.bottom + dy
+    };
+}
+
+function getBoundsCenter(bounds) {
+    return {
+        x: (bounds.left + bounds.right) / 2,
+        y: (bounds.top + bounds.bottom) / 2
+    };
+}
+
+function isSnappableTarget(target, movingTarget) {
+    if (!target) return false;
+    if (target === movingTarget) return false;
+    if (target.isStage) return false;
+    if (!target.visible) return false;
+    if (target.drawableID === undefined) return false;
+
+    const drawable =
+          vm.runtime.renderer._allDrawables[
+              target.drawableID
+          ];
+
+    if (!drawable) return false;
+    if (drawable._visible === false) return false;
+
+    return true;
+}
+
+function findSnapPosition(target, desiredX, desiredY) {
+    const threshold = 8;
+
+    const renderer =
+          vm.runtime.renderer;
+
+    const movingDrawable =
+          renderer._allDrawables[
+              target.drawableID
+          ];
+
+    if (!movingDrawable) {
+        return {
+            x: desiredX,
+            y: desiredY
+        };
+    }
+
+    const currentBounds =
+          movingDrawable.getAABB();
+
+    const predictedBounds =
+          offsetBounds(
+              currentBounds,
+              desiredX - target.x,
+              desiredY - target.y
+          );
+
+    let bestX = null;
+    let bestY = null;
+
+    const movingXEdges = [
+        predictedBounds.left,
+        predictedBounds.right
+    ];
+
+    const movingYEdges = [
+        predictedBounds.top,
+        predictedBounds.bottom
+    ];
+
+    for (
+        const otherTarget of
+        vm.runtime.targets
+    ) {
+        if (
+            !isSnappableTarget(
+                otherTarget,
+                target
+            )
+        ) {
+            continue;
+        }
+
+        const otherDrawable =
+              renderer._allDrawables[
+                  otherTarget.drawableID
+              ];
+
+        if (!otherDrawable) continue;
+
+        const otherBounds =
+              otherDrawable.getAABB();
+
+        const otherXEdges = [
+            otherBounds.left,
+            otherBounds.right
+        ];
+
+        const otherYEdges = [
+            otherBounds.top,
+            otherBounds.bottom
+        ];
+
+        for (
+            const movingEdge of
+            movingXEdges
+        ) {
+            for (
+                const otherEdge of
+                otherXEdges
+            ) {
+                const delta =
+                      otherEdge -
+                      movingEdge;
+
+                if (
+                    Math.abs(delta) <= threshold &&
+                    (
+                        bestX === null ||
+                        Math.abs(delta) <
+                        Math.abs(bestX)
+                    )
+                ) {
+                    bestX =
+                        delta;
+                }
+            }
+        }
+
+        for (
+            const movingEdge of
+            movingYEdges
+        ) {
+            for (
+                const otherEdge of
+                otherYEdges
+            ) {
+                const delta =
+                      otherEdge -
+                      movingEdge;
+
+                if (
+                    Math.abs(delta) <= threshold &&
+                    (
+                        bestY === null ||
+                        Math.abs(delta) <
+                        Math.abs(bestY)
+                    )
+                ) {
+                    bestY =
+                        delta;
+                }
+            }
+        }
+    }
+
+    return {
+        x:
+            desiredX +
+            (
+                bestX === null
+                    ? 0
+                    : bestX
+            ),
+
+        y:
+            desiredY +
+            (
+                bestY === null
+                    ? 0
+                    : bestY
+            )
+    };
+}
 
         function getShearAdjustedBounds(
             bounds,
