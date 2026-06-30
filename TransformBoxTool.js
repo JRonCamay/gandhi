@@ -513,6 +513,9 @@
               if (
                   drawableID >= 0
               ) {
+                  e.preventDefault();
+                  e.stopPropagation();
+
                  dragTarget =
                      vm.runtime.targets.find(
                      t =>
