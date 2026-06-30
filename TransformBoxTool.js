@@ -290,7 +290,8 @@
         function replaceCurrentCostume(
             target,
             costume,
-            asset
+            asset,
+            canvas
         ) {
             if (
                 !target ||
@@ -319,6 +320,29 @@
             replacement.md5ext =
                 asset.assetId + ".png";
 
+            if (
+                canvas &&
+                canvas.width &&
+                canvas.height
+            ) {
+                replacement.size = [
+                    canvas.width,
+                    canvas.height
+                ];
+            }
+
+            if (
+                canvas &&
+                typeof canvas.__gandhiBakeRotationCenterX === "number" &&
+                typeof canvas.__gandhiBakeRotationCenterY === "number"
+            ) {
+                replacement.rotationCenterX =
+                    canvas.__gandhiBakeRotationCenterX;
+
+                replacement.rotationCenterY =
+                    canvas.__gandhiBakeRotationCenterY;
+            }
+
             target.sprite.costumes[
                 target.currentCostume
             ] = replacement;
@@ -333,8 +357,12 @@
             vm.runtime.requestRedraw();
         }
 
-        function bakeCurrentCostume(callback) {
+        function bakeCurrentCostume(
+            callback,
+            targetOverride
+        ) {
             const target =
+                  targetOverride ||
                   vm.editingTarget;
 
             const costume =
@@ -378,16 +406,20 @@
                         0
                     );
 
+                    let afterBake =
+                        null;
+
                     if (
                         typeof callback === "function"
                     ) {
-                        callback(
-                            canvas,
-                            ctx,
-                            image,
-                            costume,
-                            target
-                        );
+                        afterBake =
+                            callback(
+                                canvas,
+                                ctx,
+                                image,
+                                costume,
+                                target
+                            );
                     }
 
                     exportCanvas(
@@ -401,8 +433,15 @@
                             replaceCurrentCostume(
                                 target,
                                 costume,
-                                asset
+                                asset,
+                                canvas
                             );
+
+                            if (
+                                typeof afterBake === "function"
+                            ) {
+                                afterBake();
+                            }
 
                             console.log(
                                 "Asset Bake Engine Ready"
@@ -1799,10 +1838,48 @@ function createSkewSession(e) {
         },
 
         onUp() {
+            const finalShearX =
+                  activeShearBridge
+                      ? activeShearBridge.shearX
+                      : 0;
+
+            const finalShearY =
+                  activeShearBridge
+                      ? activeShearBridge.shearY
+                      : 0;
+
             activeShearBridge = null;
             this.destroy();
             activeSkewSession = null;
-            updateSelectionBox();
+
+            this.drawable.setTransformDirty();
+
+            this.target.setXY(
+                this.target.x,
+                this.target.y
+            );
+
+            this.target.emitVisualChange();
+            vm.runtime.requestRedraw();
+
+            AssetBakeEngine.bakeCurrentCostume(
+                (
+                    canvas,
+                    ctx,
+                    image,
+                    costume
+                ) => {
+                    bakeSkewToCanvas(
+                        canvas,
+                        costume,
+                        finalShearX,
+                        finalShearY
+                    );
+
+                    return updateSelectionBox;
+                },
+                this.target
+            );
         },
 
         destroy() {
@@ -1830,6 +1907,175 @@ function createSkewSession(e) {
     activeSkewSession = session;
 
     return session;
+}
+
+function bakeSkewToCanvas(
+    canvas,
+    costume,
+    shearX,
+    shearY
+) {
+    if (
+        !shearX &&
+        !shearY
+    ) {
+        return;
+    }
+
+    const width =
+          canvas.width;
+
+    const height =
+          canvas.height;
+
+    const source =
+          document.createElement("canvas");
+
+    source.width =
+        width;
+
+    source.height =
+        height;
+
+    const sourceCtx =
+          source.getContext("2d");
+
+    sourceCtx.drawImage(
+        canvas,
+        0,
+        0
+    );
+
+    const cx =
+          width / 2;
+
+    const cy =
+          height / 2;
+
+    const points = [
+        [0, 0],
+        [width, 0],
+        [width, height],
+        [0, height]
+    ].map(
+        point => {
+            const x =
+                  point[0];
+
+            const y =
+                  point[1];
+
+            return {
+                x:
+                    x +
+                    (
+                        y -
+                        cy
+                    ) *
+                    shearX,
+
+                y:
+                    y +
+                    (
+                        x -
+                        cx
+                    ) *
+                    shearY
+            };
+        }
+    );
+
+    const minX =
+          Math.floor(
+              Math.min(
+                  ...points.map(point => point.x)
+              )
+          );
+
+    const minY =
+          Math.floor(
+              Math.min(
+                  ...points.map(point => point.y)
+              )
+          );
+
+    const maxX =
+          Math.ceil(
+              Math.max(
+                  ...points.map(point => point.x)
+              )
+          );
+
+    const maxY =
+          Math.ceil(
+              Math.max(
+                  ...points.map(point => point.y)
+              )
+          );
+
+    canvas.width =
+        Math.max(
+            1,
+            maxX - minX
+        );
+
+    canvas.height =
+        Math.max(
+            1,
+            maxY - minY
+        );
+
+    const ctx =
+          canvas.getContext("2d");
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    ctx.setTransform(
+        1,
+        shearY,
+        shearX,
+        1,
+        -shearX * cy - minX,
+        -shearY * cx - minY
+    );
+
+    ctx.drawImage(
+        source,
+        0,
+        0
+    );
+
+    ctx.setTransform(
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+    );
+
+    const rotationCenterX =
+          typeof costume.rotationCenterX === "number"
+              ? costume.rotationCenterX
+              : cx;
+
+    const rotationCenterY =
+          typeof costume.rotationCenterY === "number"
+              ? costume.rotationCenterY
+              : cy;
+
+    canvas.__gandhiBakeRotationCenterX =
+        rotationCenterX -
+        minX;
+
+    canvas.__gandhiBakeRotationCenterY =
+        rotationCenterY -
+        minY;
 }
 
 function applyTargetVisualFlipX(target) {
