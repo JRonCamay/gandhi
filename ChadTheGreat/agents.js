@@ -34,6 +34,10 @@ window.Chad = window.Chad || {};
         return "gandhi_chad_selected_agent_v1:" + chatKey();
     }
 
+    function expandedKey() {
+        return "gandhi_chad_expanded_agent_v1:" + chatKey();
+    }
+
     function loadJSON(key, fallback) {
         try {
             const raw = localStorage.getItem(key);
@@ -56,6 +60,12 @@ window.Chad = window.Chad || {};
         );
     }
 
+    function currentChatUrl() {
+        return location.href.includes("/c/")
+            ? location.href.split("#")[0]
+            : "https://chatgpt.com/";
+    }
+
     function defaultAgents() {
         return [
             {
@@ -63,9 +73,7 @@ window.Chad = window.Chad || {};
                 icon: "👩🏼",
                 name: "Brenda",
                 description: "Chad architect and developer.",
-                chatUrl: location.href.includes("/c/")
-                    ? location.href
-                    : "https://chatgpt.com/",
+                chatUrl: currentChatUrl(),
                 files: [],
                 createdAt: nowStamp(),
                 updatedAt: nowStamp()
@@ -83,15 +91,45 @@ window.Chad = window.Chad || {};
         ];
     }
 
+    function migrateAgents(agents) {
+        let changed = false;
+        const current = currentChatUrl();
+
+        for (const agent of agents) {
+            if (!agent.files) {
+                agent.files = [];
+                changed = true;
+            }
+
+            if (
+                agent.id === "agent-brenda" &&
+                current.includes("/c/") &&
+                (!agent.chatUrl || agent.chatUrl === "https://chatgpt.com/")
+            ) {
+                agent.chatUrl = current;
+                agent.updatedAt = nowStamp();
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            saveJSON(storageKey(), agents);
+        }
+
+        return agents;
+    }
+
     function getAgents() {
         const agents = loadJSON(
             storageKey(),
             defaultAgents()
         );
 
-        return Array.isArray(agents)
-            ? agents
-            : defaultAgents();
+        if (!Array.isArray(agents)) {
+            return defaultAgents();
+        }
+
+        return migrateAgents(agents);
     }
 
     function saveAgents(agents) {
@@ -111,6 +149,18 @@ window.Chad = window.Chad || {};
 
     function setSelectedAgentId(id) {
         localStorage.setItem(selectedKey(), id || "");
+    }
+
+    function getExpandedAgentId() {
+        return localStorage.getItem(expandedKey()) || "";
+    }
+
+    function setExpandedAgentId(id) {
+        localStorage.setItem(expandedKey(), id || "");
+    }
+
+    function collapseAgents() {
+        setExpandedAgentId("");
     }
 
     function getSelectedAgent() {
@@ -361,6 +411,7 @@ window.Chad = window.Chad || {};
         agent.files = mergeFiles(agent.files || [], found);
         agent.updatedAt = nowStamp();
         saveAgents(agents);
+        collapseAgents();
 
         if (window.Chad.ui && window.Chad.ui.render) {
             window.Chad.ui.render();
@@ -392,6 +443,7 @@ window.Chad = window.Chad || {};
         agents.push(agent);
         saveAgents(agents);
         setSelectedAgentId(agent.id);
+        setExpandedAgentId(agent.id);
         window.Chad.ui.render();
     }
 
@@ -414,6 +466,7 @@ window.Chad = window.Chad || {};
 
         saveAgents(finalAgents);
         setSelectedAgentId(finalAgents[0].id);
+        collapseAgents();
         window.Chad.ui.render();
     }
 
@@ -461,6 +514,25 @@ window.Chad = window.Chad || {};
         agent.chatUrl = chatUrl.trim();
         agent.updatedAt = nowStamp();
 
+        saveAgents(agents);
+        window.Chad.ui.render();
+    }
+
+    function useCurrentChatForAgent(agentId) {
+        const agents = getAgents();
+        const agent = agents.find(item => item.id === agentId);
+
+        if (!agent) {
+            return;
+        }
+
+        if (!location.href.includes("/c/")) {
+            alert("Open the target ChatGPT conversation first.");
+            return;
+        }
+
+        agent.chatUrl = currentChatUrl();
+        agent.updatedAt = nowStamp();
         saveAgents(agents);
         window.Chad.ui.render();
     }
@@ -536,7 +608,9 @@ window.Chad = window.Chad || {};
         const createEl = window.Chad.ui.createEl;
         const button = window.Chad.ui.button;
         const selectedId = getSelectedAgentId();
+        const expandedId = getExpandedAgentId();
         const selected = agent.id === selectedId;
+        const expanded = selected && agent.id === expandedId;
 
         const box = createEl("div", {
             style: {
@@ -558,7 +632,7 @@ window.Chad = window.Chad || {};
         }, [
             createEl("button", {
                 html:
-                    `${escapeHTML(agent.icon || "🤖")} <b>${escapeHTML(agent.name || "Agent")}</b>`,
+                    `${expanded ? "▾" : "▸"} ${escapeHTML(agent.icon || "🤖")} <b>${escapeHTML(agent.name || "Agent")}</b>`,
                 title: agent.description || "",
                 style: {
                     flex: "1",
@@ -571,6 +645,7 @@ window.Chad = window.Chad || {};
                 },
                 onclick: () => {
                     setSelectedAgentId(agent.id);
+                    setExpandedAgentId(agent.id);
                     window.Chad.ui.render();
                     openAgentTab(agent).catch(error => {
                         alert("Could not open agent tab.\n\n" + error.message);
@@ -598,7 +673,18 @@ window.Chad = window.Chad || {};
             }));
         }
 
-        if (selected) {
+        if (selected && !expanded) {
+            box.appendChild(createEl("div", {
+                text: "Selected. Click agent to open/expand.",
+                style: {
+                    color: "#64748b",
+                    fontSize: "11px",
+                    padding: "5px 2px 0"
+                }
+            }));
+        }
+
+        if (expanded) {
             box.appendChild(createEl("div", {
                 style: {
                     display: "flex",
@@ -614,6 +700,21 @@ window.Chad = window.Chad || {};
                         bg: "#dcfce7",
                         border: "#86efac",
                         bold: true
+                    }
+                ),
+                button(
+                    "COLLAPSE",
+                    () => {
+                        collapseAgents();
+                        window.Chad.ui.render();
+                    }
+                ),
+                button(
+                    "USE THIS CHAT",
+                    () => useCurrentChatForAgent(agent.id),
+                    {
+                        bg: "#e0f2fe",
+                        border: "#7dd3fc"
                     }
                 ),
                 button(
@@ -883,6 +984,7 @@ window.Chad = window.Chad || {};
     agentsModule.openAgentTab = openAgentTab;
     agentsModule.ensureChatiesGroup = ensureChatiesGroup;
     agentsModule.renderChatiesBody = renderChatiesBody;
+    agentsModule.collapseAgents = collapseAgents;
     agentsModule.patchUI = patchUI;
 
     window.Chad.agents = agentsModule;
