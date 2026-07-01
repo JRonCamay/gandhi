@@ -163,6 +163,19 @@ window.Chad = window.Chad || {};
         setExpandedAgentId("");
     }
 
+    function toggleAgentCollapse(agentId) {
+        setSelectedAgentId(agentId);
+
+        if (getExpandedAgentId() === agentId) {
+            collapseAgents();
+        }
+        else {
+            setExpandedAgentId(agentId);
+        }
+
+        window.Chad.ui.render();
+    }
+
     function getSelectedAgent() {
         const agents = getAgents();
         const selectedId = getSelectedAgentId();
@@ -411,7 +424,6 @@ window.Chad = window.Chad || {};
         agent.files = mergeFiles(agent.files || [], found);
         agent.updatedAt = nowStamp();
         saveAgents(agents);
-        collapseAgents();
 
         if (window.Chad.ui && window.Chad.ui.render) {
             window.Chad.ui.render();
@@ -631,8 +643,26 @@ window.Chad = window.Chad || {};
             }
         }, [
             createEl("button", {
+                text: expanded ? "▾" : "▸",
+                title: expanded ? "Collapse" : "Expand",
+                style: {
+                    width: "24px",
+                    height: "24px",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: "6px",
+                    background: "#ffffff",
+                    cursor: "pointer",
+                    color: "#0f172a"
+                },
+                onclick: event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    toggleAgentCollapse(agent.id);
+                }
+            }),
+            createEl("button", {
                 html:
-                    `${expanded ? "▾" : "▸"} ${escapeHTML(agent.icon || "🤖")} <b>${escapeHTML(agent.name || "Agent")}</b>`,
+                    `${escapeHTML(agent.icon || "🤖")} <b>${escapeHTML(agent.name || "Agent")}</b>`,
                 title: agent.description || "",
                 style: {
                     flex: "1",
@@ -675,7 +705,7 @@ window.Chad = window.Chad || {};
 
         if (selected && !expanded) {
             box.appendChild(createEl("div", {
-                text: "Selected. Click agent to open/expand.",
+                text: "Selected. Click agent name to open chat. Click arrow to expand only.",
                 style: {
                     color: "#64748b",
                     fontSize: "11px",
@@ -900,6 +930,45 @@ window.Chad = window.Chad || {};
         }
     }
 
+    function unifyRulesButton() {
+        const panel = document.querySelector("#gandhi-chad-panel");
+
+        if (!panel || panel.querySelector("#gandhi-chad-god-rules")) {
+            return;
+        }
+
+        const buttons = Array.from(panel.querySelectorAll("button"));
+        const rulesButton = buttons.find(btn => btn.textContent.trim() === "RULES");
+        const chatRulesButton = buttons.find(btn => btn.textContent.trim() === "CHAT RULES");
+
+        if (!rulesButton || !chatRulesButton || !rulesButton.parentElement) {
+            return;
+        }
+
+        const godButton = window.Chad.ui.button(
+            "GOD RULES",
+            () => {
+                const text =
+                    (window.Chad.data.companionRules || "") +
+                    "\n\n\n" +
+                    (window.Chad.data.chatRules || "");
+
+                window.Chad.actions.copyText(text);
+                alert("God Rules copied.");
+            },
+            {
+                bg: "#ede9fe",
+                border: "#c4b5fd",
+                bold: true
+            }
+        );
+
+        godButton.id = "gandhi-chad-god-rules";
+        rulesButton.parentElement.insertBefore(godButton, rulesButton);
+        rulesButton.remove();
+        chatRulesButton.remove();
+    }
+
     function injectChatiesTabButton() {
         const panel = document.querySelector("#gandhi-chad-panel");
 
@@ -941,6 +1010,7 @@ window.Chad = window.Chad || {};
     }
 
     function postProcessUI() {
+        unifyRulesButton();
         replaceCloseAndMinimizeButtons();
         injectChatiesTabButton();
 
