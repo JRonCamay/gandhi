@@ -1672,6 +1672,10 @@
             let lastUniformRatio = 1;
             let visualFlipX = false;
             let transformTarget = null;
+            const snapLock = {
+                x: null,
+                y: null
+            };
 
             // --- CLICK & HOLD SLIDER INTEGRATION FOR INSTANT REVEAL ---
 
@@ -2330,6 +2334,12 @@
                     dragTarget =
                     null;
 
+                    snapLock.x =
+                    null;
+
+                    snapLock.y =
+                    null;
+
                     window.Transfork.snapVisuals.clear();
                 }
             );
@@ -2825,6 +2835,70 @@
                 };
             }
 
+            function getSnapEdgeDelta(
+                otherBounds,
+                bounds,
+                sourceEdge,
+                targetEdge
+            ) {
+                return otherBounds[sourceEdge] -
+                bounds[targetEdge];
+            }
+
+            function getLockedSnap(
+                lock,
+                bounds,
+                renderer,
+                snapDistance,
+                releaseDistance
+            ) {
+                if (
+                    !lock ||
+                    !lock.target ||
+                    lock.target.visible === false
+                ) {
+                    return null;
+                }
+
+                const otherDrawable =
+                renderer._allDrawables[
+                    lock.target.drawableID
+                ];
+
+                if (
+                    !otherDrawable ||
+                    otherDrawable._visible === false
+                ) {
+                    return null;
+                }
+
+                const otherBounds =
+                otherDrawable.getAABB();
+
+                const delta =
+                getSnapEdgeDelta(
+                    otherBounds,
+                    bounds,
+                    lock.sourceEdge,
+                    lock.targetEdge
+                );
+
+                if (
+                    Math.abs(delta) >
+                    snapDistance + releaseDistance
+                ) {
+                    return null;
+                }
+
+                return {
+                    delta,
+                    bounds: otherBounds,
+                    target: lock.target,
+                    sourceEdge: lock.sourceEdge,
+                    targetEdge: lock.targetEdge
+                };
+            }
+
             function findSnapPosition(target, desiredX, desiredY) {
                 const renderer =
                 vm.runtime.renderer;
@@ -2873,9 +2947,21 @@
                 null;
                 let snapXTarget =
                 null;
+                let snapXOtherTarget =
+                null;
+                let snapXSourceEdge =
+                null;
+                let snapXTargetEdge =
+                null;
                 let snapY =
                 null;
                 let snapYTarget =
+                null;
+                let snapYOtherTarget =
+                null;
+                let snapYSourceEdge =
+                null;
+                let snapYTargetEdge =
                 null;
                 const snapCandidates = {
                     left: null,
@@ -2916,18 +3002,26 @@
                         [
                             {
                                 side: "left",
+                                sourceEdge: "left",
+                                targetEdge: "left",
                                 delta: otherBounds.left - bounds.left
                             },
                             {
                                 side: "left",
+                                sourceEdge: "right",
+                                targetEdge: "left",
                                 delta: otherBounds.right - bounds.left
                             },
                             {
                                 side: "right",
+                                sourceEdge: "left",
+                                targetEdge: "right",
                                 delta: otherBounds.left - bounds.right
                             },
                             {
                                 side: "right",
+                                sourceEdge: "right",
+                                targetEdge: "right",
                                 delta: otherBounds.right - bounds.right
                             }
                         ].forEach(
@@ -2962,6 +3056,15 @@
 
                                     snapXTarget =
                                     otherBounds;
+
+                                    snapXOtherTarget =
+                                    otherTarget;
+
+                                    snapXSourceEdge =
+                                    candidate.sourceEdge;
+
+                                    snapXTargetEdge =
+                                    candidate.targetEdge;
                                 }
                             }
                         );
@@ -2969,18 +3072,26 @@
                         [
                             {
                                 side: "top",
+                                sourceEdge: "top",
+                                targetEdge: "top",
                                 delta: otherBounds.top - bounds.top
                             },
                             {
                                 side: "top",
+                                sourceEdge: "bottom",
+                                targetEdge: "top",
                                 delta: otherBounds.bottom - bounds.top
                             },
                             {
                                 side: "bottom",
+                                sourceEdge: "top",
+                                targetEdge: "bottom",
                                 delta: otherBounds.top - bounds.bottom
                             },
                             {
                                 side: "bottom",
+                                sourceEdge: "bottom",
+                                targetEdge: "bottom",
                                 delta: otherBounds.bottom - bounds.bottom
                             }
                         ].forEach(
@@ -3015,6 +3126,15 @@
 
                                     snapYTarget =
                                     otherBounds;
+
+                                    snapYOtherTarget =
+                                    otherTarget;
+
+                                    snapYSourceEdge =
+                                    candidate.sourceEdge;
+
+                                    snapYTargetEdge =
+                                    candidate.targetEdge;
                                 }
                             }
                         );
@@ -3042,6 +3162,18 @@
                         snapY =
                         topDelta;
 
+                        snapYTarget =
+                        snapXTarget;
+
+                        snapYOtherTarget =
+                        snapXOtherTarget;
+
+                        snapYSourceEdge =
+                        "top";
+
+                        snapYTargetEdge =
+                        "top";
+
                     }
                     else if (
                         Math.abs(bottomDelta) <=
@@ -3050,6 +3182,18 @@
 
                         snapY =
                         bottomDelta;
+
+                        snapYTarget =
+                        snapXTarget;
+
+                        snapYOtherTarget =
+                        snapXOtherTarget;
+
+                        snapYSourceEdge =
+                        "bottom";
+
+                        snapYTargetEdge =
+                        "bottom";
 
                     }
 
@@ -3077,6 +3221,18 @@
                         snapX =
                         leftDelta;
 
+                        snapXTarget =
+                        snapYTarget;
+
+                        snapXOtherTarget =
+                        snapYOtherTarget;
+
+                        snapXSourceEdge =
+                        "left";
+
+                        snapXTargetEdge =
+                        "left";
+
                     }
                     else if (
                         Math.abs(rightDelta) <=
@@ -3086,9 +3242,96 @@
                         snapX =
                         rightDelta;
 
+                        snapXTarget =
+                        snapYTarget;
+
+                        snapXOtherTarget =
+                        snapYOtherTarget;
+
+                        snapXSourceEdge =
+                        "right";
+
+                        snapXTargetEdge =
+                        "right";
+
                     }
 
                 }
+                const releaseDistance =
+                6;
+
+                const lockedX =
+                getLockedSnap(
+                    snapLock.x,
+                    bounds,
+                    renderer,
+                    snapDistance,
+                    releaseDistance
+                );
+
+                if (lockedX) {
+                    snapX =
+                    lockedX.delta;
+
+                    snapXTarget =
+                    lockedX.bounds;
+
+                    snapLock.x.delta =
+                    lockedX.delta;
+                }
+                else if (
+                    snapX !== null &&
+                    snapXOtherTarget
+                ) {
+                    snapLock.x =
+                    {
+                        target: snapXOtherTarget,
+                        sourceEdge: snapXSourceEdge,
+                        targetEdge: snapXTargetEdge,
+                        delta: snapX
+                    };
+                }
+                else {
+                    snapLock.x =
+                    null;
+                }
+
+                const lockedY =
+                getLockedSnap(
+                    snapLock.y,
+                    bounds,
+                    renderer,
+                    snapDistance,
+                    releaseDistance
+                );
+
+                if (lockedY) {
+                    snapY =
+                    lockedY.delta;
+
+                    snapYTarget =
+                    lockedY.bounds;
+
+                    snapLock.y.delta =
+                    lockedY.delta;
+                }
+                else if (
+                    snapY !== null &&
+                    snapYOtherTarget
+                ) {
+                    snapLock.y =
+                    {
+                        target: snapYOtherTarget,
+                        sourceEdge: snapYSourceEdge,
+                        targetEdge: snapYTargetEdge,
+                        delta: snapY
+                    };
+                }
+                else {
+                    snapLock.y =
+                    null;
+                }
+
                 const snapResult = {
                     x:
                     desiredX +
