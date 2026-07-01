@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ChadTheGreat",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Chat-local project companion for ChatGPT.",
   "permissions": [
     "tabs",
@@ -30,9 +30,7 @@
         "actions.js",
         "ui.js",
         "bridge.js",
-        "agents.js",
         "paint.js",
-        "stabilizer.js",
         "content.js"
       ],
       "run_at": "document_idle"
