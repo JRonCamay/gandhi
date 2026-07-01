@@ -24,17 +24,14 @@ window.Chad = window.Chad || {};
 
             chrome.runtime.sendMessage(message, response => {
                 const error = chrome.runtime.lastError;
-
                 if (error) {
                     reject(new Error(error.message));
                     return;
                 }
-
                 if (response && response.ok === false) {
                     reject(new Error(response.error || "Extension command failed."));
                     return;
                 }
-
                 resolve(response || { ok: true });
             });
         });
@@ -43,40 +40,34 @@ window.Chad = window.Chad || {};
     bridge.isExtension = hasExtensionRuntime;
 
     bridge.openAgentTab = function (agent) {
-        return sendMessage({
-            type: "CHAD_OPEN_AGENT_TAB",
-            agent
-        });
+        return sendMessage({ type: "CHAD_OPEN_AGENT_TAB", agent });
     };
 
     bridge.groupCurrentTab = function () {
-        return sendMessage({
-            type: "CHAD_GROUP_CURRENT_TAB"
-        });
+        return sendMessage({ type: "CHAD_GROUP_CURRENT_TAB" });
+    };
+
+    bridge.doneTabFeedback = function () {
+        return sendMessage({ type: "CHAD_DONE_TAB_FEEDBACK" });
+    };
+
+    bridge.resetTabFeedback = function () {
+        return sendMessage({ type: "CHAD_RESET_TAB_FEEDBACK" });
     };
 
     function patchWindowOpen() {
-        if (window.__ChadBridgeWindowOpenPatched) {
-            return;
-        }
-
+        if (window.__ChadBridgeWindowOpenPatched) return;
         window.__ChadBridgeWindowOpenPatched = true;
 
         window.open = function (url, target, features) {
             const isAgentOpen = String(target || "").startsWith("chad_agent_");
-
             if (isAgentOpen && hasExtensionRuntime()) {
-                bridge.openAgentTab({
-                    id: target,
-                    chatUrl: String(url || "")
-                }).catch(error => {
+                bridge.openAgentTab({ id: target, chatUrl: String(url || "") }).catch(error => {
                     console.warn("[ChadBridge] openAgentTab failed", error);
                     originalOpen(url, target, features);
                 });
-
                 return null;
             }
-
             return originalOpen(url, target, features);
         };
     }
