@@ -5,6 +5,7 @@ window.Chad = window.Chad || {};
 
     const agentsModule = {};
     const CHATIES_GROUP_NAME = "Chaties";
+    let dockButton = null;
 
     function nowStamp() {
         if (
@@ -137,6 +138,17 @@ window.Chad = window.Chad || {};
         }
     }
 
+    function normalizeUrl(url) {
+        try {
+            const parsed = new URL(url);
+            parsed.hash = "";
+            return parsed.href;
+        }
+        catch {
+            return String(url || "").split("#")[0];
+        }
+    }
+
     function canUseChromeTabs() {
         return Boolean(
             typeof chrome !== "undefined" &&
@@ -178,7 +190,7 @@ window.Chad = window.Chad || {};
             )
         );
 
-        let group = groups && groups[0];
+        const group = groups && groups[0];
 
         if (!group) {
             const groupId = await chromeAsync(callback =>
@@ -220,30 +232,34 @@ window.Chad = window.Chad || {};
         }
 
         if (!canUseChromeTabs()) {
-            window.open(agent.chatUrl, "_blank");
+            window.open(
+                agent.chatUrl,
+                "chad_agent_" + agent.id
+            );
             return;
         }
 
+        const targetUrl = normalizeUrl(agent.chatUrl);
         const tabs = await chromeAsync(callback =>
             chrome.tabs.query({}, callback)
         );
 
-        const exact = tabs.find(tab =>
-            tab.url && tab.url.split("#")[0] === agent.chatUrl.split("#")[0]
+        const existing = tabs.find(tab =>
+            tab.url && normalizeUrl(tab.url) === targetUrl
         );
 
-        if (exact) {
-            await ensureChatiesGroup(exact.id);
+        if (existing) {
+            await ensureChatiesGroup(existing.id);
             await chromeAsync(callback =>
                 chrome.tabs.update(
-                    exact.id,
+                    existing.id,
                     { active: true },
                     callback
                 )
             );
             await chromeAsync(callback =>
                 chrome.windows.update(
-                    exact.windowId,
+                    existing.windowId,
                     { focused: true },
                     callback
                 )
@@ -393,8 +409,11 @@ window.Chad = window.Chad || {};
         }
 
         const nextAgents = agents.filter(item => item.id !== selectedId);
-        saveAgents(nextAgents.length ? nextAgents : defaultAgents());
-        setSelectedAgentId((nextAgents[0] || defaultAgents()[0]).id);
+        const defaults = defaultAgents();
+        const finalAgents = nextAgents.length ? nextAgents : defaults;
+
+        saveAgents(finalAgents);
+        setSelectedAgentId(finalAgents[0].id);
         window.Chad.ui.render();
     }
 
@@ -600,6 +619,14 @@ window.Chad = window.Chad || {};
                 button(
                     "COPY LINK",
                     () => window.Chad.actions.copyText(agent.chatUrl || "")
+                ),
+                button(
+                    "DELETE AGENT",
+                    deleteSelectedAgent,
+                    {
+                        bg: "#fee2e2",
+                        border: "#fecaca"
+                    }
                 )
             ]));
 
@@ -625,97 +652,209 @@ window.Chad = window.Chad || {};
         return box;
     }
 
-    function renderAgentsPanel() {
+    function renderChatiesBody() {
         const createEl = window.Chad.ui.createEl;
         const button = window.Chad.ui.button;
         const agents = getAgents();
 
-        return createEl("div", {
-            id: "gandhi-chad-agents-panel",
+        const body = createEl("div", {
             style: {
-                padding: "8px 9px",
-                borderBottom: "1px solid #cbd5e1",
+                padding: "8px",
+                overflowY: "auto",
+                height: "calc(100vh - 158px)",
                 background: "#ffffff"
+            }
+        });
+
+        body.appendChild(createEl("div", {
+            style: {
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "7px"
             }
         }, [
             createEl("div", {
+                html:
+                    "<b>Chaties</b><br>" +
+                    `<span style=\"color:#64748b\">${canUseChromeTabs() ? "Uses Chrome tab group: Chaties." : "Userscript mode: named tabs only. Tab group needs extension mode."}</span>`,
                 style: {
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "5px"
-                }
-            }, [
-                createEl("div", {
-                    text: "Agents",
-                    style: {
-                        fontWeight: "800",
-                        color: "#0f172a"
-                    }
-                }),
-                createEl("div", {
-                    style: {
-                        display: "flex",
-                        gap: "4px"
-                    }
-                }, [
-                    button(
-                        "+",
-                        addAgent,
-                        {
-                            bg: "#dcfce7",
-                            border: "#86efac",
-                            bold: true,
-                            title: "Add agent"
-                        }
-                    ),
-                    button(
-                        "-",
-                        deleteSelectedAgent,
-                        {
-                            bg: "#fee2e2",
-                            border: "#fecaca",
-                            bold: true,
-                            title: "Delete selected agent"
-                        }
-                    )
-                ])
-            ]),
-            createEl("div", {
-                text: canUseChromeTabs()
-                    ? "Opens chats in the Chaties tab group."
-                    : "Userscript mode: opens the agent link in a tab. Chrome tab grouping needs extension mode.",
-                style: {
-                    color: "#64748b",
-                    fontSize: "10.5px",
-                    marginBottom: "5px"
+                    lineHeight: "1.35"
                 }
             }),
-            ...agents.map(renderAgent)
-        ]);
+            createEl("div", {
+                style: {
+                    display: "flex",
+                    gap: "4px"
+                }
+            }, [
+                button(
+                    "+",
+                    addAgent,
+                    {
+                        bg: "#dcfce7",
+                        border: "#86efac",
+                        bold: true,
+                        title: "Add agent"
+                    }
+                )
+            ])
+        ]));
+
+        for (const agent of agents) {
+            body.appendChild(renderAgent(agent));
+        }
+
+        return body;
     }
 
-    function injectAgentsPanel() {
+    function ensureDockButton() {
+        if (dockButton) {
+            return dockButton;
+        }
+
+        dockButton = document.createElement("button");
+        dockButton.id = "gandhi-chad-dock-button";
+        dockButton.textContent = "😎";
+        dockButton.title = "Open Chad";
+
+        Object.assign(dockButton.style, {
+            position: "fixed",
+            right: "18px",
+            bottom: "18px",
+            width: "46px",
+            height: "46px",
+            borderRadius: "50%",
+            border: "1px solid #94a3b8",
+            background: "#0f172a",
+            color: "#ffffff",
+            fontSize: "24px",
+            cursor: "pointer",
+            zIndex: "999999",
+            boxShadow: "0 8px 22px rgba(15,23,42,.28)"
+        });
+
+        dockButton.addEventListener("click", () => {
+            const panel = document.querySelector("#gandhi-chad-panel");
+
+            if (panel) {
+                panel.style.display = "block";
+            }
+
+            dockButton.style.display = "none";
+        });
+
+        document.body.appendChild(dockButton);
+        return dockButton;
+    }
+
+    function dockPanel() {
+        const panel = document.querySelector("#gandhi-chad-panel");
+
+        if (panel) {
+            panel.style.display = "none";
+        }
+
+        ensureDockButton().style.display = "block";
+    }
+
+    function replaceCloseAndMinimizeButtons() {
         const panel = document.querySelector("#gandhi-chad-panel");
 
         if (!panel) {
             return;
         }
 
-        if (document.querySelector("#gandhi-chad-agents-panel")) {
-            return;
-        }
-
-        const header = panel.firstElementChild;
-
-        if (!header) {
-            return;
-        }
-
-        header.insertAdjacentElement(
-            "afterend",
-            renderAgentsPanel()
+        const buttons = Array.from(panel.querySelectorAll("button"));
+        const closeButton = buttons.find(btn => btn.textContent.trim() === "✕");
+        const minimizeButton = buttons.find(btn =>
+            btn.textContent.trim() === "—" ||
+            btn.textContent.trim() === "□"
         );
+
+        if (closeButton && !closeButton.dataset.chadDockPatched) {
+            const replacement = closeButton.cloneNode(true);
+            replacement.dataset.chadDockPatched = "1";
+            replacement.textContent = "✕";
+            replacement.title = "Dock Chad";
+            replacement.addEventListener("click", event => {
+                event.preventDefault();
+                event.stopPropagation();
+                dockPanel();
+            });
+            closeButton.replaceWith(replacement);
+        }
+
+        if (minimizeButton && !minimizeButton.dataset.chadDrawPatched) {
+            const replacement = minimizeButton.cloneNode(true);
+            replacement.dataset.chadDrawPatched = "1";
+            replacement.textContent = "🎨";
+            replacement.title = "Drawing tool coming next";
+            replacement.addEventListener("click", event => {
+                event.preventDefault();
+                event.stopPropagation();
+                alert("Drawing tool is next.");
+            });
+            minimizeButton.replaceWith(replacement);
+        }
+    }
+
+    function injectChatiesTabButton() {
+        const panel = document.querySelector("#gandhi-chad-panel");
+
+        if (!panel) {
+            return;
+        }
+
+        if (panel.querySelector("#gandhi-chad-chaties-tab")) {
+            return;
+        }
+
+        const scanButton = Array.from(panel.querySelectorAll("button"))
+            .find(btn => btn.textContent.trim() === "Scan");
+
+        if (!scanButton || !scanButton.parentElement) {
+            return;
+        }
+
+        const state = window.Chad.storage.state;
+        const buttonEl = window.Chad.ui.button(
+            "Chaties",
+            () => {
+                state.activeTab = "chaties";
+                window.Chad.ui.render();
+            },
+            {
+                bg: state.activeTab === "chaties" ? "#2563eb" : "#ffffff",
+                color: state.activeTab === "chaties" ? "#ffffff" : "#0f172a",
+                border: state.activeTab === "chaties" ? "#2563eb" : "#cbd5e1",
+                bold: state.activeTab === "chaties"
+            }
+        );
+
+        buttonEl.id = "gandhi-chad-chaties-tab";
+        scanButton.parentElement.insertBefore(
+            buttonEl,
+            scanButton.parentElement.firstChild
+        );
+    }
+
+    function postProcessUI() {
+        replaceCloseAndMinimizeButtons();
+        injectChatiesTabButton();
+
+        const state = window.Chad.storage.state;
+        const panel = document.querySelector("#gandhi-chad-panel");
+
+        if (!panel || state.activeTab !== "chaties") {
+            return;
+        }
+
+        if (!panel.querySelector("#gandhi-chad-chaties-body")) {
+            const body = renderChatiesBody();
+            body.id = "gandhi-chad-chaties-body";
+            panel.appendChild(body);
+        }
     }
 
     function patchUI() {
@@ -730,7 +869,7 @@ window.Chad = window.Chad || {};
 
         window.Chad.ui.render = function () {
             originalRender.apply(window.Chad.ui, arguments);
-            injectAgentsPanel();
+            postProcessUI();
         };
 
         window.Chad.ui.__agentsPatched = true;
@@ -742,6 +881,8 @@ window.Chad = window.Chad || {};
     agentsModule.scanVisibleChatFiles = scanVisibleChatFiles;
     agentsModule.saveScannedFilesToSelectedAgent = saveScannedFilesToSelectedAgent;
     agentsModule.openAgentTab = openAgentTab;
+    agentsModule.ensureChatiesGroup = ensureChatiesGroup;
+    agentsModule.renderChatiesBody = renderChatiesBody;
     agentsModule.patchUI = patchUI;
 
     window.Chad.agents = agentsModule;
