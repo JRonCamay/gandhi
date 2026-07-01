@@ -37,22 +37,51 @@ async function setChatiesColor(color) {
     if (group) await chrome.tabGroups.update(group.id, { color });
 }
 
-async function openAgentTab(agent) {
+async function focusTab(tab) {
+    await ensureChatiesGroup(tab.id);
+    await chrome.tabs.update(tab.id, { active: true });
+    await chrome.windows.update(tab.windowId, { focused: true });
+}
+
+async function reloadTabSafe(tabId) {
+    try {
+        await chrome.tabs.reload(tabId, { bypassCache: true });
+    }
+    catch {}
+}
+
+async function closeDuplicateTabs(tabs, keepId) {
+    const duplicates = tabs.filter(tab => tab.id !== keepId).map(tab => tab.id);
+    if (duplicates.length) {
+        await chrome.tabs.remove(duplicates);
+    }
+}
+
+async function openAgentTab(agent, senderTab) {
     if (!agent || !agent.chatUrl) throw new Error("Missing agent chat URL.");
 
     const targetUrl = normalizeUrl(agent.chatUrl);
+    const senderUrl = senderTab && senderTab.url ? normalizeUrl(senderTab.url) : "";
     const tabs = await chrome.tabs.query({});
-    const existing = tabs.find(tab => tab.url && normalizeUrl(tab.url) === targetUrl);
+    const matches = tabs.filter(tab => tab.url && normalizeUrl(tab.url) === targetUrl);
 
-    if (existing) {
-        await ensureChatiesGroup(existing.id);
-        await chrome.tabs.update(existing.id, { active: true });
-        await chrome.windows.update(existing.windowId, { focused: true });
-        return { ok: true, reused: true, tabId: existing.id };
+    if (senderTab && senderUrl === targetUrl) {
+        await closeDuplicateTabs(matches, senderTab.id);
+        await focusTab(senderTab);
+        return { ok: true, current: true, tabId: senderTab.id };
+    }
+
+    if (matches.length) {
+        const keep = matches[0];
+        await closeDuplicateTabs(matches, keep.id);
+        await focusTab(keep);
+        await reloadTabSafe(keep.id);
+        return { ok: true, reused: true, tabId: keep.id };
     }
 
     const created = await chrome.tabs.create({ url: agent.chatUrl, active: true });
     await ensureChatiesGroup(created.id);
+    await reloadTabSafe(created.id);
     return { ok: true, reused: false, tabId: created.id };
 }
 
@@ -61,9 +90,7 @@ async function openOrFocusChatGPT() {
     const existing = tabs.find(tab => isChatGPTUrl(tab.url));
 
     if (existing) {
-        await ensureChatiesGroup(existing.id);
-        await chrome.tabs.update(existing.id, { active: true });
-        await chrome.windows.update(existing.windowId, { focused: true });
+        await focusTab(existing);
         return;
     }
 
@@ -79,7 +106,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (!message || !message.type) return false;
 
     if (message.type === "CHAD_OPEN_AGENT_TAB") {
-        openAgentTab(message.agent).then(sendResponse).catch(error => sendResponse({ ok: false, error: error.message }));
+        openAgentTab(message.agent, sender.tab).then(sendResponse).catch(error => sendResponse({ ok: false, error: error.message }));
         return true;
     }
 
