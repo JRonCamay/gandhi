@@ -26,14 +26,18 @@ window.Chad = window.Chad || {};
         localStorage.setItem(key, JSON.stringify(value));
     }
 
+    function escapeHTML(text) {
+        return String(text || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\"/g, "&quot;");
+    }
+
     function normalizeRemote(items) {
         return items
             .filter(item => item && item.type === "file" && !String(item.name || "").startsWith("."))
-            .map(item => ({
-                name: item.name,
-                sha: item.sha,
-                size: item.size || 0
-            }))
+            .map(item => ({ name: item.name, sha: item.sha, size: item.size || 0 }))
             .sort((a, b) => a.name.localeCompare(b.name));
     }
 
@@ -43,15 +47,11 @@ window.Chad = window.Chad || {};
 
     async function fetchRemoteSnapshot() {
         const response = await fetch(API_URL, {
-            headers: {
-                "Accept": "application/vnd.github+json"
-            },
+            headers: { "Accept": "application/vnd.github+json" },
             cache: "no-store"
         });
 
-        if (!response.ok) {
-            throw new Error(`GitHub update check failed: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`GitHub update check failed: ${response.status}`);
 
         const data = await response.json();
         return normalizeRemote(Array.isArray(data) ? data : []);
@@ -63,18 +63,35 @@ window.Chad = window.Chad || {};
 
         for (const file of newFiles || []) {
             const old = oldMap.get(file.name);
-            if (!old || old.sha !== file.sha || old.size !== file.size) {
-                changed.push(file.name);
-            }
+            if (!old || old.sha !== file.sha || old.size !== file.size) changed.push(file.name);
         }
 
         return changed;
     }
 
-    function openUpdateDialog(changedFiles, manual) {
+    function updateStepsText() {
+        return [
+            "Run:",
+            "Update-Chad.bat",
+            "",
+            "Then:",
+            "chrome://extensions",
+            "Reload ChadTheGreat",
+            "Refresh ChatGPT."
+        ].join("\n");
+    }
+
+    function copyUpdateSteps() {
+        const text = updateStepsText();
+        if (window.Chad.actions && window.Chad.actions.copyText) window.Chad.actions.copyText(text);
+        else navigator.clipboard.writeText(text).catch(() => {});
+    }
+
+    function openUpdateDialog(changedFiles, manual, error) {
         const existing = document.querySelector("#gandhi-chad-update-dialog");
         if (existing) existing.remove();
 
+        const files = changedFiles || [];
         const overlay = document.createElement("div");
         overlay.id = "gandhi-chad-update-dialog";
         Object.assign(overlay.style, {
@@ -90,7 +107,7 @@ window.Chad = window.Chad || {};
 
         const box = document.createElement("div");
         Object.assign(box.style, {
-            width: "420px",
+            width: "440px",
             maxWidth: "92vw",
             background: "#ffffff",
             border: "1px solid #cbd5e1",
@@ -100,34 +117,37 @@ window.Chad = window.Chad || {};
             color: "#0f172a"
         });
 
-        const list = (changedFiles || []).slice(0, 8).map(name => `• ${name}`).join("\n");
-        const more = changedFiles && changedFiles.length > 8 ? `\n...and ${changedFiles.length - 8} more` : "";
+        const message = error
+            ? `Update check failed: ${error}`
+            : files.length
+                ? "A newer version of ChadTheGreat has been detected."
+                : "No newer ChadTheGreat files were detected.";
+        const fileList = files.map(name => `• ${name}`).join("\n") || "No changed files.";
 
         box.innerHTML = `
             <div style="padding:12px 14px;background:#fef3c7;border-bottom:1px solid #fcd34d">
-                <div style="font-size:18px;font-weight:900">🔄 New Update is here</div>
-                <div style="font-size:12px;color:#64748b;margin-top:3px">You need to update local files, then reload the extension.</div>
+                <div style="font-size:18px;font-weight:900">🚀 New Chad Update Available</div>
+                <div style="font-size:12px;color:#64748b;margin-top:3px">${escapeHTML(message)}</div>
             </div>
             <div style="padding:14px;font-size:13px;line-height:1.45">
-                <b>Changed files detected:</b>
-                <pre style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px;white-space:pre-wrap;font-size:12px;max-height:150px;overflow:auto">${list || "Manual update check."}${more}</pre>
+                <b>Changed files:</b> ${files.length}
+                <pre style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px;white-space:pre-wrap;font-size:12px;max-height:150px;overflow:auto">${escapeHTML(fileList)}</pre>
                 <div style="margin-top:8px">
-                    Run <b>Update-Chad.bat</b>, then go to <b>chrome://extensions</b> and click <b>Reload</b> on ChadTheGreat.
+                    Run:<br><b>Update-Chad.bat</b><br><br>
+                    Then:<br><b>chrome://extensions</b><br>
+                    Reload ChadTheGreat<br>
+                    Refresh ChatGPT.
                 </div>
             </div>
             <div style="padding:10px 14px;border-top:1px solid #e2e8f0;display:flex;gap:7px;justify-content:flex-end">
                 <button data-close-update="1" style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:7px;padding:6px 10px;cursor:pointer">Close</button>
-                <button data-copy-update="1" style="background:#dcfce7;border:1px solid #86efac;border-radius:7px;padding:6px 10px;cursor:pointer;font-weight:800">Copy Steps</button>
+                <button data-copy-update="1" style="background:#dcfce7;border:1px solid #86efac;border-radius:7px;padding:6px 10px;cursor:pointer;font-weight:800">Copy Update Steps</button>
             </div>`;
 
         overlay.appendChild(box);
         overlay.addEventListener("click", event => {
             if (event.target === overlay || event.target.dataset.closeUpdate) overlay.remove();
-            if (event.target.dataset.copyUpdate) {
-                const text = "Run Update-Chad.bat, then open chrome://extensions, reload ChadTheGreat, and refresh ChatGPT.";
-                if (window.Chad.actions && window.Chad.actions.copyText) window.Chad.actions.copyText(text);
-                else navigator.clipboard.writeText(text).catch(() => {});
-            }
+            if (event.target.dataset.copyUpdate) copyUpdateSteps();
         });
 
         document.body.appendChild(overlay);
@@ -137,9 +157,7 @@ window.Chad = window.Chad || {};
         try {
             const remote = await fetchRemoteSnapshot();
             const saved = loadJSON(SNAPSHOT_KEY, null);
-            const changed = saved && saved.files
-                ? diffSnapshots(saved.files, remote)
-                : [];
+            const changed = saved && saved.files ? diffSnapshots(saved.files, remote) : [];
 
             saveJSON(SNAPSHOT_KEY, {
                 checkedAt: Date.now(),
@@ -159,49 +177,16 @@ window.Chad = window.Chad || {};
                 return { hasUpdate: true, changed };
             }
 
-            if (manual) {
-                openUpdateDialog([], true);
-            }
-
+            if (manual) openUpdateDialog([], true);
             return { hasUpdate: false, changed: [] };
         }
         catch (error) {
-            if (manual) alert(error.message);
+            if (manual) openUpdateDialog([], true, error.message);
             return { hasUpdate: false, changed: [], error: error.message };
         }
     }
 
-    function addUpdateButton() {
-        const panel = document.querySelector("#gandhi-chad-panel");
-        if (!panel) return;
-
-        const headerButtons = panel.querySelector("div div:nth-child(2)");
-        if (!headerButtons || headerButtons.querySelector("#gandhi-chad-update-button")) return;
-
-        const btn = document.createElement("button");
-        btn.id = "gandhi-chad-update-button";
-        btn.textContent = "🔄";
-        btn.title = "Check Chad update";
-        Object.assign(btn.style, {
-            background: "#e0f2fe",
-            border: "1px solid #7dd3fc",
-            borderRadius: "6px",
-            padding: "4px 7px",
-            fontSize: "11px",
-            cursor: "pointer",
-            fontWeight: "800"
-        });
-        btn.addEventListener("click", event => {
-            event.preventDefault();
-            event.stopPropagation();
-            checkForUpdates(true);
-        });
-
-        headerButtons.insertBefore(btn, headerButtons.firstChild);
-    }
-
     function start() {
-        setInterval(addUpdateButton, 1000);
         setTimeout(() => checkForUpdates(false), 5000);
         setInterval(() => checkForUpdates(false), 1000 * 60 * 20);
     }

@@ -11,6 +11,7 @@ window.Chad = window.Chad || {};
     const ACTIVE_AGENT_KEY = "gandhi_chad_active_agent_id_v1";
     const DONE_FLASH_KEY = "gandhi_chad_task_done_flash_v1";
     const GLOBAL_NOTES_KEY = "gandhi_chad_shared_notes_v1";
+    const NORMAL_TITLE_KEY = "gandhi_chad_normal_title_v1";
 
     function createEl(tag, props = {}, children = []) {
         const node = document.createElement(tag);
@@ -86,6 +87,17 @@ window.Chad = window.Chad || {};
         return location.href.includes("/c/")
             ? location.href.split("#")[0]
             : "https://chatgpt.com/";
+    }
+
+    function normalizeUrl(url) {
+        try {
+            const parsed = new URL(url);
+            parsed.hash = "";
+            return parsed.href;
+        }
+        catch {
+            return String(url || "").split("#")[0];
+        }
     }
 
     function nowStamp() {
@@ -169,6 +181,12 @@ window.Chad = window.Chad || {};
 
     function getActiveAgentId() {
         const agents = getAgents();
+        const here = normalizeUrl(currentChatUrl());
+        const match = agents.find(agent => agent.chatUrl && normalizeUrl(agent.chatUrl) === here);
+        if (match) {
+            localStorage.setItem(ACTIVE_AGENT_KEY, match.id);
+            return match.id;
+        }
         const saved = localStorage.getItem(ACTIVE_AGENT_KEY);
         if (agents.some(agent => agent.id === saved)) return saved;
         return agents[0] ? agents[0].id : "";
@@ -201,15 +219,18 @@ window.Chad = window.Chad || {};
         if (!agent) return;
 
         const done = isDoneFlashing();
-        const prefix = done ? "✅ " : "";
         const icon = done ? "✅" : (agent.icon || "🤖");
+        const normalTitle = agent.name
+            ? `${agent.name} — ChatGPT`
+            : "ChatGPT";
 
-        document.title = agent.description
-            ? `${prefix}${agent.tabTitle || agent.name} — ${agent.description}`
-            : `${prefix}${agent.tabTitle || agent.name}`;
+        if (!done) localStorage.setItem(NORMAL_TITLE_KEY, normalTitle);
+
+        document.title = done
+            ? `✅ ${agent.name || "Agent"} — ChatGPT`
+            : normalTitle;
         setFavicon(icon);
     }
-
     function playDoneSound() {
         try {
             const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -244,6 +265,8 @@ window.Chad = window.Chad || {};
         if (window.Chad.bridge && window.Chad.bridge.resetTabFeedback) {
             window.Chad.bridge.resetTabFeedback().catch(() => {});
         }
+        const normalTitle = localStorage.getItem(NORMAL_TITLE_KEY);
+        if (normalTitle) document.title = normalTitle;
         applyTabIdentity();
         render();
     }
@@ -267,12 +290,6 @@ window.Chad = window.Chad || {};
             }
             catch {}
         }, 900);
-    }
-
-    function autoScanTasks() {
-        setTimeout(() => {
-            if (window.Chad.scanner && window.Chad.scanner.scanTasks) window.Chad.scanner.scanTasks();
-        }, 1200);
     }
 
     function getTaskRulesText() {
@@ -330,12 +347,12 @@ CH-001 COMPLETED`;
             }
         }
 
-        const filePattern = /([A-Za-z0-9_./-]+\.(?:js|txt|md|json|css|html|zip|png|jpg|jpeg|webp|svg))/gi;
+        const filePattern = /([A-Za-z0-9_./-]+\.(?:png|jpg|jpeg|webp|gif|pdf|js|txt|md|json|zip))/gi;
 
         document.querySelectorAll("a[href]").forEach(anchor => {
             const href = anchor.href || "";
             const text = anchor.textContent || "";
-            if (/github\.com|raw\.githubusercontent\.com|sandbox:|\.js|\.txt|\.zip|\.md|\.json|\.png|\.jpg|\.jpeg|\.webp|\.svg/i.test(href + " " + text)) {
+            if (/github\.com|raw\.githubusercontent\.com|sandbox:|\.png|\.jpg|\.jpeg|\.webp|\.gif|\.pdf|\.js|\.txt|\.md|\.json|\.zip/i.test(href + " " + text)) {
                 addFile(text.trim() || href.split("/").pop() || href, href, "link");
             }
         });
@@ -394,8 +411,9 @@ CH-001 COMPLETED`;
                 window.Chad.actions.copyText(text);
             }, { bg: "#ede9fe", border: "#c4b5fd", bold: true }),
             button("🎨", () => window.Chad.paint && window.Chad.paint.open(), { bg: "#fef3c7", border: "#fcd34d", bold: true, title: "Quick Sketch" }),
+            button("🔄 Update", () => window.Chad.updateChecker && window.Chad.updateChecker.checkForUpdates(true), { bg: "#e0f2fe", border: "#7dd3fc", bold: true, title: "Check Chad update" }),
             button("🐒", () => console.log("GitGit reserved."), { bg: "#fef3c7", border: "#fcd34d", bold: true, title: "GitGit" }),
-            button("✕", () => { panel.style.display = "none"; }, { bg: "#f8fafc", border: "#cbd5e1" })
+            button("✕", () => { panel.style.display = "none"; if (window.Chad.agentFixes && window.Chad.agentFixes.showDock) window.Chad.agentFixes.showDock(); }, { bg: "#f8fafc", border: "#cbd5e1" })
         ]));
 
         const tabRow = createEl("div", { style: { display: "flex", gap: "5px", flexWrap: "wrap" } });
@@ -609,7 +627,6 @@ CH-001 COMPLETED`;
             window.open(agent.chatUrl || "https://chatgpt.com/", "chad_agent_" + agent.id);
         }
         scrollToLatest();
-        autoScanTasks();
     }
 
     function editAgent(agentId) {
@@ -793,7 +810,6 @@ CH-001 COMPLETED`;
         document.body.appendChild(panel);
         bindAnswerReset();
         render();
-        setTimeout(window.Chad.scanner.scanTasks, 1200);
     }
 
     ui.createEl = createEl;

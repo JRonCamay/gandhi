@@ -43,13 +43,6 @@ async function focusTab(tab) {
     await chrome.windows.update(tab.windowId, { focused: true });
 }
 
-async function reloadTabSafe(tabId) {
-    try {
-        await chrome.tabs.reload(tabId, { bypassCache: true });
-    }
-    catch {}
-}
-
 async function closeDuplicateTabs(tabs, keepId) {
     const duplicates = tabs.filter(tab => tab.id !== keepId).map(tab => tab.id);
     if (duplicates.length) {
@@ -75,13 +68,11 @@ async function openAgentTab(agent, senderTab) {
         const keep = matches[0];
         await closeDuplicateTabs(matches, keep.id);
         await focusTab(keep);
-        await reloadTabSafe(keep.id);
         return { ok: true, reused: true, tabId: keep.id };
     }
 
     const created = await chrome.tabs.create({ url: agent.chatUrl, active: true });
     await ensureChatiesGroup(created.id);
-    await reloadTabSafe(created.id);
     return { ok: true, reused: false, tabId: created.id };
 }
 

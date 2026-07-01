@@ -12,12 +12,11 @@ window.Chad = window.Chad || {};
     let lastChatiesSignature = "";
 
     const PRESS_LABELS = new Set([
-        "SCAN FILES", "USE THIS CHAT", "COPY LINK", "DELETE AGENT", "INFO", "+",
-        "TASK RULES", "GOD RULES", "🐒", "🎨", "SCAN", "Scan",
-        "RESET SELECTED", "RESET DELETED", "Refresh Repo Memory", "Refresh Tree",
-        "Copy Repo URL", "Pin Selected", "Pin Last", "OPEN", "SRC", "COPY", "DELETE"
+        "SCAN FILES", "USE THIS CHAT", "COPY LINK", "DELETE AGENT", "INFO",
+        "MAIN", "PAINT", "GITGIT", "UPDATE", "🔄 UPDATE",
+        "TASK RULES", "GOD RULES", "SCAN TAB", "SCAN", "Scan",
+        "ROADMAP", "PINS"
     ]);
-
     function nowStamp() {
         return new Date().toLocaleString();
     }
@@ -81,9 +80,14 @@ window.Chad = window.Chad || {};
     }
 
     function getActiveId() {
+        const here = currentChatUrl();
+        const match = getAgents().find(agent => agent.chatUrl && sameUrl(agent.chatUrl, here));
+        if (match) {
+            localStorage.setItem(ACTIVE_KEY, match.id);
+            return match.id;
+        }
         return localStorage.getItem(ACTIVE_KEY) || (getAgents()[0] && getAgents()[0].id) || "";
     }
-
     function setActiveId(id) {
         localStorage.setItem(ACTIVE_KEY, id || "");
     }
@@ -187,7 +191,7 @@ window.Chad = window.Chad || {};
             }
         }
 
-        const ext = "js|txt|md|json|css|html|zip|png|jpg|jpeg|webp|svg|gif|pdf|doc|docx|xls|xlsx|ppt|pptx|csv|mp3|mp4|webm|wav";
+        const ext = "png|jpg|jpeg|webp|gif|pdf|js|txt|md|json|zip";
         const extRegex = new RegExp("\\.(?:" + ext + ")", "i");
         const filePattern = new RegExp("([A-Za-z0-9_./ -]+\\.(?:" + ext + "))", "gi");
 
@@ -225,7 +229,9 @@ window.Chad = window.Chad || {};
         if (!agent) return;
 
         if (!sameUrl(currentChatUrl(), agent.chatUrl || "")) {
-            alert("Open this agent's chat first, then scan files.");
+            if (window.Chad.ui && window.Chad.ui.openTextModal) {
+                window.Chad.ui.openTextModal("Open Agent Chat First", "Open this agent's chat first, then scan files.");
+            }
             return;
         }
 
@@ -403,6 +409,8 @@ window.Chad = window.Chad || {};
         function shouldPress(btn) {
             if (!btn || !btn.closest("#gandhi-chad-panel")) return false;
             if (btn.dataset && btn.dataset.press === "1") return true;
+            const state = window.Chad.storage && window.Chad.storage.state;
+            if (state && (state.activeTab === "pins" || state.activeTab === "repo")) return true;
             const text = (btn.textContent || "").trim();
             return PRESS_LABELS.has(text) || PRESS_LABELS.has(text.toUpperCase());
         }
@@ -458,6 +466,10 @@ window.Chad = window.Chad || {};
         return dock;
     }
 
+    function showDock() {
+        ensureDock().style.display = "block";
+    }
+
     function patchCloseButton() {
         const panel = document.querySelector("#gandhi-chad-panel");
         if (!panel) return;
@@ -468,7 +480,7 @@ window.Chad = window.Chad || {};
             event.preventDefault();
             event.stopPropagation();
             panel.style.display = "none";
-            ensureDock().style.display = "block";
+            showDock();
         };
     }
 
@@ -487,6 +499,6 @@ window.Chad = window.Chad || {};
         setTimeout(tick, 1200);
     }
 
-    window.Chad.agentFixes = { renderChatiesStable, scrollToEnd, syncActiveAgentToCurrentUrl };
+    window.Chad.agentFixes = { renderChatiesStable, scrollToEnd, syncActiveAgentToCurrentUrl, showDock };
     start();
 })();
