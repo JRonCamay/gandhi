@@ -252,6 +252,21 @@ Surgical source patch for corner snapping accuracy.
 `
         );
 
+        code = code.replace(
+            /left:\s*"-26px",\s*top:\s*"0px"/,
+            'left: "-38px",\n                    top: "8px"'
+        );
+
+        code = code.replace(
+            /left:\s*"-26px",\s*top:\s*"24px"/,
+            'left: "-38px",\n                    top: "32px"'
+        );
+
+        code = code.replace(
+            /left:\s*"-26px",\s*top:\s*"48px"/,
+            'left: "-38px",\n                    top: "56px"'
+        );
+
         console.log('[Transfork] corner snap accuracy patch applied');
         return code;
     };
