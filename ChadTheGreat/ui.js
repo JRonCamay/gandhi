@@ -10,10 +10,10 @@ window.Chad = window.Chad || {};
     const GLOBAL_AGENTS_KEY = "gandhi_chad_global_agents_v1";
     const ACTIVE_AGENT_KEY = "gandhi_chad_active_agent_id_v1";
     const DONE_FLASH_KEY = "gandhi_chad_task_done_flash_v1";
+    const GLOBAL_NOTES_KEY = "gandhi_chad_shared_notes_v1";
 
     function createEl(tag, props = {}, children = []) {
         const node = document.createElement(tag);
-
         for (const [key, value] of Object.entries(props)) {
             if (key === "style") Object.assign(node.style, value);
             else if (key === "text") node.textContent = value;
@@ -21,12 +21,10 @@ window.Chad = window.Chad || {};
             else if (key.startsWith("on")) node.addEventListener(key.slice(2).toLowerCase(), value);
             else node.setAttribute(key, value);
         }
-
         for (const child of children) {
             if (typeof child === "string") node.appendChild(document.createTextNode(child));
             else if (child) node.appendChild(child);
         }
-
         return node;
     }
 
@@ -151,7 +149,6 @@ window.Chad = window.Chad || {};
     function getAgents() {
         const agents = migrateOldAgents();
         let changed = false;
-
         for (const agent of agents) {
             if (!agent.files) {
                 agent.files = [];
@@ -162,7 +159,6 @@ window.Chad = window.Chad || {};
                 changed = true;
             }
         }
-
         if (changed) saveAgents(agents);
         return agents;
     }
@@ -203,14 +199,52 @@ window.Chad = window.Chad || {};
     function applyTabIdentity() {
         const agent = getActiveAgent();
         if (!agent) return;
+
+        const done = isDoneFlashing();
+        const prefix = done ? "✅ " : "";
+        const icon = done ? "✅" : (agent.icon || "🤖");
+
         document.title = agent.description
-            ? `${agent.tabTitle || agent.name} — ${agent.description}`
-            : (agent.tabTitle || agent.name);
-        setFavicon(agent.icon || "🤖");
+            ? `${prefix}${agent.tabTitle || agent.name} — ${agent.description}`
+            : `${prefix}${agent.tabTitle || agent.name}`;
+        setFavicon(icon);
+    }
+
+    function playDoneSound() {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            const audio = new AudioContext();
+            const osc = audio.createOscillator();
+            const gain = audio.createGain();
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(880, audio.currentTime);
+            gain.gain.setValueAtTime(0.0001, audio.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.16, audio.currentTime + 0.03);
+            gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + 0.22);
+            osc.connect(gain);
+            gain.connect(audio.destination);
+            osc.start();
+            osc.stop(audio.currentTime + 0.24);
+        }
+        catch {}
     }
 
     function markDoneFlash() {
-        localStorage.setItem(DONE_FLASH_KEY, String(Date.now() + 9000));
+        localStorage.setItem(DONE_FLASH_KEY, String(Date.now() + 600000));
+        playDoneSound();
+        if (window.Chad.bridge && window.Chad.bridge.doneTabFeedback) {
+            window.Chad.bridge.doneTabFeedback().catch(() => {});
+        }
+        applyTabIdentity();
+        render();
+    }
+
+    function resetDoneFlash() {
+        localStorage.removeItem(DONE_FLASH_KEY);
+        if (window.Chad.bridge && window.Chad.bridge.resetTabFeedback) {
+            window.Chad.bridge.resetTabFeedback().catch(() => {});
+        }
+        applyTabIdentity();
         render();
     }
 
@@ -237,10 +271,82 @@ window.Chad = window.Chad || {};
 
     function autoScanTasks() {
         setTimeout(() => {
-            if (window.Chad.scanner && window.Chad.scanner.scanTasks) {
-                window.Chad.scanner.scanTasks();
-            }
+            if (window.Chad.scanner && window.Chad.scanner.scanTasks) window.Chad.scanner.scanTasks();
         }, 1200);
+    }
+
+    function getTaskRulesText() {
+        return `TASK FORMATTING RULES
+
+Every task should use this format:
+
+🚨 CH-001 🚨
+
+Project:
+ChadTheGreat
+
+Title:
+Short title
+
+Timestamp:
+YYYY-MM-DD
+
+Task:
+Exact instruction here.
+
+Rules:
+- Keep it simple.
+- One feature at a time.
+- Do not touch unrelated files.
+
+Files to touch:
+- file.js
+
+Files not to touch:
+- unrelated.js
+
+Completion report:
+🔥🔥🔥 CH-001 COMPLETED 🔥🔥🔥
+CH-001 COMPLETED
+CH-001 COMPLETED`;
+    }
+
+    function scanVisibleChatFiles() {
+        const map = new Map();
+
+        function addFile(name, url, source) {
+            const cleanName = String(name || "").trim();
+            const cleanUrl = String(url || "").trim();
+            if (!cleanName && !cleanUrl) return;
+            const key = (cleanUrl || cleanName).toLowerCase();
+            if (!map.has(key)) {
+                map.set(key, {
+                    id: "file-" + Date.now() + "-" + map.size,
+                    name: cleanName || cleanUrl,
+                    url: cleanUrl,
+                    source: source || "visible chat",
+                    addedAt: nowStamp()
+                });
+            }
+        }
+
+        const filePattern = /([A-Za-z0-9_./-]+\.(?:js|txt|md|json|css|html|zip|png|jpg|jpeg|webp|svg))/gi;
+
+        document.querySelectorAll("a[href]").forEach(anchor => {
+            const href = anchor.href || "";
+            const text = anchor.textContent || "";
+            if (/github\.com|raw\.githubusercontent\.com|sandbox:|\.js|\.txt|\.zip|\.md|\.json|\.png|\.jpg|\.jpeg|\.webp|\.svg/i.test(href + " " + text)) {
+                addFile(text.trim() || href.split("/").pop() || href, href, "link");
+            }
+        });
+
+        document.querySelectorAll("pre, code, p, li, div").forEach(node => {
+            const text = node.textContent || "";
+            let match;
+            while ((match = filePattern.exec(text))) addFile(match[1], "", "text");
+        });
+
+        return Array.from(map.values());
     }
 
     function renderHeader() {
@@ -281,9 +387,8 @@ window.Chad = window.Chad || {};
                 `<div style="font-size:11px;color:#64748b;font-weight:600;max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHTML(agent ? agent.description : "")}</div>`
         }));
 
-        top.appendChild(createEl("div", {
-            style: { display: "flex", gap: "4px", alignItems: "center" }
-        }, [
+        top.appendChild(createEl("div", { style: { display: "flex", gap: "4px", alignItems: "center" } }, [
+            button("TASK RULES", () => window.Chad.actions.copyText(getTaskRulesText()), { bg: "#e0f2fe", border: "#7dd3fc", bold: true }),
             button("GOD RULES", () => {
                 const text = (window.Chad.data.companionRules || "") + "\n\n\n" + (window.Chad.data.chatRules || "");
                 window.Chad.actions.copyText(text);
@@ -293,9 +398,7 @@ window.Chad = window.Chad || {};
             button("✕", () => { panel.style.display = "none"; }, { bg: "#f8fafc", border: "#cbd5e1" })
         ]));
 
-        const tabRow = createEl("div", {
-            style: { display: "flex", gap: "5px", flexWrap: "wrap" }
-        });
+        const tabRow = createEl("div", { style: { display: "flex", gap: "5px", flexWrap: "wrap" } });
 
         for (const [label, tab] of tabs) {
             tabRow.appendChild(button(label, () => {
@@ -324,18 +427,17 @@ window.Chad = window.Chad || {};
 
     function renderProjectFilters() {
         const state = window.Chad.storage.state;
-        const order = window.Chad.data.projectOrder;
-        return createEl("div", {
-            style: { display: "flex", gap: "4px", flexWrap: "wrap", marginBottom: "8px" }
-        }, order.map(project => button(project, () => {
-            state.activeProject = project;
-            render();
-        }, {
-            bg: state.activeProject === project ? "#0f172a" : "#ffffff",
-            color: state.activeProject === project ? "#ffffff" : "#0f172a",
-            border: state.activeProject === project ? "#0f172a" : "#cbd5e1",
-            bold: state.activeProject === project
-        })));
+        return createEl("div", { style: { display: "flex", gap: "4px", flexWrap: "wrap", marginBottom: "8px" } },
+            window.Chad.data.projectOrder.map(project => button(project, () => {
+                state.activeProject = project;
+                render();
+            }, {
+                bg: state.activeProject === project ? "#0f172a" : "#ffffff",
+                color: state.activeProject === project ? "#ffffff" : "#0f172a",
+                border: state.activeProject === project ? "#0f172a" : "#cbd5e1",
+                bold: state.activeProject === project
+            }))
+        );
     }
 
     function renderTasks() {
@@ -356,10 +458,7 @@ window.Chad = window.Chad || {};
         let tasks = [...state.tasks];
         if (state.activeProject !== "ALL") tasks = tasks.filter(task => task.project === state.activeProject);
 
-        if (!tasks.length) {
-            wrap.appendChild(createEl("div", { text: "No tasks yet. Click SCAN.", style: { color: "#64748b", padding: "10px" } }));
-        }
-
+        if (!tasks.length) wrap.appendChild(createEl("div", { text: "No tasks yet. Click SCAN.", style: { color: "#64748b", padding: "10px" } }));
         for (const task of tasks.reverse()) wrap.appendChild(renderTaskCard(task));
         return wrap;
     }
@@ -375,9 +474,7 @@ window.Chad = window.Chad || {};
                 background: done ? "#f0fdf4" : "#f8fafc"
             }
         }, [
-            createEl("div", {
-                html: `<b>${escapeHTML(task.id)}</b><br><span style="color:#334155">${escapeHTML(task.title)}</span>`
-            }),
+            createEl("div", { html: `<b>${escapeHTML(task.id)}</b><br><span style="color:#334155">${escapeHTML(task.title)}</span>` }),
             createEl("div", {
                 html:
                     `<span style="color:#64748b">Project:</span> ${escapeHTML(task.project || "")}<br>` +
@@ -404,12 +501,8 @@ window.Chad = window.Chad || {};
         const agents = getAgents();
         const activeId = getActiveAgentId();
 
-        wrap.appendChild(createEl("div", {
-            style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "7px" }
-        }, [
-            createEl("div", {
-                html: `<b>Chaties</b><br><span style="color:#64748b">Global agents. Opens tabs in the Chaties group.</span>`
-            }),
+        wrap.appendChild(createEl("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "7px" } }, [
+            createEl("div", { html: `<b>Chaties</b><br><span style="color:#64748b">Global agents. Opens tabs in the Chaties group.</span>` }),
             button("+", () => {
                 const agent = {
                     id: "agent-" + Date.now(), icon: "🤖", name: "New Agent", description: "",
@@ -423,21 +516,19 @@ window.Chad = window.Chad || {};
             }, { bg: "#dcfce7", border: "#86efac", bold: true })
         ]));
 
-        for (const agent of agents) {
-            const active = agent.id === activeId;
-            wrap.appendChild(renderAgentCard(agent, active));
-        }
+        for (const agent of agents) wrap.appendChild(renderAgentCard(agent, agent.id === activeId));
         return wrap;
     }
 
     function renderAgentCard(agent, active) {
+        const activeDone = active && isDoneFlashing();
         const box = createEl("div", {
             style: {
-                border: "1px solid " + (active ? "#2563eb" : "#cbd5e1"),
+                border: "1px solid " + (activeDone ? "#22c55e" : active ? "#2563eb" : "#cbd5e1"),
                 borderRadius: "9px",
                 padding: "7px",
                 marginTop: "6px",
-                background: active ? "#eff6ff" : "#f8fafc"
+                background: activeDone ? "#dcfce7" : active ? "#eff6ff" : "#f8fafc"
             }
         });
 
@@ -458,8 +549,7 @@ window.Chad = window.Chad || {};
                 button("SCAN FILES", () => { scanFiles(agent.id); render(); }, { bg: "#dcfce7", border: "#86efac", bold: true }),
                 button("USE THIS CHAT", () => { agent.chatUrl = currentChatUrl(); agent.updatedAt = nowStamp(); saveAgents(getAgents().map(a => a.id === agent.id ? agent : a)); render(); }, { bg: "#e0f2fe", border: "#7dd3fc" }),
                 button("COPY LINK", () => window.Chad.actions.copyText(agent.chatUrl || "")),
-                button("DONE COLOR", () => markDoneFlash(), { bg: "#bbf7d0", border: "#22c55e", bold: true }),
-                button("DELETE AGENT", () => { saveAgents(getAgents().filter(a => a.id !== agent.id)); setActiveAgentId(getAgents()[0] ? getAgents()[0].id : ""); render(); }, { bg: "#fee2e2", border: "#fecaca" })
+                button("DELETE AGENT", () => { const next = getAgents().filter(a => a.id !== agent.id); saveAgents(next.length ? next : defaultAgents()); setActiveAgentId((next[0] || defaultAgents()[0]).id); render(); }, { bg: "#fee2e2", border: "#fecaca" })
             ]));
 
             if (!agent.files || !agent.files.length) {
@@ -496,9 +586,7 @@ window.Chad = window.Chad || {};
         const agent = list.find(item => item.id === agentId);
         if (!agent) return;
 
-        const found = window.Chad.agents && window.Chad.agents.scanVisibleChatFiles
-            ? window.Chad.agents.scanVisibleChatFiles()
-            : [];
+        const found = scanVisibleChatFiles();
         const map = new Map();
         for (const file of agent.files || []) map.set(String(file.url || file.name || file.id).toLowerCase(), file);
         for (const file of found) {
@@ -615,17 +703,15 @@ window.Chad = window.Chad || {};
     }
 
     function renderNotes() {
-        const store = window.Chad.storage;
-        const state = store.state;
         const wrap = createEl("div", { style: bodyStyle() });
-        wrap.appendChild(createEl("div", { text: "Simple notes for this chat only.", style: { color: "#64748b", marginBottom: "7px", fontSize: "11px" } }));
+        wrap.appendChild(createEl("div", { text: "Shared notes across all Chad tabs.", style: { color: "#64748b", marginBottom: "7px", fontSize: "11px" } }));
         const textarea = createEl("textarea", { style: { width: "100%", height: "calc(100vh - 220px)", boxSizing: "border-box", resize: "vertical", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "9px", fontFamily: "Consolas, monospace", fontSize: "13px", lineHeight: "1.4", color: "#0f172a", background: "#ffffff", outline: "none" } });
-        textarea.value = state.notesText;
-        textarea.addEventListener("input", () => { state.notesText = textarea.value; store.saveNotes(); });
+        textarea.value = localStorage.getItem(GLOBAL_NOTES_KEY) || "";
+        textarea.addEventListener("input", () => localStorage.setItem(GLOBAL_NOTES_KEY, textarea.value));
         wrap.appendChild(textarea);
         wrap.appendChild(createEl("div", { style: { display: "flex", gap: "5px", marginTop: "8px" } }, [
-            button("COPY NOTES", () => window.Chad.actions.copyText(state.notesText), { bg: "#e0f2fe", border: "#7dd3fc" }),
-            button("CLEAR NOTES", () => { if (!confirm("Clear notes for this chat?")) return; state.notesText = ""; store.saveNotes(); render(); }, { bg: "#fee2e2", border: "#fecaca" })
+            button("COPY NOTES", () => window.Chad.actions.copyText(localStorage.getItem(GLOBAL_NOTES_KEY) || ""), { bg: "#e0f2fe", border: "#7dd3fc" }),
+            button("CLEAR NOTES", () => { if (!confirm("Clear shared notes?")) return; localStorage.setItem(GLOBAL_NOTES_KEY, ""); render(); }, { bg: "#fee2e2", border: "#fecaca" })
         ]));
         return wrap;
     }
@@ -681,11 +767,31 @@ window.Chad = window.Chad || {};
         panel.appendChild(body);
     }
 
+    function bindAnswerReset() {
+        document.addEventListener("keydown", event => {
+            const target = event.target;
+            const isPrompt = target && (target.id === "prompt-textarea" || target.closest && target.closest("#prompt-textarea"));
+            if (isPrompt && event.key === "Enter" && !event.shiftKey && isDoneFlashing()) {
+                setTimeout(resetDoneFlash, 300);
+            }
+        }, true);
+
+        document.addEventListener("click", event => {
+            const btn = event.target && event.target.closest && event.target.closest("button");
+            if (!btn || !isDoneFlashing()) return;
+            const label = (btn.getAttribute("aria-label") || btn.textContent || "").toLowerCase();
+            if (label.includes("send") || label.includes("submit")) {
+                setTimeout(resetDoneFlash, 300);
+            }
+        }, true);
+    }
+
     function start() {
         if (document.querySelector("#gandhi-chad-panel")) return;
         window.Chad.storage.state.activeTab = window.Chad.storage.state.activeTab || "chaties";
         panel = createEl("div", { id: "gandhi-chad-panel", style: { position: "fixed", right: "14px", top: "70px", bottom: "14px", width: "410px", background: "#ffffff", color: "#111827", border: "1px solid #cbd5e1", borderRadius: "12px", zIndex: "999999", fontFamily: "Arial, sans-serif", fontSize: "12px", boxShadow: "0 10px 35px rgba(15,23,42,.20)", overflow: "hidden" } });
         document.body.appendChild(panel);
+        bindAnswerReset();
         render();
         setTimeout(window.Chad.scanner.scanTasks, 1200);
     }
@@ -700,6 +806,9 @@ window.Chad = window.Chad || {};
     ui.saveAgents = saveAgents;
     ui.getActiveAgent = getActiveAgent;
     ui.applyTabIdentity = applyTabIdentity;
+    ui.markDoneFlash = markDoneFlash;
+    ui.resetDoneFlash = resetDoneFlash;
+    ui.scanVisibleChatFiles = scanVisibleChatFiles;
 
     window.Chad.ui = ui;
 })();
