@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GitGit Big GitHub Editor
 // @namespace    http://tampermonkey.net/
-// @version      4.2.0
+// @version      4.3.0
 // @description  Full-window JavaScript editor with internal Search/Replace/Function panel and editor undo/redo, colored preview, GitHub accounts, file tree, load, and commit
 // @author       You
 // @match        https://github.com/*
@@ -13,8 +13,8 @@
 (function () {
     'use strict';
 
-    if (window.__gitgitBigEditorModularLoaded === '4.2.0') return;
-    window.__gitgitBigEditorModularLoaded = '4.2.0';
+    if (window.__gitgitBigEditorModularLoaded === '4.3.0') return;
+    window.__gitgitBigEditorModularLoaded = '4.3.0';
 
     function prepareStandalonePage() {
         const style = document.createElement('style');
@@ -375,7 +375,7 @@
     });
 
     const title = createEl('div', {
-        html: '<strong>GitGit Big GitHub Editor v4.2 SAFE</strong>',
+        html: '<strong>GitGit Big GitHub Editor v4.3</strong>',
         style: `
             font-size: 14px;
             color: #f0f6fc;
@@ -1515,6 +1515,130 @@
         }
 
         return count;
+    }
+
+
+    function getLineStartIndex(textValue, index) {
+        const pos =
+            textValue.lastIndexOf('\n', index - 1);
+
+        return pos === -1
+            ? 0
+            : pos + 1;
+    }
+
+    function getCurrentLineText(textValue, index) {
+        const start =
+            getLineStartIndex(textValue, index);
+
+        const end =
+            textValue.indexOf('\n', index);
+
+        return textValue.slice(
+            start,
+            end === -1 ? textValue.length : end
+        );
+    }
+
+    function getIndentOfLine(lineText) {
+        const match =
+            lineText.match(/^[ \t]*/);
+
+        return match
+            ? match[0].replace(/\t/g, '    ')
+            : '';
+    }
+
+    function shouldIncreaseIndent(lineText) {
+        const trimmed =
+            lineText.trim();
+
+        if (!trimmed) {
+            return false;
+        }
+
+        if (
+            /[\{\[\(]\s*$/.test(trimmed)
+        ) {
+            return true;
+        }
+
+        if (
+            /\b(if|else|for|while|switch|try|catch|finally|function|class)\b.*\)\s*$/.test(trimmed)
+        ) {
+            return true;
+        }
+
+        if (
+            /=>\s*$/.test(trimmed)
+        ) {
+            return true;
+        }
+
+        return false;
+    }
+
+    function shouldDecreaseIndent(nextText) {
+        return /^[\}\]\)]/.test(
+            nextText.trim()
+        );
+    }
+
+    function buildSmartNewlineIndent(textValue, cursorIndex) {
+        const currentLine =
+            getCurrentLineText(textValue, cursorIndex);
+
+        let indent =
+            getIndentOfLine(currentLine);
+
+        if (
+            shouldIncreaseIndent(currentLine)
+        ) {
+            indent += '    ';
+        }
+
+        const nextText =
+            textValue.slice(cursorIndex);
+
+        if (
+            shouldDecreaseIndent(nextText) &&
+            indent.length >= 4
+        ) {
+            indent =
+                indent.slice(0, -4);
+        }
+
+        return '\n' + indent;
+    }
+
+    function insertSmartNewline() {
+        const start =
+            codeArea.selectionStart;
+
+        const end =
+            codeArea.selectionEnd;
+
+        const textValue =
+            codeArea.value;
+
+        const insertText =
+            buildSmartNewlineIndent(
+                textValue,
+                start
+            );
+
+        replaceEditorValue(
+            textValue.slice(0, start) +
+                insertText +
+                textValue.slice(end),
+            start + insertText.length,
+            start + insertText.length,
+            {
+                keepScroll: true
+            }
+        );
+
+        updateCurrentLineHighlight();
     }
 
     function cleanJavaScriptFormatting(codeText) {
@@ -3239,6 +3363,12 @@
     });
 
     codeArea.addEventListener('keydown', event => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            insertSmartNewline();
+            return;
+        }
+
         if (event.key === 'Tab') {
             event.preventDefault();
 
