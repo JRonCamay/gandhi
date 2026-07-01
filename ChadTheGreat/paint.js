@@ -184,12 +184,7 @@ window.Chad = window.Chad || {};
     }
 
     function notify(message) {
-        centerDialog({
-            type: "info",
-            title: "Quick Sketch",
-            message,
-            okText: "OK"
-        });
+        centerDialog({ type: "info", title: "Quick Sketch", message, okText: "OK" });
     }
 
     function askText(title, value, done) {
@@ -319,7 +314,6 @@ window.Chad = window.Chad || {};
     function initCanvasOnce() {
         canvas = document.querySelector("#gandhi-chad-paint-canvas");
         if (!canvas || initialized) return;
-
         ctx = canvas.getContext("2d");
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -392,6 +386,103 @@ window.Chad = window.Chad || {};
         panX = 30;
         panY = 30;
         applyTransform();
+    }
+
+    function drawPastedImage(img) {
+        if (!canvas || !ctx || !img) return;
+
+        const freshCanvas = historyIndex <= 0;
+
+        if (freshCanvas) {
+            canvas.width = Math.max(1, img.naturalWidth || img.width);
+            canvas.height = Math.max(1, img.naturalHeight || img.height);
+            ctx = canvas.getContext("2d");
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0);
+            clearSelection();
+            saveHistory();
+            zoomFit();
+            notify("Image pasted. You can now draw over it.");
+            return;
+        }
+
+        const maxW = canvas.width * 0.85;
+        const maxH = canvas.height * 0.85;
+        const scale = Math.min(1, maxW / img.width, maxH / img.height);
+        const w = img.width * scale;
+        const h = img.height * scale;
+        const x = (canvas.width - w) / 2;
+        const y = (canvas.height - h) / 2;
+
+        ctx.drawImage(img, x, y, w, h);
+        clearSelection();
+        saveHistory();
+        notify("Image pasted on canvas.");
+    }
+
+    function pasteImageBlob(blob) {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => {
+            URL.revokeObjectURL(url);
+            drawPastedImage(img);
+        };
+        img.onerror = () => {
+            URL.revokeObjectURL(url);
+            notify("Could not read pasted image.");
+        };
+        img.src = url;
+    }
+
+    async function pasteFromClipboard() {
+        if (!navigator.clipboard || !navigator.clipboard.read) {
+            notify("Clipboard image read is not available here. Try Ctrl+V after copying an image.");
+            return;
+        }
+
+        try {
+            const items = await navigator.clipboard.read();
+            for (const item of items) {
+                const imageType = item.types.find(type => type.startsWith("image/"));
+                if (imageType) {
+                    pasteImageBlob(await item.getType(imageType));
+                    return;
+                }
+            }
+            notify("No image found in clipboard.");
+        }
+        catch (error) {
+            notify("Clipboard paste failed. Try Ctrl+V.\n\n" + error.message);
+        }
+    }
+
+    function handlePaste(event) {
+        if (!win || !event.clipboardData) return;
+
+        const items = Array.from(event.clipboardData.items || []);
+        const imageItem = items.find(item => item.type && item.type.startsWith("image/"));
+
+        if (imageItem) {
+            event.preventDefault();
+            event.stopPropagation();
+            pasteImageBlob(imageItem.getAsFile());
+            return;
+        }
+
+        const text = event.clipboardData.getData("text/plain");
+        if (text && activeTool === "text" && canvas && ctx) {
+            event.preventDefault();
+            ctx.save();
+            ctx.fillStyle = activeColor;
+            ctx.font = `${textSize}px ${textFont}`;
+            ctx.textBaseline = "top";
+            ctx.fillText(text, 40, 40);
+            ctx.restore();
+            saveHistory();
+            notify("Text pasted onto canvas.");
+        }
     }
 
     function onPointerDown(event) {
@@ -783,8 +874,9 @@ window.Chad = window.Chad || {};
 
     function renderFooter() {
         return el("div", { style: { padding: "9px 12px", borderTop: "1px solid #cbd5e1", background: "#f8fafc", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px" } }, [
-            el("div", { text: "Paint, erase, pan, zoom, copy, send, crop, and save local are active.", style: { color: "#64748b", fontSize: "11px", fontWeight: "700" } }),
+            el("div", { text: "Tip: copy a screenshot, open Quick Sketch, then press Ctrl+V or Paste.", style: { color: "#64748b", fontSize: "11px", fontWeight: "700" } }),
             el("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, [
+                topButton("📥 Paste", "Paste image from clipboard", pasteFromClipboard, { bg: "#fef3c7", border: "#fcd34d" }),
                 topButton("🗑 Clear", "Clear canvas", clearCanvas),
                 topButton("💾 Save Local", "Save PNG locally", saveLocal),
                 topButton("☁ Save GDrive", "Save to Google Drive", () => notify("GDrive save will be added after extension conversion."), { bg: "#e0f2fe", border: "#7dd3fc" })
@@ -803,6 +895,14 @@ window.Chad = window.Chad || {};
         initialized = false;
     }
 
+    function handleKeyDown(event) {
+        if (!win) return;
+        if (event.ctrlKey && event.key.toLowerCase() === "v") {
+            return;
+        }
+        if (event.key === "Escape") close();
+    }
+
     function render() {
         if (!win) return;
         win.innerHTML = "";
@@ -812,6 +912,7 @@ window.Chad = window.Chad || {};
             el("div", { style: { display: "flex", gap: "6px", alignItems: "center" } }, [
                 topButton("+", "Zoom in", zoomIn, { bg: "#e0f2fe", border: "#7dd3fc" }),
                 topButton("-", "Zoom out", zoomOut, { bg: "#e0f2fe", border: "#7dd3fc" }),
+                topButton("📥 Paste", "Paste image from clipboard", pasteFromClipboard, { bg: "#fef3c7", border: "#fcd34d" }),
                 topButton("📋 Copy", "Copy image or selection", copyImage, { bg: "#dcfce7", border: "#86efac" }),
                 topButton("📤 Send Now", "Copy then focus chat", sendDirect, { bg: "#fef3c7", border: "#fcd34d" }),
                 topButton("✕", "Close", close, { bg: "#fee2e2", border: "#fecaca" })
@@ -858,11 +959,14 @@ window.Chad = window.Chad || {};
                 display: "flex",
                 flexDirection: "column",
                 overflow: "hidden"
-            }
+            },
+            onpaste: handlePaste,
+            onkeydown: handleKeyDown
         });
 
         document.body.appendChild(win);
         render();
+        win.focus();
     }
 
     function patchDrawingButton() {
@@ -897,6 +1001,7 @@ window.Chad = window.Chad || {};
     paint.open = open;
     paint.close = close;
     paint.copyImage = copyImage;
+    paint.pasteFromClipboard = pasteFromClipboard;
     paint.sendDirect = sendDirect;
     paint.saveLocal = saveLocal;
     paint.patchUI = patchUI;
