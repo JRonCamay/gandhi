@@ -13,71 +13,47 @@ function normalizeUrl(url) {
 }
 
 function isChatGPTUrl(url) {
-    return /^https:\/\/(chatgpt\.com|chat\.openai\.com)\//.test(String(url || ""));
+    const text = String(url || "");
+    return text.startsWith("https://chatgpt.com/") || text.startsWith("https://chat.openai.com/");
 }
 
 async function ensureChatiesGroup(tabId) {
-    const groups = await chrome.tabGroups.query({
-        title: CHATIES_GROUP_NAME
-    });
-
+    const groups = await chrome.tabGroups.query({ title: CHATIES_GROUP_NAME });
     const group = groups && groups[0];
 
     if (!group) {
-        const groupId = await chrome.tabs.group({
-            tabIds: [tabId]
-        });
-
-        await chrome.tabGroups.update(groupId, {
-            title: CHATIES_GROUP_NAME,
-            color: "blue"
-        });
-
+        const groupId = await chrome.tabs.group({ tabIds: [tabId] });
+        await chrome.tabGroups.update(groupId, { title: CHATIES_GROUP_NAME, color: "blue" });
         return groupId;
     }
 
-    await chrome.tabs.group({
-        tabIds: [tabId],
-        groupId: group.id
-    });
-
+    await chrome.tabs.group({ tabIds: [tabId], groupId: group.id });
     return group.id;
 }
 
+async function setChatiesColor(color) {
+    const groups = await chrome.tabGroups.query({ title: CHATIES_GROUP_NAME });
+    const group = groups && groups[0];
+    if (group) await chrome.tabGroups.update(group.id, { color });
+}
+
 async function openAgentTab(agent) {
-    if (!agent || !agent.chatUrl) {
-        throw new Error("Missing agent chat URL.");
-    }
+    if (!agent || !agent.chatUrl) throw new Error("Missing agent chat URL.");
 
     const targetUrl = normalizeUrl(agent.chatUrl);
     const tabs = await chrome.tabs.query({});
-    const existing = tabs.find(tab =>
-        tab.url && normalizeUrl(tab.url) === targetUrl
-    );
+    const existing = tabs.find(tab => tab.url && normalizeUrl(tab.url) === targetUrl);
 
     if (existing) {
         await ensureChatiesGroup(existing.id);
         await chrome.tabs.update(existing.id, { active: true });
         await chrome.windows.update(existing.windowId, { focused: true });
-        return {
-            ok: true,
-            reused: true,
-            tabId: existing.id
-        };
+        return { ok: true, reused: true, tabId: existing.id };
     }
 
-    const created = await chrome.tabs.create({
-        url: agent.chatUrl,
-        active: true
-    });
-
+    const created = await chrome.tabs.create({ url: agent.chatUrl, active: true });
     await ensureChatiesGroup(created.id);
-
-    return {
-        ok: true,
-        reused: false,
-        tabId: created.id
-    };
+    return { ok: true, reused: false, tabId: created.id };
 }
 
 async function openOrFocusChatGPT() {
@@ -91,48 +67,39 @@ async function openOrFocusChatGPT() {
         return;
     }
 
-    const created = await chrome.tabs.create({
-        url: CHATGPT_HOME,
-        active: true
-    });
-
+    const created = await chrome.tabs.create({ url: CHATGPT_HOME, active: true });
     await ensureChatiesGroup(created.id);
 }
 
 chrome.action.onClicked.addListener(() => {
-    openOrFocusChatGPT().catch(error => {
-        console.warn("[ChadTheGreat] action failed", error);
-    });
+    openOrFocusChatGPT().catch(error => console.warn("[ChadTheGreat] action failed", error));
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (!message || !message.type) {
-        return false;
-    }
+    if (!message || !message.type) return false;
 
     if (message.type === "CHAD_OPEN_AGENT_TAB") {
-        openAgentTab(message.agent)
-            .then(sendResponse)
-            .catch(error => sendResponse({
-                ok: false,
-                error: error.message
-            }));
-
+        openAgentTab(message.agent).then(sendResponse).catch(error => sendResponse({ ok: false, error: error.message }));
         return true;
     }
 
     if (message.type === "CHAD_GROUP_CURRENT_TAB") {
         const tabId = sender.tab && sender.tab.id;
-
         if (!tabId) {
             sendResponse({ ok: false, error: "No sender tab." });
             return false;
         }
+        ensureChatiesGroup(tabId).then(groupId => sendResponse({ ok: true, groupId })).catch(error => sendResponse({ ok: false, error: error.message }));
+        return true;
+    }
 
-        ensureChatiesGroup(tabId)
-            .then(groupId => sendResponse({ ok: true, groupId }))
-            .catch(error => sendResponse({ ok: false, error: error.message }));
+    if (message.type === "CHAD_DONE_TAB_FEEDBACK") {
+        setChatiesColor("green").then(() => sendResponse({ ok: true })).catch(error => sendResponse({ ok: false, error: error.message }));
+        return true;
+    }
 
+    if (message.type === "CHAD_RESET_TAB_FEEDBACK") {
+        setChatiesColor("blue").then(() => sendResponse({ ok: true })).catch(error => sendResponse({ ok: false, error: error.message }));
         return true;
     }
 
