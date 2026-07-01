@@ -26,7 +26,8 @@
         "actions.js",
         "ui.js",
         "agents.js",
-        "paint.js"
+        "paint.js",
+        "hotfix.js"
     ];
 
     async function loadFile(file) {
