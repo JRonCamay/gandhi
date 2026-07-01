@@ -5,8 +5,10 @@ $RepoName = "gandhi"
 $Branch = "main"
 $Folder = "ChadTheGreat"
 $Target = $PSScriptRoot
-$ApiUrl = "https://api.github.com/repos/$RepoOwner/$RepoName/contents/$Folder?ref=$Branch"
-$RawBase = "https://raw.githubusercontent.com/$RepoOwner/$RepoName/$Branch/$Folder"
+$Parent = Split-Path -Parent $Target
+
+$ApiUrl = "https://api.github.com/repos/${RepoOwner}/${RepoName}/contents/${Folder}?ref=${Branch}"
+$RawBase = "https://raw.githubusercontent.com/${RepoOwner}/${RepoName}/${Branch}/${Folder}"
 
 function Write-Title($Text) {
     Write-Host ""
@@ -17,7 +19,7 @@ function Write-Title($Text) {
 
 function New-BackupFolder {
     $Stamp = Get-Date -Format "yyyyMMdd-HHmmss"
-    $BackupRoot = Join-Path $Target "_chad_backups"
+    $BackupRoot = Join-Path $Parent "ChadBackups"
     $BackupDir = Join-Path $BackupRoot $Stamp
     New-Item -ItemType Directory -Path $BackupDir -Force | Out-Null
     return $BackupDir
@@ -35,7 +37,9 @@ function Get-RemoteFiles {
 
     return @($Items | Where-Object {
         $_.type -eq "file" -and
-        $_.name -notlike ".*"
+        $_.name -notlike ".*" -and
+        $_.name -ne "Update-Chad.ps1" -and
+        $_.name -ne "Update-Chad.bat"
     } | Sort-Object name)
 }
 
@@ -44,8 +48,10 @@ function Get-FileText($Path) {
     return [System.IO.File]::ReadAllText($Path)
 }
 
-function Download-File($FileName, $BackupDir) {
-    $Url = "$RawBase/$FileName?cacheBust=$(Get-Date -Format yyyyMMddHHmmssfff)"
+function Download-File($Item, $BackupDir) {
+    $FileName = $Item.name
+    $EncodedName = [System.Uri]::EscapeDataString($FileName)
+    $Url = "${RawBase}/${EncodedName}?cacheBust=$(Get-Date -Format yyyyMMddHHmmssfff)"
     $Out = Join-Path $Target $FileName
     $Tmp = "$Out.tmp"
 
@@ -80,6 +86,7 @@ function Download-File($FileName, $BackupDir) {
     catch {
         if (Test-Path $Tmp) { Remove-Item $Tmp -Force }
         Write-Host "Failed $FileName" -ForegroundColor Red
+        Write-Host "URL: $Url" -ForegroundColor DarkGray
         Write-Host $_.Exception.Message -ForegroundColor Red
         return "failed"
     }
@@ -87,12 +94,19 @@ function Download-File($FileName, $BackupDir) {
 
 Write-Title "ChadTheGreat Smart Updater"
 Write-Host "Target folder: $Target"
-Write-Host "Repository: $RepoOwner/$RepoName"
+Write-Host "Backup parent: $Parent"
+Write-Host "Repository: ${RepoOwner}/${RepoName}"
 Write-Host "Remote folder: $Folder"
 Write-Host "Branch: $Branch"
 Write-Host ""
 
 try {
+    $BadBackup = Join-Path $Target "_chad_backups"
+    if (Test-Path $BadBackup) {
+        Write-Host "Removing old Chrome-blocking backup folder: $BadBackup" -ForegroundColor Yellow
+        Remove-Item $BadBackup -Recurse -Force
+    }
+
     $BackupDir = New-BackupFolder
     Write-Host "Backup folder: $BackupDir" -ForegroundColor DarkCyan
     Write-Host ""
@@ -104,6 +118,7 @@ try {
     }
 
     Write-Host "Found $($RemoteFiles.Count) remote files." -ForegroundColor Green
+    Write-Host "Updater files are skipped so they do not overwrite themselves." -ForegroundColor DarkGray
     Write-Host ""
 
     $Updated = @()
@@ -112,7 +127,7 @@ try {
     $Failed = @()
 
     foreach ($Item in $RemoteFiles) {
-        $Result = Download-File $Item.name $BackupDir
+        $Result = Download-File $Item $BackupDir
 
         if ($Result -eq "updated") { $Updated += $Item.name }
         elseif ($Result -eq "unchanged") { $Unchanged += $Item.name }
@@ -141,7 +156,7 @@ try {
     }
 
     Write-Host ""
-    Write-Host "🔥 Chad Local Update Complete 🔥" -ForegroundColor Green
+    Write-Host "Chad Local Update Complete" -ForegroundColor Green
     Write-Host "Reload ChadTheGreat in chrome://extensions, then refresh ChatGPT." -ForegroundColor Cyan
 }
 catch {
