@@ -1,4 +1,5 @@
 const CHATIES_GROUP_NAME = "Chaties";
+const CHATGPT_HOME = "https://chatgpt.com/";
 
 function normalizeUrl(url) {
     try {
@@ -9,6 +10,10 @@ function normalizeUrl(url) {
     catch {
         return String(url || "").split("#")[0];
     }
+}
+
+function isChatGPTUrl(url) {
+    return /^https:\/\/(chatgpt\.com|chat\.openai\.com)\//.test(String(url || ""));
 }
 
 async function ensureChatiesGroup(tabId) {
@@ -74,6 +79,31 @@ async function openAgentTab(agent) {
         tabId: created.id
     };
 }
+
+async function openOrFocusChatGPT() {
+    const tabs = await chrome.tabs.query({});
+    const existing = tabs.find(tab => isChatGPTUrl(tab.url));
+
+    if (existing) {
+        await ensureChatiesGroup(existing.id);
+        await chrome.tabs.update(existing.id, { active: true });
+        await chrome.windows.update(existing.windowId, { focused: true });
+        return;
+    }
+
+    const created = await chrome.tabs.create({
+        url: CHATGPT_HOME,
+        active: true
+    });
+
+    await ensureChatiesGroup(created.id);
+}
+
+chrome.action.onClicked.addListener(() => {
+    openOrFocusChatGPT().catch(error => {
+        console.warn("[ChadTheGreat] action failed", error);
+    });
+});
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (!message || !message.type) {
