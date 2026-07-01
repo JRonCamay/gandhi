@@ -3275,9 +3275,6 @@
 
                     snapXTarget =
                     lockedX.bounds;
-
-                    snapLock.x.delta =
-                    lockedX.delta;
                 }
                 else if (
                     snapX !== null &&
@@ -3288,7 +3285,10 @@
                         target: snapXOtherTarget,
                         sourceEdge: snapXSourceEdge,
                         targetEdge: snapXTargetEdge,
-                        delta: snapX
+                        delta: snapX,
+                        value:
+                        desiredX +
+                        snapX
                     };
                 }
                 else {
@@ -3311,9 +3311,6 @@
 
                     snapYTarget =
                     lockedY.bounds;
-
-                    snapLock.y.delta =
-                    lockedY.delta;
                 }
                 else if (
                     snapY !== null &&
@@ -3324,7 +3321,10 @@
                         target: snapYOtherTarget,
                         sourceEdge: snapYSourceEdge,
                         targetEdge: snapYTargetEdge,
-                        delta: snapY
+                        delta: snapY,
+                        value:
+                        desiredY +
+                        snapY
                     };
                 }
                 else {
@@ -3334,20 +3334,24 @@
 
                 const snapResult = {
                     x:
-                    desiredX +
-                    (
-                        snapX === null
-                        ? 0
-                        : snapX
-                    ),
+                    snapLock.x
+                    ? snapLock.x.value
+                    : desiredX +
+                      (
+                          snapX === null
+                          ? 0
+                          : snapX
+                      ),
 
                     y:
-                    desiredY +
-                    (
-                        snapY === null
-                        ? 0
-                        : snapY
-                    )
+                    snapLock.y
+                    ? snapLock.y.value
+                    : desiredY +
+                      (
+                          snapY === null
+                          ? 0
+                          : snapY
+                      )
                 };
 
                 window.Transfork.snapVisuals.update(
