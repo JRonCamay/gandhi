@@ -164,7 +164,9 @@ window.Chad = window.Chad || {};
         }
 
         if (window.Chad.bridge && window.Chad.bridge.openAgentTab) {
-            window.Chad.bridge.openAgentTab(agent).catch(error => console.warn("[Chad] openAgentTab failed", error));
+            window.Chad.bridge.openAgentTab(agent).catch(() => {
+                window.open(agent.chatUrl || "https://chatgpt.com/", "chad_agent_" + agent.id);
+            });
         }
 
         renderChatiesStable(true);

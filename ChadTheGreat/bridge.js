@@ -5,6 +5,8 @@ window.Chad = window.Chad || {};
 
     const bridge = {};
     const originalOpen = window.open.bind(window);
+    const RUNTIME_RETRY_MS = 250;
+    const RUNTIME_TIMEOUT_MS = 5000;
 
     function hasExtensionRuntime() {
         return Boolean(
@@ -37,10 +39,52 @@ window.Chad = window.Chad || {};
         });
     }
 
+    function waitForRuntime() {
+        return new Promise(resolve => {
+            const start = Date.now();
+
+            function check() {
+                if (hasExtensionRuntime()) {
+                    resolve(true);
+                    return;
+                }
+
+                if (Date.now() - start >= RUNTIME_TIMEOUT_MS) {
+                    resolve(false);
+                    return;
+                }
+
+                setTimeout(check, RUNTIME_RETRY_MS);
+            }
+
+            check();
+        });
+    }
+
+    function openFallback(agent) {
+        const url = agent && agent.chatUrl
+            ? agent.chatUrl
+            : "https://chatgpt.com/";
+        const target = agent && agent.id
+            ? "chad_agent_" + agent.id
+            : "_blank";
+
+        originalOpen(url, target);
+        return { ok: true, fallback: true };
+    }
+
     bridge.isExtension = hasExtensionRuntime;
 
-    bridge.openAgentTab = function (agent) {
-        return sendMessage({ type: "CHAD_OPEN_AGENT_TAB", agent });
+    bridge.openAgentTab = async function (agent) {
+        const ready = await waitForRuntime();
+        if (!ready) return openFallback(agent);
+
+        try {
+            return await sendMessage({ type: "CHAD_OPEN_AGENT_TAB", agent });
+        }
+        catch {
+            return openFallback(agent);
+        }
     };
 
     bridge.groupCurrentTab = function () {
@@ -61,11 +105,8 @@ window.Chad = window.Chad || {};
 
         window.open = function (url, target, features) {
             const isAgentOpen = String(target || "").startsWith("chad_agent_");
-            if (isAgentOpen && hasExtensionRuntime()) {
-                bridge.openAgentTab({ id: target, chatUrl: String(url || "") }).catch(error => {
-                    console.warn("[ChadBridge] openAgentTab failed", error);
-                    originalOpen(url, target, features);
-                });
+            if (isAgentOpen) {
+                bridge.openAgentTab({ id: String(target || "").replace(/^chad_agent_/, ""), chatUrl: String(url || "") });
                 return null;
             }
             return originalOpen(url, target, features);
