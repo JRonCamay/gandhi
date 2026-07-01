@@ -22,6 +22,7 @@ Loads all Transfork modules from the same Transfork folder.
         'asset-bake-engine.js',
         'overlay-tools.js',
         'skew-tools.js',
+        'corner-snap-patch.js',
         'transfork-main.js'
     ];
 
