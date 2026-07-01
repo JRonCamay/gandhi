@@ -5,44 +5,29 @@ window.Chad = window.Chad || {};
 
     const ui = {};
     let panel = null;
+    let body = null;
     let contextMenu = null;
+    const GLOBAL_AGENTS_KEY = "gandhi_chad_global_agents_v1";
+    const ACTIVE_AGENT_KEY = "gandhi_chad_active_agent_id_v1";
+    const DONE_FLASH_KEY = "gandhi_chad_task_done_flash_v1";
 
     function createEl(tag, props = {}, children = []) {
-        const el = document.createElement(tag);
+        const node = document.createElement(tag);
 
         for (const [key, value] of Object.entries(props)) {
-            if (key === "style") {
-                Object.assign(el.style, value);
-            }
-            else if (key === "text") {
-                el.textContent = value;
-            }
-            else if (key === "html") {
-                el.innerHTML = value;
-            }
-            else if (key.startsWith("on")) {
-                el.addEventListener(
-                    key.slice(2).toLowerCase(),
-                    value
-                );
-            }
-            else {
-                el.setAttribute(key, value);
-            }
+            if (key === "style") Object.assign(node.style, value);
+            else if (key === "text") node.textContent = value;
+            else if (key === "html") node.innerHTML = value;
+            else if (key.startsWith("on")) node.addEventListener(key.slice(2).toLowerCase(), value);
+            else node.setAttribute(key, value);
         }
 
         for (const child of children) {
-            if (typeof child === "string") {
-                el.appendChild(
-                    document.createTextNode(child)
-                );
-            }
-            else if (child) {
-                el.appendChild(child);
-            }
+            if (typeof child === "string") node.appendChild(document.createTextNode(child));
+            else if (child) node.appendChild(child);
         }
 
-        return el;
+        return node;
     }
 
     function escapeHTML(text) {
@@ -56,17 +41,19 @@ window.Chad = window.Chad || {};
     function button(label, fn, extra = {}) {
         return createEl("button", {
             text: label,
-            onclick: fn,
             title: extra.title || "",
+            onclick: event => {
+                event.preventDefault();
+                event.stopPropagation();
+                fn(event);
+            },
             style: {
                 background: extra.bg || "#f8fafc",
                 color: extra.color || "#0f172a",
-                border:
-                    "1px solid " +
-                    (extra.border || "#cbd5e1"),
+                border: "1px solid " + (extra.border || "#cbd5e1"),
                 borderRadius: "6px",
-                padding: "4px 7px",
-                fontSize: "11px",
+                padding: extra.padding || "4px 7px",
+                fontSize: extra.fontSize || "11px",
                 cursor: "pointer",
                 whiteSpace: "nowrap",
                 fontWeight: extra.bold ? "700" : "500"
@@ -83,11 +70,184 @@ window.Chad = window.Chad || {};
         };
     }
 
-    function renderHeader() {
-        const store = window.Chad.storage;
-        const state = store.state;
+    function loadJSON(key, fallback) {
+        try {
+            const raw = localStorage.getItem(key);
+            return raw ? (JSON.parse(raw) || fallback) : fallback;
+        }
+        catch {
+            return fallback;
+        }
+    }
 
+    function saveJSON(key, value) {
+        localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    function currentChatUrl() {
+        return location.href.includes("/c/")
+            ? location.href.split("#")[0]
+            : "https://chatgpt.com/";
+    }
+
+    function nowStamp() {
+        return window.Chad.storage && window.Chad.storage.nowStamp
+            ? window.Chad.storage.nowStamp()
+            : new Date().toLocaleString();
+    }
+
+    function defaultAgents() {
+        return [
+            {
+                id: "agent-brenda",
+                icon: "👩🏼",
+                name: "Brenda",
+                description: "Chad architect and developer.",
+                chatUrl: currentChatUrl(),
+                tabTitle: "👩🏼 Brenda",
+                files: [],
+                createdAt: nowStamp(),
+                updatedAt: nowStamp()
+            },
+            {
+                id: "agent-shaggy",
+                icon: "🧔",
+                name: "Shaggy",
+                description: "Another ChatGPT tab.",
+                chatUrl: "https://chatgpt.com/",
+                tabTitle: "🧔 Shaggy",
+                files: [],
+                createdAt: nowStamp(),
+                updatedAt: nowStamp()
+            }
+        ];
+    }
+
+    function migrateOldAgents() {
+        const existing = loadJSON(GLOBAL_AGENTS_KEY, null);
+        if (Array.isArray(existing) && existing.length) return existing;
+
+        const migrated = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (!key || !key.startsWith("gandhi_chad_agents_v1:")) continue;
+            const old = loadJSON(key, []);
+            if (!Array.isArray(old)) continue;
+            for (const agent of old) {
+                if (!agent || !agent.id || migrated.some(item => item.id === agent.id)) continue;
+                migrated.push({
+                    ...agent,
+                    tabTitle: agent.tabTitle || `${agent.icon || "🤖"} ${agent.name || "Agent"}`,
+                    files: agent.files || []
+                });
+            }
+        }
+
+        const agents = migrated.length ? migrated : defaultAgents();
+        saveJSON(GLOBAL_AGENTS_KEY, agents);
+        return agents;
+    }
+
+    function getAgents() {
+        const agents = migrateOldAgents();
+        let changed = false;
+
+        for (const agent of agents) {
+            if (!agent.files) {
+                agent.files = [];
+                changed = true;
+            }
+            if (!agent.tabTitle) {
+                agent.tabTitle = `${agent.icon || "🤖"} ${agent.name || "Agent"}`;
+                changed = true;
+            }
+        }
+
+        if (changed) saveAgents(agents);
+        return agents;
+    }
+
+    function saveAgents(agents) {
+        saveJSON(GLOBAL_AGENTS_KEY, agents);
+    }
+
+    function getActiveAgentId() {
+        const agents = getAgents();
+        const saved = localStorage.getItem(ACTIVE_AGENT_KEY);
+        if (agents.some(agent => agent.id === saved)) return saved;
+        return agents[0] ? agents[0].id : "";
+    }
+
+    function setActiveAgentId(id) {
+        localStorage.setItem(ACTIVE_AGENT_KEY, id || "");
+    }
+
+    function getActiveAgent() {
+        const id = getActiveAgentId();
+        return getAgents().find(agent => agent.id === id) || getAgents()[0] || null;
+    }
+
+    function setFavicon(icon) {
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-size="48">${icon || "🤖"}</text></svg>`;
+        const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+        let link = document.querySelector("link[data-chad-favicon]");
+        if (!link) {
+            link = document.createElement("link");
+            link.rel = "icon";
+            link.dataset.chadFavicon = "1";
+            document.head.appendChild(link);
+        }
+        link.href = url;
+    }
+
+    function applyTabIdentity() {
+        const agent = getActiveAgent();
+        if (!agent) return;
+        document.title = agent.description
+            ? `${agent.tabTitle || agent.name} — ${agent.description}`
+            : (agent.tabTitle || agent.name);
+        setFavicon(agent.icon || "🤖");
+    }
+
+    function markDoneFlash() {
+        localStorage.setItem(DONE_FLASH_KEY, String(Date.now() + 9000));
+        render();
+    }
+
+    function isDoneFlashing() {
+        return Date.now() < Number(localStorage.getItem(DONE_FLASH_KEY) || 0);
+    }
+
+    function scrollToLatest() {
+        setTimeout(() => {
+            try {
+                const targets = [
+                    document.querySelector("main"),
+                    document.querySelector("[role='main']"),
+                    document.scrollingElement,
+                    document.documentElement,
+                    document.body
+                ].filter(Boolean);
+                for (const target of targets) target.scrollTop = target.scrollHeight;
+                window.scrollTo(0, document.body.scrollHeight);
+            }
+            catch {}
+        }, 900);
+    }
+
+    function autoScanTasks() {
+        setTimeout(() => {
+            if (window.Chad.scanner && window.Chad.scanner.scanTasks) {
+                window.Chad.scanner.scanTasks();
+            }
+        }, 1200);
+    }
+
+    function renderHeader() {
+        const state = window.Chad.storage.state;
+        const agent = getActiveAgent();
         const tabs = [
+            ["Chaties", "chaties"],
             ["Tasks", "tasks"],
             ["Roadmap", "roadmap"],
             ["Pins", "pins"],
@@ -95,1103 +255,439 @@ window.Chad = window.Chad || {};
             ["Notes", "notes"]
         ];
 
-        return createEl("div", {
+        const header = createEl("div", {
             style: {
                 padding: "9px",
-                background: "#f1f5f9",
-                borderBottom: "1px solid #cbd5e1"
+                background: isDoneFlashing() ? "#dcfce7" : "#f1f5f9",
+                borderBottom: "1px solid " + (isDoneFlashing() ? "#22c55e" : "#cbd5e1"),
+                boxShadow: isDoneFlashing() ? "0 0 0 3px rgba(34,197,94,.25) inset" : "none"
             }
-        }, [
-            createEl("div", {
-                style: {
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom:
-                        state.minimized ? "0" : "7px"
-                }
-            }, [
-                createEl("div", {
-                    text: "Chad",
-                    style: {
-                        fontWeight: "800",
-                        fontSize: "17px",
-                        color: "#0f172a"
-                    }
-                }),
-                createEl("div", {
-                    style: {
-                        display: "flex",
-                        gap: "4px"
-                    }
-                }, [
-                    button(
-                        "RULES",
-                        window.Chad.actions.copyRules,
-                        {
-                            bg: "#e0f2fe",
-                            border: "#7dd3fc",
-                            bold: true
-                        }
-                    ),
-                    button(
-                        "CHAT RULES",
-                        window.Chad.actions.copyChatRules,
-                        {
-                            bg: "#fef3c7",
-                            border: "#fcd34d",
-                            bold: true
-                        }
-                    ),
-                    button(
-                        state.minimized ? "□" : "—",
-                        () => {
-                            state.minimized =
-                                !state.minimized;
-                            render();
-                        }
-                    ),
-                    button(
-                        "✕",
-                        () => {
-                            panel.style.display = "none";
-                        }
-                    )
-                ])
-            ]),
-            state.minimized ? null : createEl("div", {
-                style: {
-                    display: "flex",
-                    gap: "5px",
-                    flexWrap: "wrap"
-                }
-            }, [
-                ...tabs.map(([label, tab]) =>
-                    button(label, () => {
-                        state.activeTab = tab;
-                        render();
+        });
 
-                        if (tab === "repo") {
-                            window.Chad.actions
-                                .ensureRepoTreeLoaded();
-                        }
-                    }, {
-                        bg:
-                            state.activeTab === tab
-                                ? "#2563eb"
-                                : "#ffffff",
-                        color:
-                            state.activeTab === tab
-                                ? "#ffffff"
-                                : "#0f172a",
-                        border:
-                            state.activeTab === tab
-                                ? "#2563eb"
-                                : "#cbd5e1",
-                        bold: state.activeTab === tab
-                    })
-                ),
-                button(
-                    "Scan",
-                    window.Chad.scanner.scanTasks,
-                    {
-                        bg: "#dcfce7",
-                        border: "#86efac",
-                        bold: true
-                    }
-                ),
-                createEl("span", {
-                    id: "gandhi-chad-scan-status",
-                    text: "",
-                    style: {
-                        fontSize: "11px",
-                        color: "#64748b",
-                        alignSelf: "center"
-                    }
-                })
-            ])
-        ]);
+        const top = createEl("div", {
+            style: {
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: "8px",
+                marginBottom: "7px"
+            }
+        });
+
+        top.appendChild(createEl("div", {
+            html:
+                `<div style="font-size:10px;color:#64748b;font-weight:800;line-height:1">Chad</div>` +
+                `<div style="font-size:17px;color:#0f172a;font-weight:900;line-height:1.15">${escapeHTML(agent ? agent.icon : "🤖")} ${escapeHTML(agent ? agent.name : "Agent")}</div>` +
+                `<div style="font-size:11px;color:#64748b;font-weight:600;max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHTML(agent ? agent.description : "")}</div>`
+        }));
+
+        top.appendChild(createEl("div", {
+            style: { display: "flex", gap: "4px", alignItems: "center" }
+        }, [
+            button("GOD RULES", () => {
+                const text = (window.Chad.data.companionRules || "") + "\n\n\n" + (window.Chad.data.chatRules || "");
+                window.Chad.actions.copyText(text);
+            }, { bg: "#ede9fe", border: "#c4b5fd", bold: true }),
+            button("🎨", () => window.Chad.paint && window.Chad.paint.open(), { bg: "#fef3c7", border: "#fcd34d", bold: true, title: "Quick Sketch" }),
+            button("🐒", () => console.log("GitGit reserved."), { bg: "#fef3c7", border: "#fcd34d", bold: true, title: "GitGit" }),
+            button("✕", () => { panel.style.display = "none"; }, { bg: "#f8fafc", border: "#cbd5e1" })
+        ]));
+
+        const tabRow = createEl("div", {
+            style: { display: "flex", gap: "5px", flexWrap: "wrap" }
+        });
+
+        for (const [label, tab] of tabs) {
+            tabRow.appendChild(button(label, () => {
+                state.activeTab = tab;
+                render();
+                if (tab === "repo") window.Chad.actions.ensureRepoTreeLoaded();
+            }, {
+                bg: state.activeTab === tab ? "#2563eb" : "#ffffff",
+                color: state.activeTab === tab ? "#ffffff" : "#0f172a",
+                border: state.activeTab === tab ? "#2563eb" : "#cbd5e1",
+                bold: state.activeTab === tab
+            }));
+        }
+
+        tabRow.appendChild(button("Scan", window.Chad.scanner.scanTasks, { bg: "#dcfce7", border: "#86efac", bold: true }));
+        tabRow.appendChild(createEl("span", {
+            id: "gandhi-chad-scan-status",
+            text: "",
+            style: { fontSize: "11px", color: "#64748b", alignSelf: "center" }
+        }));
+
+        header.appendChild(top);
+        header.appendChild(tabRow);
+        return header;
     }
 
     function renderProjectFilters() {
         const state = window.Chad.storage.state;
         const order = window.Chad.data.projectOrder;
-
         return createEl("div", {
-            style: {
-                display: "flex",
-                gap: "4px",
-                flexWrap: "wrap",
-                marginBottom: "8px"
-            }
-        }, order.map(project =>
-            button(project, () => {
-                state.activeProject = project;
-                render();
-            }, {
-                bg:
-                    state.activeProject === project
-                        ? "#0f172a"
-                        : "#ffffff",
-                color:
-                    state.activeProject === project
-                        ? "#ffffff"
-                        : "#0f172a",
-                border:
-                    state.activeProject === project
-                        ? "#0f172a"
-                        : "#cbd5e1",
-                bold: state.activeProject === project
-            })
-        ));
-    }
-
-    function currentTaskSummary() {
-        const state = window.Chad.storage.state;
-
-        const pending = state.tasks
-            .filter(task => task.status !== "Completed")
-            .slice()
-            .reverse()[0];
-
-        if (!pending) {
-            return createEl("div", {
-                text: "Current: none",
-                style: {
-                    color: "#64748b",
-                    marginBottom: "8px"
-                }
-            });
-        }
-
-        return createEl("div", {
-            html:
-                `<b>Current:</b> ${escapeHTML(pending.id)} — ${escapeHTML(pending.title)}<br>` +
-                `<span style="color:#64748b">Status: ${escapeHTML(pending.status)} | Deadline: ${escapeHTML(pending.deadline || "No deadline")}</span>`,
-            style: {
-                padding: "7px",
-                border: "1px solid #cbd5e1",
-                borderRadius: "8px",
-                background: "#f8fafc",
-                marginBottom: "8px"
-            }
-        });
-    }
-
-    function renderTaskCard(task) {
-        const isDone =
-            task.status === "Completed";
-
-        return createEl("div", {
-            style: {
-                border:
-                    "1px solid " +
-                    (isDone ? "#86efac" : "#cbd5e1"),
-                borderRadius: "9px",
-                padding: "8px",
-                marginBottom: "8px",
-                background:
-                    isDone ? "#f0fdf4" : "#f8fafc"
-            }
-        }, [
-            createEl("div", {
-                style: {
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: "8px",
-                    alignItems: "flex-start",
-                    marginBottom: "5px"
-                }
-            }, [
-                createEl("div", {
-                    html:
-                        `<b>${escapeHTML(task.id)}</b><br>` +
-                        `<span style="color:#334155">${escapeHTML(task.title)}</span>`
-                }),
-                createEl("span", {
-                    text: task.status,
-                    style: {
-                        color:
-                            isDone ? "#15803d" : "#ca8a04",
-                        fontWeight: "bold"
-                    }
-                })
-            ]),
-            createEl("div", {
-                html:
-                    `<span style="color:#64748b">Project:</span> ${escapeHTML(task.project || "")}<br>` +
-                    `<span style="color:#64748b">Created:</span> ${escapeHTML(task.createdAt || "")}<br>` +
-                    `<span style="color:#64748b">Updated:</span> ${escapeHTML(task.updatedAt || "")}<br>` +
-                    `<span style="color:#64748b">Deadline:</span> ${escapeHTML(task.deadline || "No deadline")}`,
-                style: {
-                    fontSize: "11px",
-                    color: "#334155",
-                    lineHeight: "1.35"
-                }
-            }),
-            createEl("div", {
-                style: {
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: "4px",
-                    marginTop: "7px"
-                }
-            }, [
-                button(
-                    "OPEN",
-                    () => openTaskModal(task)
-                ),
-                button(
-                    "SRC",
-                    () => window.Chad.actions
-                        .scrollToTask(task)
-                ),
-                button(
-                    "COPY",
-                    () => window.Chad.actions
-                        .copyText(task.prompt)
-                ),
-                button(
-                    "DUE",
-                    () => window.Chad.actions
-                        .setDeadline(task)
-                ),
-                button(
-                    "DONE",
-                    () => window.Chad.actions
-                        .markDone(task),
-                    {
-                        bg: "#dcfce7",
-                        border: "#86efac",
-                        bold: true
-                    }
-                ),
-                button(
-                    "DELETE",
-                    () => window.Chad.actions
-                        .deleteTask(task),
-                    {
-                        bg: "#fee2e2",
-                        border: "#fecaca"
-                    }
-                )
-            ])
-        ]);
+            style: { display: "flex", gap: "4px", flexWrap: "wrap", marginBottom: "8px" }
+        }, order.map(project => button(project, () => {
+            state.activeProject = project;
+            render();
+        }, {
+            bg: state.activeProject === project ? "#0f172a" : "#ffffff",
+            color: state.activeProject === project ? "#ffffff" : "#0f172a",
+            border: state.activeProject === project ? "#0f172a" : "#cbd5e1",
+            bold: state.activeProject === project
+        })));
     }
 
     function renderTasks() {
         const store = window.Chad.storage;
         const state = store.state;
+        const wrap = createEl("div", { style: bodyStyle() });
 
-        const body = createEl("div", {
-            style: bodyStyle()
-        });
-
-        body.appendChild(currentTaskSummary());
-
-        body.appendChild(createEl("div", {
-            style: {
-                display: "flex",
-                gap: "5px",
-                marginBottom: "8px",
-                flexWrap: "wrap"
-            }
-        }, [
-            button(
-                "SCAN",
-                window.Chad.scanner.scanTasks,
-                {
-                    bg: "#dcfce7",
-                    border: "#86efac",
-                    bold: true
-                }
-            ),
-            button(
-                "RESET DELETED",
-                () => {
-                    if (
-                        !confirm(
-                            "Allow deleted tasks to be scanned again in this chat?"
-                        )
-                    ) {
-                        return;
-                    }
-
-                    store.resetDeletedTasks();
-                    window.Chad.scanner.scanTasks();
-                },
-                {
-                    bg: "#fef3c7",
-                    border: "#fcd34d"
-                }
-            )
+        wrap.appendChild(createEl("div", { style: { display: "flex", gap: "5px", marginBottom: "8px", flexWrap: "wrap" } }, [
+            button("SCAN", window.Chad.scanner.scanTasks, { bg: "#dcfce7", border: "#86efac", bold: true }),
+            button("RESET DELETED", () => {
+                if (!confirm("Allow deleted tasks to be scanned again in this chat?")) return;
+                store.resetDeletedTasks();
+                window.Chad.scanner.scanTasks();
+            }, { bg: "#fef3c7", border: "#fcd34d" })
         ]));
 
-        body.appendChild(renderProjectFilters());
+        wrap.appendChild(renderProjectFilters());
+        let tasks = [...state.tasks];
+        if (state.activeProject !== "ALL") tasks = tasks.filter(task => task.project === state.activeProject);
 
-        let list = [...state.tasks];
-
-        if (state.activeProject !== "ALL") {
-            list = list.filter(
-                task => task.project === state.activeProject
-            );
+        if (!tasks.length) {
+            wrap.appendChild(createEl("div", { text: "No tasks yet. Click SCAN.", style: { color: "#64748b", padding: "10px" } }));
         }
 
-        if (!list.length) {
-            body.appendChild(createEl("div", {
-                text: "No tasks yet. Click SCAN.",
-                style: {
-                    color: "#64748b",
-                    padding: "10px"
-                }
-            }));
+        for (const task of tasks.reverse()) wrap.appendChild(renderTaskCard(task));
+        return wrap;
+    }
+
+    function renderTaskCard(task) {
+        const done = task.status === "Completed";
+        return createEl("div", {
+            style: {
+                border: "1px solid " + (done ? "#86efac" : "#cbd5e1"),
+                borderRadius: "9px",
+                padding: "8px",
+                marginBottom: "8px",
+                background: done ? "#f0fdf4" : "#f8fafc"
+            }
+        }, [
+            createEl("div", {
+                html: `<b>${escapeHTML(task.id)}</b><br><span style="color:#334155">${escapeHTML(task.title)}</span>`
+            }),
+            createEl("div", {
+                html:
+                    `<span style="color:#64748b">Project:</span> ${escapeHTML(task.project || "")}<br>` +
+                    `<span style="color:#64748b">Status:</span> ${escapeHTML(task.status || "Pending")}<br>` +
+                    `<span style="color:#64748b">Updated:</span> ${escapeHTML(task.updatedAt || "")}`,
+                style: { fontSize: "11px", color: "#334155", lineHeight: "1.35", marginTop: "5px" }
+            }),
+            createEl("div", { style: { display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "7px" } }, [
+                button("OPEN", () => openTextModal(task.id + " — " + task.title, task.prompt)),
+                button("SRC", () => window.Chad.actions.scrollToTask(task)),
+                button("COPY", () => window.Chad.actions.copyText(task.prompt)),
+                button("DUE", () => window.Chad.actions.setDeadline(task)),
+                button("DONE", () => {
+                    window.Chad.actions.markDone(task);
+                    markDoneFlash();
+                }, { bg: "#dcfce7", border: "#86efac", bold: true }),
+                button("DELETE", () => window.Chad.actions.deleteTask(task), { bg: "#fee2e2", border: "#fecaca" })
+            ])
+        ]);
+    }
+
+    function renderChaties() {
+        const wrap = createEl("div", { style: bodyStyle() });
+        const agents = getAgents();
+        const activeId = getActiveAgentId();
+
+        wrap.appendChild(createEl("div", {
+            style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "7px" }
+        }, [
+            createEl("div", {
+                html: `<b>Chaties</b><br><span style="color:#64748b">Global agents. Opens tabs in the Chaties group.</span>`
+            }),
+            button("+", () => {
+                const agent = {
+                    id: "agent-" + Date.now(), icon: "🤖", name: "New Agent", description: "",
+                    chatUrl: "https://chatgpt.com/", tabTitle: "🤖 New Agent", files: [], createdAt: nowStamp(), updatedAt: nowStamp()
+                };
+                const list = getAgents();
+                list.push(agent);
+                saveAgents(list);
+                setActiveAgentId(agent.id);
+                render();
+            }, { bg: "#dcfce7", border: "#86efac", bold: true })
+        ]));
+
+        for (const agent of agents) {
+            const active = agent.id === activeId;
+            wrap.appendChild(renderAgentCard(agent, active));
+        }
+        return wrap;
+    }
+
+    function renderAgentCard(agent, active) {
+        const box = createEl("div", {
+            style: {
+                border: "1px solid " + (active ? "#2563eb" : "#cbd5e1"),
+                borderRadius: "9px",
+                padding: "7px",
+                marginTop: "6px",
+                background: active ? "#eff6ff" : "#f8fafc"
+            }
+        });
+
+        box.appendChild(createEl("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "6px" } }, [
+            button(`${agent.icon || "🤖"} ${agent.name || "Agent"}`, () => openAgent(agent), {
+                bg: "transparent", border: "transparent", bold: true, padding: "3px", fontSize: "12px"
+            }),
+            button("INFO", () => editAgent(agent.id), { bg: "#fef3c7", border: "#fcd34d" })
+        ]));
+
+        box.appendChild(createEl("div", {
+            text: agent.description || "Click INFO to add description.",
+            style: { color: agent.description ? "#64748b" : "#94a3b8", fontSize: "11px", marginTop: "3px" }
+        }));
+
+        if (active) {
+            box.appendChild(createEl("div", { style: { display: "flex", gap: "4px", flexWrap: "wrap", marginTop: "6px" } }, [
+                button("SCAN FILES", () => { scanFiles(agent.id); render(); }, { bg: "#dcfce7", border: "#86efac", bold: true }),
+                button("USE THIS CHAT", () => { agent.chatUrl = currentChatUrl(); agent.updatedAt = nowStamp(); saveAgents(getAgents().map(a => a.id === agent.id ? agent : a)); render(); }, { bg: "#e0f2fe", border: "#7dd3fc" }),
+                button("COPY LINK", () => window.Chad.actions.copyText(agent.chatUrl || "")),
+                button("DONE COLOR", () => markDoneFlash(), { bg: "#bbf7d0", border: "#22c55e", bold: true }),
+                button("DELETE AGENT", () => { saveAgents(getAgents().filter(a => a.id !== agent.id)); setActiveAgentId(getAgents()[0] ? getAgents()[0].id : ""); render(); }, { bg: "#fee2e2", border: "#fecaca" })
+            ]));
+
+            if (!agent.files || !agent.files.length) {
+                box.appendChild(createEl("div", { text: "No files yet. Click SCAN FILES.", style: { color: "#64748b", fontSize: "11px", padding: "7px 2px 0" } }));
+            }
+            else {
+                for (const file of agent.files) box.appendChild(renderAgentFile(agent, file));
+            }
         }
 
-        for (const task of list.reverse()) {
-            body.appendChild(renderTaskCard(task));
-        }
+        return box;
+    }
 
-        return body;
+    function renderAgentFile(agent, file) {
+        return createEl("div", { style: { border: "1px solid #e2e8f0", borderRadius: "7px", padding: "6px", marginTop: "5px", background: "#ffffff" } }, [
+            createEl("div", {
+                html: `<b>📄 ${escapeHTML(file.name)}</b><br><span style="color:#64748b">${escapeHTML(file.source || "chat")} · ${escapeHTML(file.addedAt || "")}</span>`,
+                style: { fontSize: "11px", lineHeight: "1.35", marginBottom: "5px" }
+            }),
+            createEl("div", { style: { display: "flex", gap: "4px", flexWrap: "wrap" } }, [
+                file.url ? button("OPEN", () => window.open(file.url, "_blank")) : null,
+                button("COPY", () => window.Chad.actions.copyText(file.url || file.name)),
+                button("DELETE", () => {
+                    agent.files = (agent.files || []).filter(item => item.id !== file.id);
+                    saveAgents(getAgents().map(a => a.id === agent.id ? agent : a));
+                    render();
+                }, { bg: "#fee2e2", border: "#fecaca" })
+            ])
+        ]);
+    }
+
+    function scanFiles(agentId) {
+        const list = getAgents();
+        const agent = list.find(item => item.id === agentId);
+        if (!agent) return;
+
+        const found = window.Chad.agents && window.Chad.agents.scanVisibleChatFiles
+            ? window.Chad.agents.scanVisibleChatFiles()
+            : [];
+        const map = new Map();
+        for (const file of agent.files || []) map.set(String(file.url || file.name || file.id).toLowerCase(), file);
+        for (const file of found) {
+            const key = String(file.url || file.name || file.id).toLowerCase();
+            if (!map.has(key)) map.set(key, file);
+        }
+        agent.files = Array.from(map.values());
+        agent.updatedAt = nowStamp();
+        saveAgents(list);
+    }
+
+    function openAgent(agent) {
+        setActiveAgentId(agent.id);
+        applyTabIdentity();
+        render();
+        if (window.Chad.bridge && window.Chad.bridge.isExtension && window.Chad.bridge.isExtension()) {
+            window.Chad.bridge.openAgentTab(agent).catch(() => window.open(agent.chatUrl || "https://chatgpt.com/", "chad_agent_" + agent.id));
+        }
+        else {
+            window.open(agent.chatUrl || "https://chatgpt.com/", "chad_agent_" + agent.id);
+        }
+        scrollToLatest();
+        autoScanTasks();
+    }
+
+    function editAgent(agentId) {
+        const list = getAgents();
+        const agent = list.find(item => item.id === agentId);
+        if (!agent) return;
+        const icon = prompt("Icon", agent.icon || "🤖"); if (icon === null) return;
+        const name = prompt("Name", agent.name || "Agent"); if (name === null) return;
+        const description = prompt("Description", agent.description || ""); if (description === null) return;
+        const chatUrl = prompt("Chat URL", agent.chatUrl || "https://chatgpt.com/"); if (chatUrl === null) return;
+        const tabTitle = prompt("Tab title", agent.tabTitle || `${icon} ${name}`); if (tabTitle === null) return;
+        Object.assign(agent, { icon: icon.trim() || "🤖", name: name.trim() || "Agent", description: description.trim(), chatUrl: chatUrl.trim() || "https://chatgpt.com/", tabTitle: tabTitle.trim() || `${icon} ${name}`, updatedAt: nowStamp() });
+        saveAgents(list);
+        setActiveAgentId(agent.id);
+        applyTabIdentity();
+        render();
     }
 
     function renderRoadmap() {
-        const body = createEl("div", {
-            style: bodyStyle()
-        });
-
-        body.appendChild(
-            button(
-                "Refresh Repo Memory",
-                window.Chad.actions.refreshRepoMemory,
-                {
-                    bg: "#ede9fe",
-                    border: "#c4b5fd",
-                    bold: true
-                }
-            )
-        );
-
-        body.appendChild(createEl("div", {
-            style: { height: "8px" }
-        }));
-
+        const wrap = createEl("div", { style: bodyStyle() });
+        wrap.appendChild(button("Refresh Repo Memory", window.Chad.actions.refreshRepoMemory, { bg: "#ede9fe", border: "#c4b5fd", bold: true }));
+        wrap.appendChild(createEl("div", { style: { height: "8px" } }));
         for (const item of window.Chad.storage.state.roadmap) {
-            body.appendChild(createEl("div", {
-                style: {
-                    border: "1px solid #cbd5e1",
-                    borderRadius: "9px",
-                    padding: "8px",
-                    marginBottom: "8px",
-                    background: "#f8fafc"
-                }
-            }, [
-                createEl("div", {
-                    html:
-                        `<b>${escapeHTML(item.title)}</b><br>` +
-                        `<span style="color:#ca8a04">${escapeHTML(item.status)}</span><br>` +
-                        `<span style="color:#64748b">Updated: ${escapeHTML(item.updatedAt || "")}</span>`,
-                    style: {
-                        marginBottom: "6px"
-                    }
-                }),
-                createEl("pre", {
-                    text: item.text,
-                    style: {
-                        whiteSpace: "pre-wrap",
-                        fontFamily: "Consolas, monospace",
-                        fontSize: "11px",
-                        color: "#334155",
-                        margin: "0"
-                    }
-                })
+            wrap.appendChild(createEl("div", { style: { border: "1px solid #cbd5e1", borderRadius: "9px", padding: "8px", marginBottom: "8px", background: "#f8fafc" } }, [
+                createEl("div", { html: `<b>${escapeHTML(item.title)}</b><br><span style="color:#ca8a04">${escapeHTML(item.status)}</span><br><span style="color:#64748b">Updated: ${escapeHTML(item.updatedAt || "")}</span>` }),
+                createEl("pre", { text: item.text, style: { whiteSpace: "pre-wrap", fontFamily: "Consolas, monospace", fontSize: "11px", color: "#334155", margin: "7px 0 0" } })
             ]));
         }
-
-        return body;
+        return wrap;
     }
 
     function renderPins() {
         const state = window.Chad.storage.state;
-
-        const body = createEl("div", {
-            style: bodyStyle()
-        }, [
-            createEl("div", {
-                style: {
-                    display: "flex",
-                    gap: "5px",
-                    marginBottom: "8px"
-                }
-            }, [
-                button(
-                    "Pin Selected",
-                    window.Chad.actions.pinSelection,
-                    {
-                        bg: "#ede9fe",
-                        border: "#c4b5fd"
-                    }
-                ),
-                button(
-                    "Pin Last",
-                    window.Chad.actions.pinLastAssistant,
-                    {
-                        bg: "#ede9fe",
-                        border: "#c4b5fd"
-                    }
-                )
-            ])
-        ]);
-
-        if (!state.pins.length) {
-            body.appendChild(createEl("div", {
-                text: "No pinned responses yet.",
-                style: {
-                    color: "#64748b",
-                    padding: "10px"
-                }
-            }));
-        }
-
+        const wrap = createEl("div", { style: bodyStyle() });
+        wrap.appendChild(createEl("div", { style: { display: "flex", gap: "5px", marginBottom: "8px" } }, [
+            button("Pin Selected", window.Chad.actions.pinSelection, { bg: "#ede9fe", border: "#c4b5fd" }),
+            button("Pin Last", window.Chad.actions.pinLastAssistant, { bg: "#ede9fe", border: "#c4b5fd" })
+        ]));
+        if (!state.pins.length) wrap.appendChild(createEl("div", { text: "No pinned responses yet.", style: { color: "#64748b", padding: "10px" } }));
         for (const pin of state.pins) {
-            body.appendChild(createEl("div", {
-                style: {
-                    border: "1px solid #cbd5e1",
-                    borderRadius: "9px",
-                    padding: "8px",
-                    marginBottom: "8px",
-                    background: "#f8fafc"
-                }
-            }, [
-                createEl("div", {
-                    html:
-                        `<b>${escapeHTML(pin.title)}</b><br>` +
-                        `<span style="color:#64748b">${escapeHTML(pin.createdAt)}</span>`,
-                    style: {
-                        marginBottom: "6px"
-                    }
-                }),
-                createEl("div", {
-                    style: {
-                        display: "flex",
-                        gap: "4px",
-                        marginBottom: "6px"
-                    }
-                }, [
-                    button(
-                        "OPEN",
-                        () => openTextModal(
-                            pin.title,
-                            pin.text
-                        )
-                    ),
-                    button(
-                        "SRC",
-                        () => window.Chad.actions
-                            .scrollToPin(pin)
-                    ),
-                    button(
-                        "COPY",
-                        () => window.Chad.actions
-                            .copyText(pin.text)
-                    ),
-                    button(
-                        "DELETE",
-                        () => {
-                            state.pins = state.pins.filter(
-                                item => item.id !== pin.id
-                            );
-
-                            window.Chad.storage.savePins();
-                            render();
-                        },
-                        {
-                            bg: "#fee2e2",
-                            border: "#fecaca"
-                        }
-                    )
+            wrap.appendChild(createEl("div", { style: { border: "1px solid #cbd5e1", borderRadius: "9px", padding: "8px", marginBottom: "8px", background: "#f8fafc" } }, [
+                createEl("div", { html: `<b>${escapeHTML(pin.title)}</b><br><span style="color:#64748b">${escapeHTML(pin.createdAt)}</span>`, style: { marginBottom: "6px" } }),
+                createEl("div", { style: { display: "flex", gap: "4px", marginBottom: "6px" } }, [
+                    button("OPEN", () => openTextModal(pin.title, pin.text)),
+                    button("SRC", () => window.Chad.actions.scrollToPin(pin)),
+                    button("COPY", () => window.Chad.actions.copyText(pin.text)),
+                    button("DELETE", () => { state.pins = state.pins.filter(item => item.id !== pin.id); window.Chad.storage.savePins(); render(); }, { bg: "#fee2e2", border: "#fecaca" })
                 ])
             ]));
         }
-
-        return body;
+        return wrap;
     }
-
-    function buildTree(items) {
-        const root = {
-            name: window.Chad.data.repo.repo,
-            path: "",
-            type: "tree",
-            children: {},
-            open: true
-        };
-
-        for (const item of items) {
-            const parts = item.path.split("/");
-            let node = root;
-            let currentPath = "";
-
-            for (let i = 0; i < parts.length; i++) {
-                const part = parts[i];
-                currentPath =
-                    currentPath
-                        ? currentPath + "/" + part
-                        : part;
-
-                const isLast =
-                    i === parts.length - 1;
-
-                const type =
-                    isLast ? item.type : "tree";
-
-                if (!node.children[part]) {
-                    node.children[part] = {
-                        name: part,
-                        path: currentPath,
-                        type,
-                        children: {},
-                        open:
-                            currentPath === "Transfork" ||
-                            currentPath === "ChadTheGreat" ||
-                            currentPath === "MiniConsole"
-                    };
-                }
-
-                node = node.children[part];
-            }
-        }
-
-        return root;
-    }
-
-    function isFolderOpen(path, fallback) {
-        const state = window.Chad.storage.state;
-
-        if (
-            Object.prototype.hasOwnProperty.call(
-                state.openFolders,
-                path
-            )
-        ) {
-            return state.openFolders[path];
-        }
-
-        return fallback;
-    }
-
-    function setFolderOpen(path, open) {
-        const store = window.Chad.storage;
-        store.state.openFolders[path] = open;
-        store.saveOpenFolders();
-    }
-
-    function renderTreeNode(node, depth, body) {
-        if (node.path !== "") {
-            const isFolder = node.type === "tree";
-            const open =
-                isFolderOpen(node.path, node.open);
-
-            const row = createEl("div", {
-                style: {
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    padding: "3px 5px",
-                    margin: "1px 0",
-                    borderRadius: "5px",
-                    cursor: "pointer",
-                    fontFamily: "Consolas, monospace",
-                    fontSize: "12px",
-                    color: isFolder ? "#0f172a" : "#334155",
-                    marginLeft: (depth * 13) + "px",
-                    background: "transparent"
-                },
-                onmouseenter: () => {
-                    row.style.background = "#f1f5f9";
-                },
-                onmouseleave: () => {
-                    row.style.background = "transparent";
-                },
-                onclick: event => {
-                    event.stopPropagation();
-
-                    if (isFolder) {
-                        setFolderOpen(
-                            node.path,
-                            !open
-                        );
-                        render();
-                    }
-                    else {
-                        window.Chad.actions.copyRawFile(
-                            node.path
-                        );
-                    }
-                },
-                oncontextmenu: event => {
-                    event.preventDefault();
-                    event.stopPropagation();
-
-                    if (!isFolder) {
-                        showRepoContextMenu(
-                            event.clientX,
-                            event.clientY,
-                            node.path
-                        );
-                    }
-                }
-            }, [
-                createEl("span", {
-                    text: isFolder
-                        ? (open ? "▾" : "▸")
-                        : "•",
-                    style: { width: "12px" }
-                }),
-                createEl("span", {
-                    text:
-                        (isFolder ? "📁 " : "📄 ") +
-                        node.name
-                })
-            ]);
-
-            body.appendChild(row);
-
-            if (isFolder && !open) {
-                return;
-            }
-        }
-
-        const children = Object.values(node.children)
-            .sort((a, b) => {
-                if (a.type !== b.type) {
-                    return a.type === "tree" ? -1 : 1;
-                }
-
-                return a.name.localeCompare(b.name);
-            });
-
-        for (const child of children) {
-            renderTreeNode(
-                child,
-                depth + (node.path ? 1 : 0),
-                body
-            );
-        }
-    }
-
-    function menuItem(text, fn) {
-        return createEl("div", {
-            text,
-            style: {
-                padding: "7px 9px",
-                cursor: "pointer",
-                borderRadius: "5px",
-                color: "#0f172a"
-            },
-            onmouseenter: event => {
-                event.currentTarget.style.background = "#f1f5f9";
-            },
-            onmouseleave: event => {
-                event.currentTarget.style.background = "transparent";
-            },
-            onclick: () => {
-                hideRepoContextMenu();
-                fn();
-            }
-        });
-    }
-
-    function hideRepoContextMenu() {
-        if (contextMenu) {
-            contextMenu.remove();
-        }
-
-        contextMenu = null;
-    }
-
-    function showRepoContextMenu(x, y, path) {
-        hideRepoContextMenu();
-
-        contextMenu = createEl("div", {
-            style: {
-                position: "fixed",
-                left: x + "px",
-                top: y + "px",
-                background: "#ffffff",
-                border: "1px solid #cbd5e1",
-                borderRadius: "8px",
-                boxShadow: "0 8px 24px rgba(15,23,42,.22)",
-                zIndex: "1000002",
-                padding: "5px",
-                minWidth: "150px"
-            }
-        }, [
-            menuItem(
-                "Copy RAW",
-                () => window.Chad.actions.copyRawFile(path)
-            ),
-            menuItem(
-                "Copy URL",
-                () => window.Chad.actions.copyText(
-                    window.Chad.actions.fileUrl(path)
-                )
-            ),
-            menuItem(
-                "Copy Raw URL",
-                () => window.Chad.actions.copyText(
-                    window.Chad.actions.rawUrl(path)
-                )
-            )
-        ]);
-
-        document.body.appendChild(contextMenu);
-    }
-
-    document.addEventListener(
-        "click",
-        hideRepoContextMenu,
-        true
-    );
 
     function renderRepo() {
         const state = window.Chad.storage.state;
         const repo = window.Chad.data.repo;
-
-        const body = createEl("div", {
-            style: bodyStyle()
-        });
-
-        body.appendChild(createEl("div", {
-            html:
-                `<b>${repo.owner}/${repo.repo}</b><br>` +
-                `<span style="color:#64748b">Branch: ${repo.branch}</span>`,
-            style: {
-                marginBottom: "8px"
-            }
-        }));
-
-        body.appendChild(createEl("div", {
-            style: {
-                display: "flex",
-                gap: "5px",
-                marginBottom: "8px"
-            }
-        }, [
-            button(
-                "Refresh Tree",
-                () => window.Chad.actions
-                    .loadRepoTree(true),
-                {
-                    bg: "#e0f2fe",
-                    border: "#7dd3fc",
-                    bold: true
-                }
-            ),
-            button(
-                "Copy Repo URL",
-                () => window.Chad.actions.copyText(
-                    `https://github.com/${repo.owner}/${repo.repo}`
-                )
-            )
+        const wrap = createEl("div", { style: bodyStyle() });
+        wrap.appendChild(createEl("div", { html: `<b>${repo.owner}/${repo.repo}</b><br><span style="color:#64748b">Branch: ${repo.branch}</span>`, style: { marginBottom: "8px" } }));
+        wrap.appendChild(createEl("div", { style: { display: "flex", gap: "5px", marginBottom: "8px" } }, [
+            button("Refresh Tree", () => window.Chad.actions.loadRepoTree(true), { bg: "#e0f2fe", border: "#7dd3fc", bold: true }),
+            button("Copy Repo URL", () => window.Chad.actions.copyText(`https://github.com/${repo.owner}/${repo.repo}`))
         ]));
+        if (state.repoLoading) return wrap.appendChild(createEl("div", { text: "Loading repo tree...", style: { color: "#64748b", padding: "10px" } })), wrap;
+        if (!state.repoTree) return wrap.appendChild(createEl("div", { text: "Click Refresh Tree to load the Gandhi repo file tree.", style: { color: "#64748b", padding: "10px" } })), wrap;
+        renderRepoTree(wrap, state.repoTree.items || []);
+        return wrap;
+    }
 
-        if (state.repoLoading) {
-            body.appendChild(createEl("div", {
-                text: "Loading repo tree...",
-                style: {
-                    color: "#64748b",
-                    padding: "10px"
-                }
-            }));
-
-            return body;
+    function renderRepoTree(wrap, items) {
+        const folders = {};
+        for (const item of items) {
+            const parts = item.path.split("/");
+            const folder = parts.length > 1 ? parts[0] : "";
+            if (!folders[folder]) folders[folder] = [];
+            folders[folder].push(item);
         }
-
-        if (!state.repoTree) {
-            body.appendChild(createEl("div", {
-                text: "Click Refresh Tree to load the Gandhi repo file tree.",
-                style: {
-                    color: "#64748b",
-                    padding: "10px"
-                }
-            }));
-
-            return body;
+        for (const [folder, list] of Object.entries(folders).sort()) {
+            if (folder) wrap.appendChild(createEl("div", { text: "📁 " + folder, style: { fontWeight: "800", margin: "7px 0 3px" } }));
+            for (const item of list.filter(x => x.type === "blob").slice(0, 300)) {
+                wrap.appendChild(createEl("div", {
+                    text: "📄 " + item.path,
+                    style: { fontFamily: "Consolas, monospace", fontSize: "12px", padding: "3px 5px", cursor: "pointer", color: "#334155" },
+                    onclick: () => window.Chad.actions.copyRawFile(item.path),
+                    oncontextmenu: event => {
+                        event.preventDefault();
+                        showRepoContextMenu(event.clientX, event.clientY, item.path);
+                    }
+                }));
+            }
         }
-
-        if (state.repoTree.error) {
-            body.appendChild(createEl("div", {
-                text:
-                    "Using fallback tree. Error: " +
-                    state.repoTree.error,
-                style: {
-                    color: "#b45309",
-                    marginBottom: "8px"
-                }
-            }));
-        }
-        else {
-            body.appendChild(createEl("div", {
-                text:
-                    "Loaded: " +
-                    state.repoTree.loadedAt,
-                style: {
-                    color: "#64748b",
-                    marginBottom: "8px",
-                    fontSize: "11px"
-                }
-            }));
-        }
-
-        const treeRoot = buildTree(
-            state.repoTree.items || []
-        );
-
-        renderTreeNode(treeRoot, 0, body);
-
-        return body;
     }
 
     function renderNotes() {
         const store = window.Chad.storage;
         const state = store.state;
-
-        const body = createEl("div", {
-            style: bodyStyle()
-        });
-
-        body.appendChild(createEl("div", {
-            text: "Simple notes for this chat only.",
-            style: {
-                color: "#64748b",
-                marginBottom: "7px",
-                fontSize: "11px"
-            }
-        }));
-
-        const textarea = createEl("textarea", {
-            style: {
-                width: "100%",
-                height: "calc(100vh - 220px)",
-                boxSizing: "border-box",
-                resize: "vertical",
-                border: "1px solid #cbd5e1",
-                borderRadius: "8px",
-                padding: "9px",
-                fontFamily: "Consolas, monospace",
-                fontSize: "13px",
-                lineHeight: "1.4",
-                color: "#0f172a",
-                background: "#ffffff",
-                outline: "none"
-            }
-        });
-
-        textarea.value =
-            state.notesText;
-
-        textarea.addEventListener("input", () => {
-            state.notesText = textarea.value;
-            store.saveNotes();
-        });
-
-        body.appendChild(textarea);
-
-        body.appendChild(createEl("div", {
-            style: {
-                display: "flex",
-                gap: "5px",
-                marginTop: "8px"
-            }
-        }, [
-            button(
-                "COPY NOTES",
-                () => window.Chad.actions
-                    .copyText(state.notesText),
-                {
-                    bg: "#e0f2fe",
-                    border: "#7dd3fc"
-                }
-            ),
-            button(
-                "CLEAR NOTES",
-                () => {
-                    if (
-                        !confirm(
-                            "Clear notes for this chat?"
-                        )
-                    ) {
-                        return;
-                    }
-
-                    state.notesText = "";
-                    store.saveNotes();
-                    render();
-                },
-                {
-                    bg: "#fee2e2",
-                    border: "#fecaca"
-                }
-            )
+        const wrap = createEl("div", { style: bodyStyle() });
+        wrap.appendChild(createEl("div", { text: "Simple notes for this chat only.", style: { color: "#64748b", marginBottom: "7px", fontSize: "11px" } }));
+        const textarea = createEl("textarea", { style: { width: "100%", height: "calc(100vh - 220px)", boxSizing: "border-box", resize: "vertical", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "9px", fontFamily: "Consolas, monospace", fontSize: "13px", lineHeight: "1.4", color: "#0f172a", background: "#ffffff", outline: "none" } });
+        textarea.value = state.notesText;
+        textarea.addEventListener("input", () => { state.notesText = textarea.value; store.saveNotes(); });
+        wrap.appendChild(textarea);
+        wrap.appendChild(createEl("div", { style: { display: "flex", gap: "5px", marginTop: "8px" } }, [
+            button("COPY NOTES", () => window.Chad.actions.copyText(state.notesText), { bg: "#e0f2fe", border: "#7dd3fc" }),
+            button("CLEAR NOTES", () => { if (!confirm("Clear notes for this chat?")) return; state.notesText = ""; store.saveNotes(); render(); }, { bg: "#fee2e2", border: "#fecaca" })
         ]));
-
-        return body;
+        return wrap;
     }
 
-    function openTextModal(title, text) {
-        const bg = createEl("div", {
-            style: {
-                position: "fixed",
-                inset: "0",
-                background: "rgba(15,23,42,.35)",
-                zIndex: "1000000",
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "center",
-                paddingTop: "40px"
-            }
-        });
+    function menuItem(text, fn) {
+        return createEl("div", { text, style: { padding: "7px 9px", cursor: "pointer", borderRadius: "5px", color: "#0f172a" }, onclick: () => { hideRepoContextMenu(); fn(); } });
+    }
 
-        const modal = createEl("div", {
-            style: {
-                width: "780px",
-                maxWidth: "94vw",
-                maxHeight: "86vh",
-                background: "#ffffff",
-                color: "#111827",
-                border: "1px solid #cbd5e1",
-                borderRadius: "10px",
-                boxShadow: "0 12px 40px rgba(15,23,42,.25)",
-                overflow: "hidden"
-            }
-        }, [
-            createEl("div", {
-                style: {
-                    padding: "10px",
-                    borderBottom: "1px solid #cbd5e1",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    position: "sticky",
-                    top: "0",
-                    background: "#f8fafc",
-                    zIndex: "1"
-                }
-            }, [
-                createEl("div", {
-                    text: title,
-                    style: {
-                        fontSize: "17px",
-                        fontWeight: "800"
-                    }
-                }),
-                createEl("div", {
-                    style: {
-                        display: "flex",
-                        gap: "5px"
-                    }
-                }, [
-                    button(
-                        "COPY",
-                        () => window.Chad.actions.copyText(text)
-                    ),
-                    button(
-                        "✕",
-                        () => bg.remove()
-                    )
-                ])
-            ]),
-            createEl("pre", {
-                text,
-                style: {
-                    margin: "0",
-                    padding: "14px",
-                    overflow: "auto",
-                    maxHeight: "72vh",
-                    whiteSpace: "pre-wrap",
-                    fontFamily: "Consolas, monospace",
-                    fontSize: "14px",
-                    lineHeight: "1.45",
-                    color: "#334155"
-                }
-            })
+    function hideRepoContextMenu() {
+        if (contextMenu) contextMenu.remove();
+        contextMenu = null;
+    }
+
+    function showRepoContextMenu(x, y, path) {
+        hideRepoContextMenu();
+        contextMenu = createEl("div", { style: { position: "fixed", left: x + "px", top: y + "px", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "8px", boxShadow: "0 8px 24px rgba(15,23,42,.22)", zIndex: "1000002", padding: "5px", minWidth: "150px" } }, [
+            menuItem("Copy RAW", () => window.Chad.actions.copyRawFile(path)),
+            menuItem("Copy URL", () => window.Chad.actions.copyText(window.Chad.actions.fileUrl(path))),
+            menuItem("Copy Raw URL", () => window.Chad.actions.copyText(window.Chad.actions.rawUrl(path)))
         ]);
+        document.body.appendChild(contextMenu);
+    }
 
+    document.addEventListener("click", hideRepoContextMenu, true);
+
+    function openTextModal(title, text) {
+        const bg = createEl("div", { style: { position: "fixed", inset: "0", background: "rgba(15,23,42,.35)", zIndex: "1000000", display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: "40px" } });
+        const modal = createEl("div", { style: { width: "780px", maxWidth: "94vw", maxHeight: "86vh", background: "#ffffff", color: "#111827", border: "1px solid #cbd5e1", borderRadius: "10px", boxShadow: "0 12px 40px rgba(15,23,42,.25)", overflow: "hidden" } }, [
+            createEl("div", { style: { padding: "10px", borderBottom: "1px solid #cbd5e1", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8fafc" } }, [
+                createEl("div", { text: title, style: { fontSize: "17px", fontWeight: "800" } }),
+                createEl("div", { style: { display: "flex", gap: "5px" } }, [button("COPY", () => window.Chad.actions.copyText(text)), button("✕", () => bg.remove())])
+            ]),
+            createEl("pre", { text, style: { margin: "0", padding: "14px", overflow: "auto", maxHeight: "72vh", whiteSpace: "pre-wrap", fontFamily: "Consolas, monospace", fontSize: "14px", lineHeight: "1.45", color: "#334155" } })
+        ]);
         bg.appendChild(modal);
         document.body.appendChild(bg);
     }
 
-    function openTaskModal(task) {
-        openTextModal(
-            task.id + " — " + task.title,
-            task.prompt
-        );
-    }
-
     function render() {
-        if (!panel) {
-            return;
-        }
-
-        const state =
-            window.Chad.storage.state;
-
+        if (!panel) return;
+        const state = window.Chad.storage.state;
+        applyTabIdentity();
         panel.innerHTML = "";
         panel.appendChild(renderHeader());
-
-        if (state.minimized) {
-            return;
-        }
-
-        if (state.activeTab === "tasks") {
-            panel.appendChild(renderTasks());
-        }
-        else if (state.activeTab === "roadmap") {
-            panel.appendChild(renderRoadmap());
-        }
-        else if (state.activeTab === "pins") {
-            panel.appendChild(renderPins());
-        }
-        else if (state.activeTab === "repo") {
-            panel.appendChild(renderRepo());
-        }
-        else if (state.activeTab === "notes") {
-            panel.appendChild(renderNotes());
-        }
+        if (body) body.remove();
+        if (state.activeTab === "chaties") body = renderChaties();
+        else if (state.activeTab === "tasks") body = renderTasks();
+        else if (state.activeTab === "roadmap") body = renderRoadmap();
+        else if (state.activeTab === "pins") body = renderPins();
+        else if (state.activeTab === "repo") body = renderRepo();
+        else if (state.activeTab === "notes") body = renderNotes();
+        else body = renderTasks();
+        panel.appendChild(body);
     }
 
     function start() {
-        if (document.querySelector("#gandhi-chad-panel")) {
-            return;
-        }
-
-        panel = createEl("div", {
-            id: "gandhi-chad-panel",
-            style: {
-                position: "fixed",
-                right: "14px",
-                top: "70px",
-                bottom: "14px",
-                width: "410px",
-                background: "#ffffff",
-                color: "#111827",
-                border: "1px solid #cbd5e1",
-                borderRadius: "12px",
-                zIndex: "999999",
-                fontFamily: "Arial, sans-serif",
-                fontSize: "12px",
-                boxShadow: "0 10px 35px rgba(15,23,42,.20)",
-                overflow: "hidden"
-            }
-        });
-
+        if (document.querySelector("#gandhi-chad-panel")) return;
+        window.Chad.storage.state.activeTab = window.Chad.storage.state.activeTab || "chaties";
+        panel = createEl("div", { id: "gandhi-chad-panel", style: { position: "fixed", right: "14px", top: "70px", bottom: "14px", width: "410px", background: "#ffffff", color: "#111827", border: "1px solid #cbd5e1", borderRadius: "12px", zIndex: "999999", fontFamily: "Arial, sans-serif", fontSize: "12px", boxShadow: "0 10px 35px rgba(15,23,42,.20)", overflow: "hidden" } });
         document.body.appendChild(panel);
-
         render();
-
-        setTimeout(
-            window.Chad.scanner.scanTasks,
-            1200
-        );
+        setTimeout(window.Chad.scanner.scanTasks, 1200);
     }
 
     ui.createEl = createEl;
@@ -1199,7 +695,11 @@ window.Chad = window.Chad || {};
     ui.render = render;
     ui.start = start;
     ui.openTextModal = openTextModal;
-    ui.openTaskModal = openTaskModal;
+    ui.openTaskModal = task => openTextModal(task.id + " — " + task.title, task.prompt);
+    ui.getAgents = getAgents;
+    ui.saveAgents = saveAgents;
+    ui.getActiveAgent = getActiveAgent;
+    ui.applyTabIdentity = applyTabIdentity;
 
     window.Chad.ui = ui;
 })();
