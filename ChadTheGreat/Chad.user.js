@@ -24,7 +24,8 @@
         "storage.js",
         "scanner.js",
         "actions.js",
-        "ui.js"
+        "ui.js",
+        "agents.js"
     ];
 
     async function loadFile(file) {
