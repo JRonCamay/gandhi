@@ -4,6 +4,7 @@ window.Chad = window.Chad || {};
     "use strict";
 
     const bridge = {};
+    const originalOpen = window.open.bind(window);
 
     function hasExtensionRuntime() {
         return Boolean(
@@ -54,5 +55,32 @@ window.Chad = window.Chad || {};
         });
     };
 
+    function patchWindowOpen() {
+        if (window.__ChadBridgeWindowOpenPatched) {
+            return;
+        }
+
+        window.__ChadBridgeWindowOpenPatched = true;
+
+        window.open = function (url, target, features) {
+            const isAgentOpen = String(target || "").startsWith("chad_agent_");
+
+            if (isAgentOpen && hasExtensionRuntime()) {
+                bridge.openAgentTab({
+                    id: target,
+                    chatUrl: String(url || "")
+                }).catch(error => {
+                    console.warn("[ChadBridge] openAgentTab failed", error);
+                    originalOpen(url, target, features);
+                });
+
+                return null;
+            }
+
+            return originalOpen(url, target, features);
+        };
+    }
+
     window.Chad.bridge = bridge;
+    patchWindowOpen();
 })();
