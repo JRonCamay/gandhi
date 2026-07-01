@@ -768,6 +768,32 @@ window.addEventListener("mousemove", e => {
 
         document.body.appendChild(box);
 
+        function handleOutsidePanelClick(e) {
+            if (!box.contains(e.target)) {
+                box.remove();
+            }
+        }
+
+        const originalBoxRemove = box.remove.bind(box);
+
+        box.remove = function () {
+            document.removeEventListener(
+                "mousedown",
+                handleOutsidePanelClick,
+                true
+            );
+
+            originalBoxRemove();
+        };
+
+        setTimeout(() => {
+            document.addEventListener(
+                "mousedown",
+                handleOutsidePanelClick,
+                true
+            );
+        }, 0);
+
         const input = document.getElementById("gandi-input");
         const results = document.getElementById("gandi-results");
         const recentDashboard = document.getElementById("gandi-recent-dashboard");
