@@ -25,7 +25,8 @@
         "scanner.js",
         "actions.js",
         "ui.js",
-        "agents.js"
+        "agents.js",
+        "paint.js"
     ];
 
     async function loadFile(file) {
