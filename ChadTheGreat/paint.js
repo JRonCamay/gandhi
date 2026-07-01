@@ -4,27 +4,31 @@ window.Chad = window.Chad || {};
     "use strict";
 
     const paint = {};
+
     let win = null;
     let canvas = null;
     let ctx = null;
     let viewport = null;
     let canvasWrap = null;
+    let selectionBox = null;
+
     let activeTool = "brush";
     let activeColor = "#ef4444";
     let brushSize = 8;
     let textSize = 24;
     let textFont = "Arial";
     let zoom = 1;
-    let panX = 0;
-    let panY = 0;
+    let panX = 30;
+    let panY = 30;
+
     let isDown = false;
     let lastPoint = null;
     let startPoint = null;
     let selection = null;
-    let selectionBox = null;
     let panStart = null;
     let history = [];
     let historyIndex = -1;
+    let initialized = false;
 
     const COLORS = [
         "#000000", "#ffffff", "#ef4444", "#f97316",
@@ -57,6 +61,158 @@ window.Chad = window.Chad || {};
         return node;
     }
 
+    function centerDialog(options) {
+        const overlay = el("div", {
+            style: {
+                position: "fixed",
+                inset: "0",
+                background: "rgba(15,23,42,.35)",
+                zIndex: "1000008",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontFamily: "Arial, sans-serif"
+            }
+        });
+
+        const card = el("div", {
+            style: {
+                width: "360px",
+                maxWidth: "calc(100vw - 40px)",
+                background: "#ffffff",
+                border: "1px solid #334155",
+                borderRadius: "14px",
+                boxShadow: "0 18px 60px rgba(15,23,42,.35)",
+                padding: "14px",
+                color: "#0f172a"
+            }
+        });
+
+        const title = el("div", {
+            text: options.title || "Chad",
+            style: {
+                fontSize: "15px",
+                fontWeight: "900",
+                marginBottom: "8px"
+            }
+        });
+
+        const message = el("div", {
+            text: options.message || "",
+            style: {
+                color: "#475569",
+                fontSize: "13px",
+                lineHeight: "1.4",
+                marginBottom: "10px",
+                whiteSpace: "pre-wrap"
+            }
+        });
+
+        let input = null;
+
+        if (options.input) {
+            input = el("input", {
+                value: options.value || "",
+                style: {
+                    width: "100%",
+                    boxSizing: "border-box",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: "9px",
+                    padding: "8px",
+                    fontSize: "13px",
+                    marginBottom: "10px"
+                }
+            });
+        }
+
+        const actions = el("div", {
+            style: {
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "6px"
+            }
+        });
+
+        function finish(value) {
+            overlay.remove();
+            if (options.onDone) options.onDone(value);
+        }
+
+        const cancel = el("button", {
+            text: options.cancelText || "Cancel",
+            style: dialogButtonStyle("#f8fafc", "#cbd5e1"),
+            onclick: () => finish(null)
+        });
+
+        const ok = el("button", {
+            text: options.okText || "OK",
+            style: dialogButtonStyle("#2563eb", "#2563eb", "#ffffff"),
+            onclick: () => finish(input ? input.value : true)
+        });
+
+        if (options.type !== "info") actions.appendChild(cancel);
+        actions.appendChild(ok);
+
+        card.appendChild(title);
+        card.appendChild(message);
+        if (input) card.appendChild(input);
+        card.appendChild(actions);
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+
+        if (input) {
+            input.focus();
+            input.select();
+            input.addEventListener("keydown", event => {
+                if (event.key === "Enter") finish(input.value);
+                if (event.key === "Escape") finish(null);
+            });
+        }
+    }
+
+    function dialogButtonStyle(bg, border, color = "#0f172a") {
+        return {
+            background: bg,
+            color,
+            border: "1px solid " + border,
+            borderRadius: "8px",
+            padding: "7px 10px",
+            fontSize: "12px",
+            fontWeight: "800",
+            cursor: "pointer"
+        };
+    }
+
+    function notify(message) {
+        centerDialog({
+            type: "info",
+            title: "Quick Sketch",
+            message,
+            okText: "OK"
+        });
+    }
+
+    function askText(title, value, done) {
+        centerDialog({
+            title,
+            message: "Type the text below.",
+            input: true,
+            value: value || "",
+            okText: "Add",
+            onDone: done
+        });
+    }
+
+    function confirmChad(message, done) {
+        centerDialog({
+            title: "Confirm",
+            message,
+            okText: "Yes",
+            cancelText: "No",
+            onDone: value => done(Boolean(value))
+        });
+    }
+
     function topButton(label, title, fn, extra = {}) {
         return el("button", {
             text: label,
@@ -72,32 +228,65 @@ window.Chad = window.Chad || {};
                 cursor: "pointer",
                 whiteSpace: "nowrap"
             },
-            onclick: fn
+            onclick: event => {
+                event.preventDefault();
+                event.stopPropagation();
+                fn();
+            }
         });
     }
 
+    function setTool(id) {
+        activeTool = id;
+        updateToolButtons();
+        updateStatus();
+        updateCursor();
+    }
+
     function toolButton(id, icon, label) {
-        const selected = activeTool === id;
         return el("button", {
+            class: "gandhi-chad-paint-tool",
+            "data-tool": id,
             html:
                 `<div style=\"font-size:20px;line-height:1\">${icon}</div>` +
                 `<div style=\"font-size:10px;margin-top:3px\">${label}</div>`,
             title: label,
-            style: {
-                width: "70px",
-                minHeight: "54px",
-                border: "1px solid " + (selected ? "#2563eb" : "#cbd5e1"),
-                borderRadius: "9px",
-                background: selected ? "#eff6ff" : "#ffffff",
-                color: "#0f172a",
-                cursor: "pointer",
-                fontWeight: selected ? "800" : "600"
-            },
-            onclick: () => {
-                activeTool = id;
-                updateToolUI();
+            style: toolButtonStyle(activeTool === id),
+            onclick: event => {
+                event.preventDefault();
+                event.stopPropagation();
+                setTool(id);
             }
         });
+    }
+
+    function toolButtonStyle(selected) {
+        return {
+            width: "70px",
+            minHeight: "54px",
+            border: "1px solid " + (selected ? "#2563eb" : "#cbd5e1"),
+            borderRadius: "9px",
+            background: selected ? "#eff6ff" : "#ffffff",
+            color: "#0f172a",
+            cursor: "pointer",
+            fontWeight: selected ? "800" : "600"
+        };
+    }
+
+    function updateToolButtons() {
+        document.querySelectorAll(".gandhi-chad-paint-tool").forEach(button => {
+            Object.assign(button.style, toolButtonStyle(button.dataset.tool === activeTool));
+        });
+    }
+
+    function updateStatus() {
+        const status = document.querySelector("#gandhi-chad-paint-status");
+        if (status) status.textContent = `Tool: ${activeTool} · Color: ${activeColor}`;
+    }
+
+    function updateCursor() {
+        if (!canvasWrap) return;
+        canvasWrap.style.cursor = activeTool === "pan" ? "grab" : activeTool === "zoom" ? "zoom-in" : "crosshair";
     }
 
     function clearSelection() {
@@ -124,21 +313,19 @@ window.Chad = window.Chad || {};
         historyIndex = index;
     }
 
-    function undo() {
-        restoreHistory(historyIndex - 1);
-    }
+    function undo() { restoreHistory(historyIndex - 1); }
+    function redo() { restoreHistory(historyIndex + 1); }
 
-    function redo() {
-        restoreHistory(historyIndex + 1);
-    }
-
-    function initCanvas() {
+    function initCanvasOnce() {
         canvas = document.querySelector("#gandhi-chad-paint-canvas");
-        if (!canvas) return;
+        if (!canvas || initialized) return;
+
         ctx = canvas.getContext("2d");
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         saveHistory();
+        initialized = true;
+        zoomFit();
     }
 
     function getCanvasPoint(event) {
@@ -154,16 +341,8 @@ window.Chad = window.Chad || {};
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
         ctx.lineWidth = brushSize;
-
-        if (activeTool === "eraser") {
-            ctx.globalCompositeOperation = "source-over";
-            ctx.strokeStyle = "#ffffff";
-        }
-        else {
-            ctx.globalCompositeOperation = "source-over";
-            ctx.strokeStyle = activeColor;
-        }
-
+        ctx.globalCompositeOperation = "source-over";
+        ctx.strokeStyle = activeTool === "eraser" ? "#ffffff" : activeColor;
         ctx.beginPath();
         ctx.moveTo(from.x, from.y);
         ctx.lineTo(to.x, to.y);
@@ -173,7 +352,6 @@ window.Chad = window.Chad || {};
 
     function updateSelectionBox() {
         if (!selectionBox || !selection) return;
-
         selectionBox.style.display = "block";
         selectionBox.style.left = (panX + selection.x * zoom) + "px";
         selectionBox.style.top = (panY + selection.y * zoom) + "px";
@@ -202,10 +380,7 @@ window.Chad = window.Chad || {};
 
     function zoomFit() {
         if (!viewport || !canvas) return;
-        const zr = Math.min(
-            (viewport.clientWidth - 40) / canvas.width,
-            (viewport.clientHeight - 40) / canvas.height
-        );
+        const zr = Math.min((viewport.clientWidth - 40) / canvas.width, (viewport.clientHeight - 40) / canvas.height);
         zoom = Math.max(0.2, Math.min(2, zr));
         panX = Math.max(20, (viewport.clientWidth - canvas.width * zoom) / 2);
         panY = Math.max(20, (viewport.clientHeight - canvas.height * zoom) / 2);
@@ -221,50 +396,45 @@ window.Chad = window.Chad || {};
 
     function onPointerDown(event) {
         if (!canvas || !ctx) return;
-
         isDown = true;
         startPoint = getCanvasPoint(event);
         lastPoint = startPoint;
 
         if (activeTool === "pan") {
-            panStart = {
-                x: event.clientX,
-                y: event.clientY,
-                panX,
-                panY
-            };
+            panStart = { x: event.clientX, y: event.clientY, panX, panY };
+            return;
+        }
+
+        if (activeTool === "zoom") {
+            if (event.shiftKey) zoomOut();
+            else zoomIn();
+            isDown = false;
             return;
         }
 
         if (activeTool === "text") {
-            const text = prompt("Text to add", "Label");
-            if (text) {
-                ctx.save();
-                ctx.fillStyle = activeColor;
-                ctx.font = `${textSize}px ${textFont}`;
-                ctx.textBaseline = "top";
-                ctx.fillText(text, startPoint.x, startPoint.y);
-                ctx.restore();
-                saveHistory();
-            }
+            askText("Add Text", "Label", text => {
+                if (text) {
+                    ctx.save();
+                    ctx.fillStyle = activeColor;
+                    ctx.font = `${textSize}px ${textFont}`;
+                    ctx.textBaseline = "top";
+                    ctx.fillText(text, startPoint.x, startPoint.y);
+                    ctx.restore();
+                    saveHistory();
+                }
+            });
             isDown = false;
             return;
         }
 
         if (activeTool === "select" || activeTool === "crop") {
-            selection = {
-                x: startPoint.x,
-                y: startPoint.y,
-                w: 1,
-                h: 1
-            };
+            selection = { x: startPoint.x, y: startPoint.y, w: 1, h: 1 };
             updateSelectionBox();
             return;
         }
 
-        if (activeTool === "brush" || activeTool === "eraser") {
-            drawLine(startPoint, startPoint);
-        }
+        if (activeTool === "brush" || activeTool === "eraser") drawLine(startPoint, startPoint);
     }
 
     function onPointerMove(event) {
@@ -299,32 +469,18 @@ window.Chad = window.Chad || {};
         if (!isDown) return;
         isDown = false;
         panStart = null;
-
-        if (activeTool === "brush" || activeTool === "eraser") {
-            saveHistory();
-        }
+        if (activeTool === "brush" || activeTool === "eraser") saveHistory();
     }
 
     async function canvasBlobFromSelection() {
         if (!canvas) return null;
-
         let source = canvas;
 
         if (selection && selection.w > 2 && selection.h > 2) {
             const temp = document.createElement("canvas");
             temp.width = Math.max(1, Math.round(selection.w));
             temp.height = Math.max(1, Math.round(selection.h));
-            temp.getContext("2d").drawImage(
-                canvas,
-                selection.x,
-                selection.y,
-                selection.w,
-                selection.h,
-                0,
-                0,
-                temp.width,
-                temp.height
-            );
+            temp.getContext("2d").drawImage(canvas, selection.x, selection.y, selection.w, selection.h, 0, 0, temp.width, temp.height);
             source = temp;
         }
 
@@ -336,31 +492,30 @@ window.Chad = window.Chad || {};
         if (!blob) return;
 
         try {
-            await navigator.clipboard.write([
-                new ClipboardItem({ "image/png": blob })
-            ]);
-            alert(selection ? "Selected area copied." : "Image copied.");
+            await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+            notify(selection ? "Selected area copied." : "Image copied.");
         }
         catch (error) {
             saveLocal();
-            alert("Clipboard image copy failed. Saved PNG instead.\n\n" + error.message);
+            notify("Clipboard image copy failed. PNG was saved instead.\n\n" + error.message);
         }
     }
 
     async function sendDirect() {
-        await copyImage();
-        const input =
-            document.querySelector("#prompt-textarea") ||
-            document.querySelector("textarea") ||
-            document.querySelector("[contenteditable='true']");
+        const blob = await canvasBlobFromSelection();
+        if (!blob) return;
 
-        if (input) {
-            input.focus();
-            alert("Image copied. Press Ctrl+V in the chat box.");
+        try {
+            await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
         }
-        else {
-            alert("Image copied. Open the chat input and press Ctrl+V.");
+        catch (error) {
+            notify("Could not copy image for sending.\n\n" + error.message);
+            return;
         }
+
+        const input = document.querySelector("#prompt-textarea") || document.querySelector("textarea") || document.querySelector("[contenteditable='true']");
+        if (input) input.focus();
+        notify("Image copied. Press Ctrl+V in the chat box.");
     }
 
     function saveLocal() {
@@ -373,33 +528,25 @@ window.Chad = window.Chad || {};
 
     function clearCanvas() {
         if (!canvas || !ctx) return;
-        if (!confirm("Clear canvas?")) return;
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        clearSelection();
-        saveHistory();
+        confirmChad("Clear canvas?", yes => {
+            if (!yes) return;
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            clearSelection();
+            saveHistory();
+        });
     }
 
     function cropToSelection() {
         if (!selection || selection.w < 2 || selection.h < 2) {
-            alert("Make a rectangle selection first.");
+            notify("Make a rectangle selection first.");
             return;
         }
 
         const temp = document.createElement("canvas");
         temp.width = Math.round(selection.w);
         temp.height = Math.round(selection.h);
-        temp.getContext("2d").drawImage(
-            canvas,
-            selection.x,
-            selection.y,
-            selection.w,
-            selection.h,
-            0,
-            0,
-            temp.width,
-            temp.height
-        );
+        temp.getContext("2d").drawImage(canvas, selection.x, selection.y, selection.w, selection.h, 0, 0, temp.width, temp.height);
 
         canvas.width = temp.width;
         canvas.height = temp.height;
@@ -421,28 +568,30 @@ window.Chad = window.Chad || {};
                 borderRadius: "10px",
                 background: "#ffffff"
             }
-        }, COLORS.map(color =>
-            el("button", {
-                title: color,
-                style: {
-                    width: "22px",
-                    height: "22px",
-                    borderRadius: "5px",
-                    border: "2px solid " + (activeColor === color ? "#0f172a" : "#cbd5e1"),
-                    background: color,
-                    cursor: "pointer",
-                    boxShadow: color === "#ffffff" ? "inset 0 0 0 1px #e2e8f0" : "none"
-                },
-                onclick: () => {
-                    activeColor = color;
-                    updateToolUI();
-                }
-            })
-        ));
+        }, COLORS.map(color => el("button", {
+            title: color,
+            style: {
+                width: "22px",
+                height: "22px",
+                borderRadius: "5px",
+                border: "2px solid " + (activeColor === color ? "#0f172a" : "#cbd5e1"),
+                background: color,
+                cursor: "pointer",
+                boxShadow: color === "#ffffff" ? "inset 0 0 0 1px #e2e8f0" : "none"
+            },
+            onclick: event => {
+                event.preventDefault();
+                event.stopPropagation();
+                activeColor = color;
+                renderInspectorOnly();
+                updateStatus();
+            }
+        })));
     }
 
     function renderToolbar() {
         return el("div", {
+            id: "gandhi-chad-paint-toolbar",
             style: {
                 width: "88px",
                 padding: "10px 8px",
@@ -524,13 +673,7 @@ window.Chad = window.Chad || {};
             onpointerdown: onPointerDown,
             onpointermove: onPointerMove,
             onpointerup: onPointerUp,
-            onpointerleave: onPointerUp,
-            onclick: event => {
-                if (activeTool === "zoom") {
-                    if (event.shiftKey) zoomOut();
-                    else zoomIn();
-                }
-            }
+            onpointerleave: onPointerUp
         });
 
         selectionBox = el("div", {
@@ -550,8 +693,9 @@ window.Chad = window.Chad || {};
         viewport.appendChild(selectionBox);
 
         setTimeout(() => {
-            initCanvas();
-            zoomFit();
+            initCanvasOnce();
+            applyTransform();
+            updateCursor();
         }, 0);
 
         return viewport;
@@ -626,10 +770,15 @@ window.Chad = window.Chad || {};
             el("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" } }, [
                 topButton("Copy Sel", "Copy selected rectangle", copyImage),
                 topButton("Crop", "Crop to selection", cropToSelection),
-                topButton("Clear Sel", "Clear selection", () => { clearSelection(); }),
+                topButton("Clear Sel", "Clear selection", () => clearSelection()),
                 topButton("Fit", "Fit to window", zoomFit)
             ])
         ]);
+    }
+
+    function renderInspectorOnly() {
+        const old = document.querySelector("#gandhi-chad-paint-inspector");
+        if (old) old.replaceWith(renderInspector());
     }
 
     function renderFooter() {
@@ -638,14 +787,20 @@ window.Chad = window.Chad || {};
             el("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap" } }, [
                 topButton("🗑 Clear", "Clear canvas", clearCanvas),
                 topButton("💾 Save Local", "Save PNG locally", saveLocal),
-                topButton("☁ Save GDrive", "Save to Google Drive", () => alert("GDrive save will be added after extension conversion."), { bg: "#e0f2fe", border: "#7dd3fc" })
+                topButton("☁ Save GDrive", "Save to Google Drive", () => notify("GDrive save will be added after extension conversion."), { bg: "#e0f2fe", border: "#7dd3fc" })
             ])
         ]);
     }
 
-    function updateToolUI() {
-        if (!win) return;
-        render();
+    function close() {
+        if (win) win.remove();
+        win = null;
+        canvas = null;
+        ctx = null;
+        viewport = null;
+        canvasWrap = null;
+        selectionBox = null;
+        initialized = false;
     }
 
     function render() {
@@ -653,7 +808,7 @@ window.Chad = window.Chad || {};
         win.innerHTML = "";
 
         win.appendChild(el("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "#0f172a", color: "#ffffff", borderBottom: "1px solid #334155" } }, [
-            el("div", { html: "<b>🎨 Quick Sketch</b> " + `<span style=\"color:#cbd5e1;font-size:12px\">Tool: ${activeTool} · Color: ${activeColor}</span>`, style: { fontSize: "16px" } }),
+            el("div", { html: "<b>🎨 Quick Sketch</b> " + `<span id=\"gandhi-chad-paint-status\" style=\"color:#cbd5e1;font-size:12px\">Tool: ${activeTool} · Color: ${activeColor}</span>`, style: { fontSize: "16px" } }),
             el("div", { style: { display: "flex", gap: "6px", alignItems: "center" } }, [
                 topButton("+", "Zoom in", zoomIn, { bg: "#e0f2fe", border: "#7dd3fc" }),
                 topButton("-", "Zoom out", zoomOut, { bg: "#e0f2fe", border: "#7dd3fc" }),
@@ -680,11 +835,12 @@ window.Chad = window.Chad || {};
         }
 
         zoom = 1;
-        panX = 0;
-        panY = 0;
+        panX = 30;
+        panY = 30;
         history = [];
         historyIndex = -1;
         selection = null;
+        initialized = false;
 
         win = el("div", {
             id: "gandhi-chad-paint-window",
@@ -713,8 +869,8 @@ window.Chad = window.Chad || {};
         const panel = document.querySelector("#gandhi-chad-panel");
         if (!panel) return;
 
-        const drawingButton = Array.from(panel.querySelectorAll("button"))
-            .find(btn => btn.textContent.trim() === "🎨");
+        const drawingButton = panel.querySelector("#gandhi-chad-paint-button") ||
+            Array.from(panel.querySelectorAll("button")).find(btn => btn.textContent.trim() === "🎨");
 
         if (!drawingButton || drawingButton.dataset.chadPaintPatched) return;
 
@@ -731,12 +887,10 @@ window.Chad = window.Chad || {};
         if (!window.Chad.ui || window.Chad.ui.__paintPatched) return;
 
         const originalRender = window.Chad.ui.render;
-
         window.Chad.ui.render = function () {
             originalRender.apply(window.Chad.ui, arguments);
             patchDrawingButton();
         };
-
         window.Chad.ui.__paintPatched = true;
     }
 
@@ -748,6 +902,5 @@ window.Chad = window.Chad || {};
     paint.patchUI = patchUI;
 
     window.Chad.paint = paint;
-
     patchUI();
 })();
