@@ -10,132 +10,100 @@ Technical refinement and formalization developed collaboratively with
 OpenAI ChatGPT during the design and development of the Transfork
 project.
 
-------------------------------------------------------------------------
-
 Purpose
 
-Engineering Standards define HOW code behaves.
-
-Engineering Principles define HOW engineers think.
-
-These principles preserve simplicity, encourage creativity, prevent
-architectural drift, and enable long-term collaboration between Human
-and AI engineers.
-
-------------------------------------------------------------------------
+Engineering Principles define how engineers think before writing code.
+Engineering Standards define how implementations behave.
 
 Principle Zero — Unleash the Engineer
 
-The Guardian Standards already protect the runtime.
+The Guardian Standards already protect the runtime. Trust DID and OR so
+your mental energy is spent designing better software instead of
+worrying about collisions and ownership.
 
-Guardian of Identity - DID — Declaration Identity
+Principle 1 — Architectural Stability (AS)
 
-Guardian of Authority - OR — Ownership Rule
+Once a solution is verified and accepted, treat it as the project’s best
+known solution specially if it has been applied and it works enough. If not yet, you can opt for another one that proves itself clearly better.
 
-Trust the Guardian Standards.
+Principle 2 — Respect Accepted Solutions (RAS)
 
-The standards protect the runtime.
+Every new idea must compete against the current working solution, not an
+imaginary perfect solution. If the current solution already solves the
+problem well, protect it.
 
-Your mind should be free to protect the architecture.
-
-Think bigger. Think cleaner. Think simpler. Experiment. Create.
-Innovate. Build confidently.
-
-------------------------------------------------------------------------
-
-Principle 1 — Architectural Stability
-
-Every new idea must compete against the current working solution.
-
-Protect accepted solutions.
-
-------------------------------------------------------------------------
-
-Principle 2 — Trust Previous Engineers
+Principle 3 — Trust Previous Engineers (TPE)
 
 Always assume the previous engineer acted in good faith and solved a
-real problem.
+real problem. Understand why code exists and don't replace if it works.
 
-Before replacing their work, understand why it exists.
+Principle 4 — Simplicity First (SF)
 
-------------------------------------------------------------------------
+Choose the simplest solution that is correct, maintainable, and
+understandable. Complexity is a cost.
 
-Principle 3 — Simplicity First
+Principle 5 — Complexity Must Earn Its Place (CMEP)
 
-Choose the simplest correct solution.
+Every abstraction must remove more complexity than it introduces. If it
+makes the system harder to understand, it probably doesn’t belong.
 
-------------------------------------------------------------------------
+Principle 6 — Prefer Direct Solutions (PDS)
 
-Principle 4 — Complexity Must Earn Its Place
+Solve problems directly before introducing unnecessary managers,
+controllers, factories, or additional layers.
 
-Every abstraction must remove more complexity than it introduces.
+Principle 7 — Modularize Only With Purpose (MOWP)
 
-------------------------------------------------------------------------
+Modularization exists to improve responsibility and maintainability, not
+to satisfy trends or arbitrary file sizes.
 
-Principle 5 — Prefer Direct Solutions
+Principle 8 — Solve the Root Cause (SRC)
 
-Prefer direct, maintainable solutions before introducing additional
-layers.
+Fix the real cause instead of building permanent architecture around
+temporary symptoms.
 
-------------------------------------------------------------------------
+Principle 9 — Avoid Architecture Drift (AAD)
 
-Principle 6 — Modularize Only With Purpose
+Do not continuously redesign accepted solutions simply because new ideas
+appear. Unnecessary evolution creates unstable software.
 
-Modularization is a tool, not the objective.
+Principle 10 — Good Enough Wins (GEW)
 
-------------------------------------------------------------------------
+When a solution already satisfies the project’s requirements, move
+forward. Endless optimization prevents software from being finished.
 
-Principle 7 — Solve the Root Cause
+Principle 11 — Let the Codebase Remember (LCR)
 
-Fix causes, not symptoms.
+Important engineering knowledge belongs in the repository through
+standards and documentation, not in people’s memories.
 
-------------------------------------------------------------------------
+Principle 12 — Engineering Over Ego (EOE)
 
-Principle 8 — Let the Codebase Remember
+The best solution wins regardless of who proposed it. Good engineering
+values results over ownership.
 
-Do not rely on memory.
+Principle 13 — Build for the Next Engineer (BNE)
 
-Let the repository preserve engineering knowledge.
+Leave every project easier to understand and continue than when you
+first opened it.
 
-------------------------------------------------------------------------
+Principle 14 — Protect Engineering Momentum (PEM)
 
-Principle 9 — Engineering Over Ego
+Engineering time is valuable. During implementation, prioritize progress
+over unnecessary discussion.
 
-The best solution wins.
+Principle 15 — Execute First (EF)
 
-------------------------------------------------------------------------
-
-Principle 10 — Build for the Next Engineer
-
-Leave the project easier to continue than when you found it.
-
-------------------------------------------------------------------------
-
-Principle 11 — Execute First
-
-Find.
-
-Fix.
-
-Verify.
-
-Next.
-
-Ship.
-
-Don’t Narrate.
-
-------------------------------------------------------------------------
+Implementation workflow: Find → Fix → Verify → Next. Discussion belongs
+to architecture; execution belongs to implementation.
 
 Closing
 
-Protect ideas.
+The purpose of AI-Safe Engineering is not to create the most complicated
+architecture.
 
-Protect stability.
-
-Protect simplicity.
-
-Protect each other.
+Its purpose is to build software that remains simple, stable,
+maintainable, and finished.
 
 The Guardian Standards protect the runtime.
 
