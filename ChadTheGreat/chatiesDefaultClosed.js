@@ -86,7 +86,7 @@ window.Chad = window.Chad || {};
             originalRender.apply(window.Chad.ui, arguments);
             lastTab = nextTab;
 
-            if (nextTab === "chaties" && window.Chad.agentFixes && window.Chad.agentFixes.renderChatiesStable) {
+            if (!enteringChaties && nextTab === "chaties" && window.Chad.agentFixes && window.Chad.agentFixes.renderChatiesStable) {
                 window.Chad.agentFixes.renderChatiesStable(true);
             }
 
