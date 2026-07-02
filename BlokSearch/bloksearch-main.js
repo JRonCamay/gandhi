@@ -677,7 +677,7 @@ window.addEventListener("mousemove", e => {
     }
 
     function openSearch() {
-        const existingBox = document.getElementById("gandi-search");
+        const existingBox = window.BlokSearch.ui.getElementById("gandi-search");
         if (existingBox) existingBox.remove();
 
         const ws = window.Blockly?.getMainWorkspace();
@@ -777,38 +777,12 @@ window.addEventListener("mousemove", e => {
             </div>
         `;
 
-        document.body.appendChild(box);
+        window.BlokSearch.ui.attachSearchPanel(box);
 
-        function handleOutsidePanelClick(e) {
-            if (!box.contains(e.target)) {
-                box.remove();
-            }
-        }
-
-        const originalBoxRemove = box.remove.bind(box);
-
-        box.remove = function () {
-            document.removeEventListener(
-                "mousedown",
-                handleOutsidePanelClick,
-                true
-            );
-
-            originalBoxRemove();
-        };
-
-        setTimeout(() => {
-            document.addEventListener(
-                "mousedown",
-                handleOutsidePanelClick,
-                true
-            );
-        }, 0);
-
-        const input = document.getElementById("gandi-input");
-        const results = document.getElementById("gandi-results");
-        const recentDashboard = document.getElementById("gandi-recent-dashboard");
-        const recentListContainer = document.getElementById("gandi-recent-list");
+        const input = window.BlokSearch.ui.getElementById("gandi-input");
+        const results = window.BlokSearch.ui.getElementById("gandi-results");
+        const recentDashboard = window.BlokSearch.ui.getElementById("gandi-recent-dashboard");
+        const recentListContainer = window.BlokSearch.ui.getElementById("gandi-recent-list");
 
         if (left + width + 270 > window.innerWidth) {
             recentDashboard.style.left = "-262px";
@@ -820,12 +794,12 @@ window.addEventListener("mousemove", e => {
             recentBlocksHistory.forEach(entry => buildRecentItemUI(entry, recentListContainer, box));
         }
 
-        document.getElementById("btn-tidy").onclick = () => {
+        window.BlokSearch.ui.getElementById("btn-tidy").onclick = () => {
             ws.cleanUp();
             box.remove();
         };
 
-        document.getElementById("btn-clean-unused").onclick = () => {
+        window.BlokSearch.ui.getElementById("btn-clean-unused").onclick = () => {
             const allTopBlocks = ws.getTopBlocks(false);
             let targetCount = 0;
             allTopBlocks.forEach(b => {
@@ -840,7 +814,7 @@ window.addEventListener("mousemove", e => {
             box.remove();
         };
 
-        document.getElementById("btn-delete-all").onclick = () => {
+        window.BlokSearch.ui.getElementById("btn-delete-all").onclick = () => {
             if (confirm("Are you sure you want to completely clear the entire workspace canvas layout?")) {
                 ws.clear();
                 box.remove();

@@ -30,14 +30,8 @@ window.BlokSearch.ui = {
 
         document.body.appendChild(host);
         this.flushPendingStyles();
-
-        const nativeRemove = panel.remove.bind(panel);
-        panel.remove = () => {
-            nativeRemove();
-            this.removeSearchPanel();
-        };
-
         root.appendChild(panel);
+
         return panel;
     },
 
