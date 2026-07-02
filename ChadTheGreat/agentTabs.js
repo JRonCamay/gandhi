@@ -25,7 +25,6 @@ window.Chad = window.Chad || {};
         if (!agent || !identity) return;
 
         identity.setActiveId(agent.id);
-        identity.setExpanded(agent.id, true);
 
         if (identity.sameUrl(location.href, agent.chatUrl || "")) {
             scrollToEnd();
