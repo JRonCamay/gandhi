@@ -10,6 +10,9 @@ Explicit edge-mode snapping engine for Transfork.
 
     const SNAP_PX = 12;
     const CORNER_FACTOR = 0.45;
+    const SETTLE_LIMIT = 4;
+
+    let lastSnap = null;
 
     function renderer() {
         return window.Transfork?.geometry?.getRenderer()
@@ -161,6 +164,43 @@ Explicit edge-mode snapping engine for Transfork.
         window.Transfork?.snapVisuals?.update({ target, candidates: visual, result });
     }
 
+    function rememberSnap(target, x, y) {
+        lastSnap = {
+            target,
+            x,
+            y,
+            time: Date.now()
+        };
+    }
+
+    function settleAxis(bounds, snap) {
+        if (!snap) return 0;
+
+        const delta = snap.otherBounds[snap.otherEdge] - bounds[snap.activeEdge];
+        return Math.abs(delta) <= SETTLE_LIMIT ? delta : 0;
+    }
+
+    function settleSnap(target) {
+        const r = renderer();
+        if (!target || !r?._allDrawables || !lastSnap) return false;
+        if (lastSnap.target !== target) return false;
+        if (Date.now() - lastSnap.time > 1200) return false;
+
+        const bounds = getFreshAABB(target, r);
+        if (!bounds) return false;
+
+        const dx = settleAxis(bounds, lastSnap.x);
+        const dy = settleAxis(bounds, lastSnap.y);
+
+        if (!dx && !dy) return false;
+
+        target.setXY(target.x + dx, target.y + dy);
+        target.emitVisualChange();
+        window.vm?.runtime?.requestRedraw();
+        window.Transfork?.geometry?.clear(target);
+        return true;
+    }
+
     function findSnapPosition(target, desiredX, desiredY) {
         const r = renderer();
         if (!target || !r?._allDrawables) return { x: desiredX, y: desiredY };
@@ -195,11 +235,16 @@ Explicit edge-mode snapping engine for Transfork.
             y: desiredY + (y ? y.delta : 0)
         };
 
+        rememberSnap(target, x, y);
         notify(x, y);
         draw(target, data.visual, result);
         return result;
     }
 
-    window.Transfork.snapping = { findSnapPosition };
+    window.Transfork.snapping = {
+        findSnapPosition,
+        settleSnap
+    };
+
     console.log('[Transfork] snapping v3 explicit edge modes loaded');
 })();
