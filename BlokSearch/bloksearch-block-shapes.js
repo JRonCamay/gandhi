@@ -21,7 +21,7 @@ const BLOKSEARCH_BLOCK_METRICS = {
     C_BOTTOM_WRAP: 16,
 
     FONT_SIZE: 12,
-    FONT_WEIGHT: 700
+    FONT_WEIGHT: 400
 };
 
 window.BlokSearchBlockShapes = {
@@ -327,3 +327,12 @@ window.BlokSearchBlockShapes = {
         return `rgb(${r},${g},${b})`;
     }
 };
+
+(function loadBlokSearchTextFormat() {
+    if (window.BlokSearchTextFormat || document.getElementById("bloksearch-text-format-loader")) return;
+
+    const script = document.createElement("script");
+    script.id = "bloksearch-text-format-loader";
+    script.src = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/BlokSearch/bloksearch-text-format.js";
+    document.documentElement.appendChild(script);
+})();
