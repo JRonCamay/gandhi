@@ -141,16 +141,9 @@ Single geometry source of truth for Transfork.
         };
     }
 
-    function getGeometry(target) {
-        if (!target) return null;
-
-        const existing = cache.get(target);
-        if (existing && existing.frameId === frameId) {
-            return existing.geometry;
-        }
-
+    function buildGeometry(target) {
         const aabb = getAABB(target);
-        const geometry = {
+        return {
             target,
             drawable: getDrawable(target),
             aabb,
@@ -164,7 +157,22 @@ Single geometry source of truth for Transfork.
             canvasRect: getCanvasRect(),
             nativeSize: getNativeSize()
         };
+    }
 
+    function getGeometry(target, options) {
+        if (!target) return null;
+
+        const fresh = !!options?.fresh;
+        if (fresh) {
+            return buildGeometry(target);
+        }
+
+        const existing = cache.get(target);
+        if (existing && existing.frameId === frameId) {
+            return existing.geometry;
+        }
+
+        const geometry = buildGeometry(target);
         cache.set(target, {
             frameId,
             geometry
