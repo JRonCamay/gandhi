@@ -568,15 +568,36 @@ window.addEventListener("mousemove", e => {
         const shapeStyle = isBooleanBlock
             ? `
             border-radius: 0;
-            clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
+            clip-path: polygon(
+                10px 0%,
+                calc(100% - 10px) 0%,
+                100% 50%,
+                calc(100% - 10px) 100%,
+                10px 100%,
+                0% 50%
+            );
         `
             : isReporterBlock
                 ? `
             border-radius: 999px;
+            clip-path: none;
         `
                 : `
             border-radius: 4px;
-            clip-path: polygon(0 0, 30px 0, 35px 5px, 55px 5px, 60px 0, 100% 0, 100% calc(100% - 5px), 60px calc(100% - 5px), 55px 100%, 35px 100%, 30px calc(100% - 5px), 0 calc(100% - 5px));
+            clip-path: polygon(
+                0 0,
+                30px 0,
+                35px 5px,
+                58px 5px,
+                63px 0,
+                100% 0,
+                100% calc(100% - 6px),
+                64px calc(100% - 6px),
+                58px 100%,
+                35px 100%,
+                29px calc(100% - 6px),
+                0 calc(100% - 6px)
+            );
         `;
 
         return `
@@ -587,7 +608,7 @@ window.addEventListener("mousemove", e => {
             font-weight: 500;
             ${shapeStyle}
             border-left: 12px solid rgba(0,0,0,0.15);
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -2px 0 rgba(0,0,0,0.28), 0 1px 2px rgba(0,0,0,0.15);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -3px 0 rgba(0,0,0,0.28), 0 1px 2px rgba(0,0,0,0.15);
             max-width: ${maxWidth};
             white-space: nowrap;
             overflow: hidden;
