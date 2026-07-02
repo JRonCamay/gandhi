@@ -25,6 +25,11 @@ window.Chad = window.Chad || {};
     }
 
     function renderChatiesStable(force) {
+        if (window.Chad.uiChaties && window.Chad.uiChaties.renderIntoPanel) {
+            window.Chad.uiChaties.renderIntoPanel();
+            return;
+        }
+
         const panel = document.querySelector("#gandhi-chad-panel");
         const state = window.Chad.storage && window.Chad.storage.state;
         if (!panel || !state || state.activeTab !== "chaties") return;
@@ -44,7 +49,7 @@ window.Chad = window.Chad || {};
             activeId,
             doneLive,
             expandedMap,
-            agents: agents.map(a => [a.id, a.name, a.icon, a.description, a.chatUrl, (filesApi.visibleFilesForAgent(a) || []).length])
+            agents: agents.map(a => [a.id, a.name, a.icon, a.description, a.chatUrl])
         });
 
         if (!force && oldBody.dataset.chadStable === "1" && signature === lastChatiesSignature) return;
@@ -67,7 +72,6 @@ window.Chad = window.Chad || {};
             ${agents.map(agent => {
                 const active = agent.id === activeId;
                 const expanded = identity.isExpanded(agent.id);
-                const files = filesApi.visibleFilesForAgent(agent);
                 const activeDone = active && doneLive;
                 return `
                     <div style="border:1px solid ${activeDone ? "#22c55e" : active ? "#2563eb" : "#cbd5e1"};border-radius:9px;padding:7px;margin-top:6px;background:${activeDone ? "#dcfce7" : active ? "#eff6ff" : "#f8fafc"}">
@@ -85,9 +89,6 @@ window.Chad = window.Chad || {};
                                 ${btn("USE THIS CHAT", { usechat: agent.id }, "#e0f2fe", "#7dd3fc", false, true)}
                                 ${btn("COPY LINK", { copylink: agent.id }, "#f8fafc", "#cbd5e1", false, true)}
                                 ${btn("DELETE AGENT", { deleteagent: agent.id }, "#fee2e2", "#fecaca", false, true)}
-                            </div>
-                            <div style="margin-top:6px">
-                                ${files.length ? files.map(file => filesApi.renderFile(agent, file, btn, escapeHTML)).join("") : `<div style="color:#64748b;font-size:11px;padding:7px 2px 0">No files for this agent chat yet.</div>`}
                             </div>` : ""}
                     </div>`;
             }).join("")}`;
@@ -123,13 +124,12 @@ window.Chad = window.Chad || {};
             if (!target) return;
             const d = target.dataset;
             const identity = window.Chad.agentIdentity;
-            const filesApi = window.Chad.agentFiles;
             const tabs = window.Chad.agentTabs;
 
             if (d.toggleagent) { identity.toggleExpanded(d.toggleagent); renderChatiesStable(true); return; }
             if (d.openagent) { tabs.openAgent(identity.getAgents().find(a => a.id === d.openagent), renderChatiesStable); return; }
             if (d.editagent) { editAgent(d.editagent); renderChatiesStable(true); return; }
-            if (d.scanfiles) { filesApi.mergeFiles(d.scanfiles); renderChatiesStable(true); return; }
+            if (d.scanfiles && window.Chad.agentFiles) { window.Chad.agentFiles.mergeFiles(d.scanfiles); renderChatiesStable(true); return; }
             if (d.usechat) {
                 const agents = identity.getAgents();
                 const agent = agents.find(a => a.id === d.usechat);
@@ -138,7 +138,6 @@ window.Chad = window.Chad || {};
                     agent.updatedAt = nowStamp();
                     identity.saveAgents(agents);
                     identity.setActiveId(agent.id);
-                    identity.setExpanded(agent.id, true);
                     if (window.Chad.ui && window.Chad.ui.applyTabIdentity) window.Chad.ui.applyTabIdentity();
                     renderChatiesStable(true);
                 }
@@ -154,18 +153,6 @@ window.Chad = window.Chad || {};
                 identity.saveAgents(next);
                 if (identity.getActiveId() === d.deleteagent) identity.setActiveId(next[0] ? next[0].id : "");
                 renderChatiesStable(true);
-                return;
-            }
-            if (d.openfile) window.open(d.openfile, "_blank");
-            if (d.copyfile && window.Chad.actions) window.Chad.actions.copyText(d.copyfile);
-            if (d.deletefile) {
-                const agents = identity.getAgents();
-                const agent = agents.find(a => a.id === d.agentid);
-                if (agent) {
-                    agent.files = (agent.files || []).filter(file => file.id !== d.deletefile);
-                    identity.saveAgents(agents);
-                    renderChatiesStable(true);
-                }
             }
         });
     }
@@ -177,8 +164,6 @@ window.Chad = window.Chad || {};
         if (window.Chad.chadDock) {
             window.Chad.chadDock.patchCloseButton();
         }
-        const state = window.Chad.storage && window.Chad.storage.state;
-        if (state && state.activeTab === "chaties") renderChatiesStable(false);
     }
 
     function start() {
