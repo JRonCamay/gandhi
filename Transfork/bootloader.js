@@ -20,6 +20,7 @@ Loads all Transfork modules from the same Transfork folder.
         'snap-visuals.js',
         'snapping.js',
         'snapping-v2.js',
+        'snapping-v3.js',
         'vm.js',
         'asset-bake-engine.js',
         'overlay-tools.js',
