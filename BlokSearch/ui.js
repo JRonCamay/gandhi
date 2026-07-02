@@ -9,7 +9,6 @@ window.BlokSearch.ui = {
     host: null,
     shadowRoot: null,
     pendingStyles: [],
-    outsidePointerHandler: null,
 
     attachSearchPanel(panel) {
         this.removeSearchPanel();
@@ -32,21 +31,11 @@ window.BlokSearch.ui = {
         document.body.appendChild(host);
         this.flushPendingStyles();
         root.appendChild(panel);
-        this.installPanelEventIsolation(panel);
 
         return panel;
     },
 
     removeSearchPanel() {
-        if (this.outsidePointerHandler) {
-            document.removeEventListener(
-                "pointerdown",
-                this.outsidePointerHandler,
-                true
-            );
-            this.outsidePointerHandler = null;
-        }
-
         if (this.host && this.host.parentNode) {
             this.host.parentNode.removeChild(this.host);
         }
@@ -94,46 +83,5 @@ window.BlokSearch.ui = {
         styles.forEach(item => {
             this.injectStyle(item.id, item.cssText);
         });
-    },
-
-    installPanelEventIsolation(panel) {
-        const stopKeys = event => {
-            event.stopPropagation();
-        };
-
-        const stopPointer = event => {
-            event.stopPropagation();
-        };
-
-        panel.addEventListener("keydown", stopKeys, true);
-        panel.addEventListener("keyup", stopKeys, true);
-        panel.addEventListener("keypress", stopKeys, true);
-        panel.addEventListener("beforeinput", stopKeys, true);
-        panel.addEventListener("input", stopKeys, true);
-        panel.addEventListener("pointerdown", stopPointer, true);
-        panel.addEventListener("mousedown", stopPointer, true);
-        panel.addEventListener("click", stopPointer, true);
-
-        this.outsidePointerHandler = event => {
-            const path = event.composedPath ? event.composedPath() : [];
-            const insidePanel =
-                path.includes(panel) ||
-                path.includes(this.host) ||
-                path.includes(this.shadowRoot);
-
-            if (!insidePanel) {
-                this.removeSearchPanel();
-            }
-        };
-
-        setTimeout(() => {
-            if (!this.host) return;
-
-            document.addEventListener(
-                "pointerdown",
-                this.outsidePointerHandler,
-                true
-            );
-        }, 0);
     }
 };
