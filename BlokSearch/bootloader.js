@@ -26,6 +26,8 @@ Loads all BlokSearch modules from the same BlokSearch folder.
         'bloksearch-block-shapes.js',
         'bloksearch-search-engine.js',
         'search-controller.js',
+        'block-cache.js',
+        'virtual-list-renderer.js',
         'bloksearch-main.js'
     ];
 
@@ -86,9 +88,116 @@ Loads all BlokSearch modules from the same BlokSearch folder.
         return code.replace(target, replacement);
     }
 
+    function patchMainVirtualRenderer(code) {
+        const stateTarget = `let selectedIndex = 0;
+        let filteredEntries = [];`;
+        const statePatch = `let selectedIndex = 0;
+        let filteredEntries = [];
+        let virtualRenderer = null;`;
+
+        code = code.replace(stateTarget, statePatch);
+
+        const renderRegex = /function renderResults\(\) \{[\s\S]*?\n        function refresh\(\) \{/;
+        const renderPatch = `function renderResults() {
+            if (!window.BlokSearch || !window.BlokSearch.VirtualListRenderer) {
+                results.innerHTML = "";
+                filteredEntries.forEach((entry, index) => {
+                    const row = document.createElement("div");
+                    row.textContent = entry.label;
+                    row.onmousedown = e => {
+                        if (e.button !== 0) return;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const createdBlock = insertBlock(entry, window.mouseX, window.mouseY);
+                        box.remove();
+                        startDraggingBlock(createdBlock, e);
+                    };
+                    results.appendChild(row);
+                });
+                return;
+            }
+
+            const buildRow = (entry, index, selected, cache) => {
+                const row = document.createElement("div");
+                row.style.cssText = \`
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: 4px 6px;
+                    margin-bottom: 4px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    transition: background 0.1s;
+                    box-sizing: border-box;
+                \`;
+
+                if (selected) {
+                    row.style.background = "rgba(255,255,255,0.12)";
+                }
+
+                const blockFrame = document.createElement("div");
+                blockFrame.style.cssText = getBlockFrameStyle(entry, "75%");
+                const cacheKey = entry.type + "::" + entry.label;
+                blockFrame.innerHTML = cache.getOrCreate(cacheKey, () => formatParameterText(entry.label));
+
+                const categoryLabel = document.createElement("span");
+                const categoryText = entry.category ? entry.category.charAt(0).toUpperCase() + entry.category.slice(1) : "Custom";
+                categoryLabel.textContent = \`[\${categoryText}]\`;
+                categoryLabel.style.cssText = \`
+                    font-size: 10px;
+                    color: #888;
+                    font-weight: normal;
+                    padding-left: 8px;
+                    white-space: nowrap;
+                \`;
+
+                row.appendChild(blockFrame);
+                row.appendChild(categoryLabel);
+
+                row.onmouseenter = () => {
+                    selectedIndex = index;
+                    if (virtualRenderer) {
+                        virtualRenderer.setSelectedIndex(selectedIndex);
+                    }
+                };
+
+                row.onmousedown = e => {
+                    if (e.button !== 0) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const createdBlock = insertBlock(entry, window.mouseX, window.mouseY);
+                    box.remove();
+                    startDraggingBlock(createdBlock, e);
+                };
+
+                return row;
+            };
+
+            if (virtualRenderer) {
+                virtualRenderer.dispose();
+            }
+
+            virtualRenderer = new window.BlokSearch.VirtualListRenderer(results, {
+                rowHeight: 38,
+                buffer: 8,
+                cache: window.BlokSearch.blockFrameCache || (window.BlokSearch.blockFrameCache = new window.BlokSearch.BlockCache(500)),
+                renderRow: buildRow
+            });
+
+            virtualRenderer.setItems(filteredEntries, selectedIndex);
+            virtualRenderer.setSelectedIndex(selectedIndex);
+        }
+
+        function refresh() {`;
+
+        return code.replace(renderRegex, renderPatch);
+    }
+
     function prepareModuleCode(loadedModule) {
         if (loadedModule.name === 'bloksearch-main.js') {
-            return patchMainSearchPipeline(loadedModule.code);
+            return patchMainVirtualRenderer(
+                patchMainSearchPipeline(loadedModule.code)
+            );
         }
 
         return loadedModule.code;
