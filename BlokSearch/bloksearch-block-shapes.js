@@ -28,24 +28,32 @@ window.BlokSearchBlockShapes = {
                 : isCBlock
                     ? `
             border-radius: 4px;
+            padding: 5px 12px 18px 16px;
+            min-height: 34px;
             clip-path: polygon(
                 0 0,
                 30px 0,
-                35px 5px,
-                58px 5px,
-                63px 0,
+                35px 6px,
+                58px 6px,
+                64px 0,
                 100% 0,
-                100% 35%,
-                42px 35%,
-                42px 66%,
-                100% 66%,
-                100% calc(100% - 6px),
-                64px calc(100% - 6px),
-                58px 100%,
-                35px 100%,
-                29px calc(100% - 6px),
-                0 calc(100% - 6px)
+                100% 100%,
+                64px 100%,
+                58px calc(100% - 6px),
+                35px calc(100% - 6px),
+                29px 100%,
+                0 100%
             );
+            background-image:
+                linear-gradient(
+                    to bottom,
+                    transparent 0,
+                    transparent 18px,
+                    rgba(0,0,0,0.28) 18px,
+                    rgba(0,0,0,0.28) 24px,
+                    transparent 24px
+                );
+            background-blend-mode: multiply;
         `
                 : `
             border-radius: 4px;
