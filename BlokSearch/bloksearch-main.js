@@ -565,6 +565,12 @@ window.addEventListener("mousemove", e => {
     function getBlockFrameStyle(entry, maxWidth) {
         const isBooleanBlock = entry.outputCheck && entry.outputCheck.includes("Boolean");
         const isReporterBlock = !isBooleanBlock && entry.hasOutput;
+        const isCBlock =
+            entry.type === "control_if" ||
+            entry.type === "control_if_else" ||
+            entry.type === "control_forever" ||
+            entry.type === "control_repeat" ||
+            entry.type === "control_repeat_until";
         const shapeStyle = isBooleanBlock
             ? `
             border-radius: 0;
@@ -581,6 +587,28 @@ window.addEventListener("mousemove", e => {
                 ? `
             border-radius: 999px;
             clip-path: none;
+        `
+                : isCBlock
+                    ? `
+            border-radius: 4px;
+            clip-path: polygon(
+                0 0,
+                30px 0,
+                35px 5px,
+                58px 5px,
+                63px 0,
+                100% 0,
+                100% 35%,
+                42px 35%,
+                42px 66%,
+                100% 66%,
+                100% calc(100% - 6px),
+                64px calc(100% - 6px),
+                58px 100%,
+                35px 100%,
+                29px calc(100% - 6px),
+                0 calc(100% - 6px)
+            );
         `
                 : `
             border-radius: 4px;
