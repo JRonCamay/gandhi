@@ -22,6 +22,7 @@ Loads all Transfork modules from the same Transfork folder.
         'geometry.js',
         'alpha-tools.js',
         'ui/overlay.js',
+        'tools/move-tool.js',
         'snap-visuals.js',
         'snapping.js',
         'snapping-v2.js',
