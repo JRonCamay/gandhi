@@ -1566,13 +1566,6 @@
                     );
                 }
             );
-            let rotating = false;
-            let rotateCenterX = 0;
-            let rotateCenterY = 0;
-            let rotateScaleX = 0;
-            let rotateScaleY = 0;
-            let startDirection = 0;
-            let startAngle = 0;
             let startMouseX = 0;
             let startMouseY = 0;
             let shearX = 0;
@@ -2145,27 +2138,20 @@
                 e => {
                     e.preventDefault();
                     e.stopPropagation();
-                    transformTarget = vm.editingTarget;
-
-                    const drawable = vm.runtime.renderer._allDrawables[transformTarget.drawableID];
-                    installShearHook(
-                        drawable,
-                        transformTarget
+                    Transfork.tools.rotateTool.begin(
+                        e,
+                        {
+                            target: vm.editingTarget,
+                            renderer: vm.runtime.renderer,
+                            overlay,
+                            getDrawable: target =>
+                                vm.runtime.renderer
+                                ._allDrawables[
+                                    target.drawableID
+                                ],
+                            installShearHook
+                        }
                     );
-                    rotateScaleX = drawable.scale[0];
-                    rotateScaleY = drawable.scale[1];
-
-                    const rect = overlay.getBoundingClientRect();
-                    rotateCenterX = rect.left + rect.width / 2;
-                    rotateCenterY = rect.top + rect.height / 2;
-
-                    startAngle = Math.atan2(
-                        e.clientY - rotateCenterY,
-                        e.clientX - rotateCenterX
-                    );
-
-                    startDirection = transformTarget.direction;
-                    rotating = true;
                 }
             );
 
@@ -2194,7 +2180,7 @@
 
                     Transfork.tools.resizeTool.commit();
 
-                    rotating = false;
+                    Transfork.tools.rotateTool.commit();
                     transformTarget = null;
 
                     alphaDragging =
@@ -2228,7 +2214,7 @@
                     if (
                         Transfork.tools.moveTool.isActive() ||
                         Transfork.tools.resizeTool.isActive() ||
-                        rotating ||
+                        Transfork.tools.rotateTool.isActive() ||
                         alphaDragging
                     ) {
 
@@ -2286,27 +2272,16 @@
                         }
                     );
 
-                    if (rotating) {
-                        const angle = Math.atan2(
-                            e.clientY - rotateCenterY,
-                            e.clientX - rotateCenterX
-                        );
-
-                        const delta = (angle - startAngle) * 180 / Math.PI;
-                        const newDirection = startDirection + delta;
-
-                        transformTarget.setDirection(newDirection);
-
-                        const drawable = vm.runtime.renderer._allDrawables[transformTarget.drawableID];
-                        installShearHook(
-                            drawable,
-                            transformTarget
-                        );
-                        drawable.updateScale([
-                                rotateScaleX,
-                                rotateScaleY
-                        ]);
-                    }
+                    Transfork.tools.rotateTool.update(
+                        e,
+                        {
+                            getDrawable: target =>
+                                vm.runtime.renderer
+                                ._allDrawables[
+                                    target.drawableID
+                                ]
+                        }
+                    );
 
                 }
             );
