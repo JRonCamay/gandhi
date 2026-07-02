@@ -20,6 +20,8 @@ Loads all Transfork modules from the same Transfork folder.
         'engine/simulation.js',
         'engine/transform.js',
         'geometry.js',
+        'alpha-tools.js',
+        'ui/overlay.js',
         'snap-visuals.js',
         'snapping.js',
         'snapping-v2.js',
