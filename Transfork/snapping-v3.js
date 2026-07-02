@@ -12,7 +12,10 @@ Explicit edge-mode snapping engine for Transfork.
     const CORNER_FACTOR = 0.45;
 
     function renderer() {
-        return window.vm?.renderer || window.vm?.runtime?.renderer || null;
+        return window.Transfork?.geometry?.getRenderer()
+            || window.vm?.renderer
+            || window.vm?.runtime?.renderer
+            || null;
     }
 
     function snapDistance(r) {
@@ -53,6 +56,20 @@ Explicit edge-mode snapping engine for Transfork.
         return picked;
     }
 
+    function getFreshAABB(target, r) {
+        const geometry = window.Transfork?.geometry?.getGeometry(
+            target,
+            { fresh: true }
+        );
+
+        if (geometry && geometry.aabb) return geometry.aabb;
+
+        const drawable = r._allDrawables[target.drawableID];
+        if (!drawable || typeof drawable.getAABB !== 'function') return null;
+
+        return drawable.getAABB();
+    }
+
     function collect(target, bounds, r, limit) {
         const horizontal = [];
         const vertical = [];
@@ -62,10 +79,9 @@ Explicit edge-mode snapping engine for Transfork.
         for (const other of window.vm?.runtime?.targets || []) {
             if (!other || other === target || other.isStage) continue;
 
-            const drawable = r._allDrawables[other.drawableID];
-            if (!drawable || drawable._visible === false) continue;
+            const b = getFreshAABB(other, r);
+            if (!b) continue;
 
-            const b = drawable.getAABB();
             const candidates = [
                 item('x', 'left', 'left', b.left - bounds.left, b, other),
                 item('x', 'left', 'right', b.right - bounds.left, b, other),
@@ -149,11 +165,11 @@ Explicit edge-mode snapping engine for Transfork.
         const r = renderer();
         if (!target || !r?._allDrawables) return { x: desiredX, y: desiredY };
 
-        const drawable = r._allDrawables[target.drawableID];
-        if (!drawable) return { x: desiredX, y: desiredY };
+        const currentAABB = getFreshAABB(target, r);
+        if (!currentAABB) return { x: desiredX, y: desiredY };
 
         const bounds = shift(
-            drawable.getAABB(),
+            currentAABB,
             desiredX - target.x,
             desiredY - target.y
         );
