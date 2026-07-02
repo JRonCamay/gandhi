@@ -111,6 +111,13 @@ Loads all BlokSearch modules from the same BlokSearch folder.
                         if (e.button !== 0) return;
                         e.preventDefault();
                         e.stopPropagation();
+
+                        if (window.BlokSearch && window.BlokSearch.canvasInjector) {
+                            window.BlokSearch.canvasInjector.teleport(entry);
+                            box.remove();
+                            return;
+                        }
+
                         const createdBlock = insertBlock(entry, window.mouseX, window.mouseY);
                         box.remove();
                         startDraggingBlock(createdBlock, e);
@@ -168,6 +175,13 @@ Loads all BlokSearch modules from the same BlokSearch folder.
                     if (e.button !== 0) return;
                     e.preventDefault();
                     e.stopPropagation();
+
+                    if (window.BlokSearch && window.BlokSearch.canvasInjector) {
+                        window.BlokSearch.canvasInjector.teleport(entry);
+                        box.remove();
+                        return;
+                    }
+
                     const createdBlock = insertBlock(entry, window.mouseX, window.mouseY);
                     box.remove();
                     startDraggingBlock(createdBlock, e);
@@ -196,10 +210,31 @@ Loads all BlokSearch modules from the same BlokSearch folder.
         return code.replace(renderRegex, renderPatch);
     }
 
+    function patchMainKeyboardTeleport(code) {
+        const target = `const createdBlock = insertBlock(filteredEntries[selectedIndex], window.mouseX, window.mouseY);
+                    box.remove();
+                    startDraggingBlock(createdBlock, e);`;
+
+        const replacement = `if (window.BlokSearch && window.BlokSearch.canvasInjector) {
+                        window.BlokSearch.canvasInjector.teleport(filteredEntries[selectedIndex]);
+                        box.remove();
+                        return;
+                    }
+
+                    const createdBlock = insertBlock(filteredEntries[selectedIndex], window.mouseX, window.mouseY);
+                    box.remove();
+                    startDraggingBlock(createdBlock, e);`;
+
+        if (!code.includes(target)) return code;
+        return code.replace(target, replacement);
+    }
+
     function prepareModuleCode(loadedModule) {
         if (loadedModule.name === 'bloksearch-main.js') {
-            return patchMainVirtualRenderer(
-                patchMainSearchPipeline(loadedModule.code)
+            return patchMainKeyboardTeleport(
+                patchMainVirtualRenderer(
+                    patchMainSearchPipeline(loadedModule.code)
+                )
             );
         }
 
