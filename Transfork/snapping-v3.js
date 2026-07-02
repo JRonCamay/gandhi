@@ -11,8 +11,10 @@ Explicit edge-mode snapping engine for Transfork.
     const SNAP_PX = 12;
     const CORNER_FACTOR = 0.45;
     const SETTLE_LIMIT = 4;
+    const ANCHOR_LIMIT = 6;
 
     let lastSnap = null;
+    let snapAnchor = null;
 
     function renderer() {
         return window.Transfork?.geometry?.getRenderer()
@@ -164,6 +166,74 @@ Explicit edge-mode snapping engine for Transfork.
         window.Transfork?.snapVisuals?.update({ target, candidates: visual, result });
     }
 
+    function cloneBounds(bounds) {
+        if (!bounds) return null;
+        return {
+            left: bounds.left,
+            right: bounds.right,
+            top: bounds.top,
+            bottom: bounds.bottom
+        };
+    }
+
+    function pickAnchorCandidate(x, y) {
+        if (x && !y) return x;
+        if (y && !x) return y;
+        if (!x && !y) return null;
+        return Math.abs(x.delta) <= Math.abs(y.delta) ? x : y;
+    }
+
+    function makeAnchor(target, snap) {
+        if (!snap) return null;
+        return {
+            target,
+            axis: snap.axis,
+            activeEdge: snap.activeEdge,
+            otherEdge: snap.otherEdge,
+            otherTarget: snap.otherTarget,
+            otherBounds: cloneBounds(snap.otherBounds),
+            time: Date.now()
+        };
+    }
+
+    function sameBounds(a, b) {
+        if (!a || !b) return false;
+        return (
+            Math.abs(a.left - b.left) <= ANCHOR_LIMIT &&
+            Math.abs(a.right - b.right) <= ANCHOR_LIMIT &&
+            Math.abs(a.top - b.top) <= ANCHOR_LIMIT &&
+            Math.abs(a.bottom - b.bottom) <= ANCHOR_LIMIT
+        );
+    }
+
+    function anchorIsValid(anchor, r) {
+        if (!anchor || !anchor.otherTarget) return false;
+        const currentOther = getFreshAABB(anchor.otherTarget, r);
+        return sameBounds(anchor.otherBounds, currentOther);
+    }
+
+    function correctionFromSnap(bounds, snap, limit) {
+        if (!snap) return 0;
+        const delta = snap.otherBounds[snap.otherEdge] - bounds[snap.activeEdge];
+        return Math.abs(delta) <= limit ? delta : 0;
+    }
+
+    function applyAxisCorrection(result, currentAABB, target, snap, limit) {
+        if (!snap) return;
+
+        const proposed = shift(
+            currentAABB,
+            result.x - target.x,
+            result.y - target.y
+        );
+
+        const delta = correctionFromSnap(proposed, snap, limit);
+        if (!delta) return;
+
+        if (snap.axis === 'x') result.x += delta;
+        else result.y += delta;
+    }
+
     function rememberSnap(target, x, y) {
         lastSnap = {
             target,
@@ -174,10 +244,19 @@ Explicit edge-mode snapping engine for Transfork.
     }
 
     function settleAxis(bounds, snap) {
-        if (!snap) return 0;
+        return correctionFromSnap(bounds, snap, SETTLE_LIMIT);
+    }
 
-        const delta = snap.otherBounds[snap.otherEdge] - bounds[snap.activeEdge];
-        return Math.abs(delta) <= SETTLE_LIMIT ? delta : 0;
+    function settleAnchor(target, r, bounds) {
+        if (!snapAnchor || snapAnchor.target !== target) return null;
+        if (!anchorIsValid(snapAnchor, r)) return null;
+
+        const delta = correctionFromSnap(bounds, snapAnchor, ANCHOR_LIMIT);
+        if (!delta) return null;
+
+        return snapAnchor.axis === 'x'
+            ? { dx: delta, dy: 0 }
+            : { dx: 0, dy: delta };
     }
 
     function settleSnap(target) {
@@ -189,8 +268,12 @@ Explicit edge-mode snapping engine for Transfork.
         const bounds = getFreshAABB(target, r);
         if (!bounds) return false;
 
-        const dx = settleAxis(bounds, lastSnap.x);
-        const dy = settleAxis(bounds, lastSnap.y);
+        const anchorMove = settleAnchor(target, r, bounds) || { dx: 0, dy: 0 };
+        const afterAnchor = shift(bounds, anchorMove.dx, anchorMove.dy);
+        const dx = anchorMove.dx + settleAxis(afterAnchor, lastSnap.x);
+        const dy = anchorMove.dy + settleAxis(afterAnchor, lastSnap.y);
+
+        snapAnchor = null;
 
         if (!dx && !dy) return false;
 
@@ -230,10 +313,22 @@ Explicit edge-mode snapping engine for Transfork.
             y = axis.y;
         }
 
+        if (!x && !y) {
+            snapAnchor = null;
+        }
+
+        if ((x || y) && (!snapAnchor || snapAnchor.target !== target)) {
+            snapAnchor = makeAnchor(target, pickAnchorCandidate(x, y));
+        }
+
         const result = {
             x: desiredX + (x ? x.delta : 0),
             y: desiredY + (y ? y.delta : 0)
         };
+
+        if (snapAnchor && snapAnchor.target === target && anchorIsValid(snapAnchor, r)) {
+            applyAxisCorrection(result, currentAABB, target, snapAnchor, ANCHOR_LIMIT);
+        }
 
         rememberSnap(target, x, y);
         notify(x, y);
