@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ChadTheGreat",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Chat-local project companion for ChatGPT.",
   "permissions": [
     "tabs",
@@ -35,10 +35,10 @@
         "agentIdentity.js",
         "agentTabs.js",
         "agentFiles.js",
+        "uiChaties.js",
         "chadDock.js",
         "pressFeedback.js",
         "agentFixes.js",
-        "chatiesDefaultClosed.js",
         "updateChecker.js",
         "uiTweaks.js",
         "content.js"
