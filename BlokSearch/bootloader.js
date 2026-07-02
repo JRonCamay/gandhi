@@ -79,12 +79,17 @@ Loads all BlokSearch modules from the same BlokSearch folder.
                 window.BlokSearch.searchEngine &&
                 window.BlokSearch.searchEngine.findFuzzyResults
             ) {
+                const blokContext = window.BlokSearch.contextResolver
+                    ? window.BlokSearch.contextResolver.resolve()
+                    : {};
+
                 filteredEntries = window.BlokSearch.searchEngine.findFuzzyResults({
+                    ...blokContext,
                     cachedBlocks,
                     q,
-                    reporterMode,
+                    reporterMode: blokContext.reporterMode || reporterMode,
                     targetedConnection,
-                    isBooleanTarget
+                    isBooleanTarget: blokContext.booleanMode || isBooleanTarget
                 });
             }`;
 
