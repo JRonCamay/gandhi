@@ -102,7 +102,6 @@ window.Chad = window.Chad || {};
 
         if (match && getActiveId() !== match.id) {
             setActiveId(match.id);
-            setExpanded(match.id, true);
             if (window.Chad.ui && window.Chad.ui.applyTabIdentity) {
                 window.Chad.ui.applyTabIdentity();
             }
