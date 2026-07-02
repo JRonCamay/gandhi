@@ -28,6 +28,7 @@ Loads all Transfork modules from the same Transfork folder.
         'tools/move-tool.js',
         'snap-visuals.js',
         'snap/candidate-solver.js',
+        'snap/edge-solver.js',
         'snapping.js',
         'snapping-v2.js',
         'snapping-v3.js',

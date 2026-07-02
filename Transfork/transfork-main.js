@@ -2442,38 +2442,7 @@
                     rect.width
                 );
 
-                let snapX =
-                null;
-                let snapXTarget =
-                null;
-                let snapXOtherTarget =
-                null;
-                let snapXSourceEdge =
-                null;
-                let snapXTargetEdge =
-                null;
-                let snapY =
-                null;
-                let snapYTarget =
-                null;
-                let snapYOtherTarget =
-                null;
-                let snapYSourceEdge =
-                null;
-                let snapYTargetEdge =
-                null;
-                const snapCandidates = {
-                    left: null,
-                    right: null,
-                    top: null,
-                    bottom: null
-                };
-                const candidateDeltas = {
-                    left: null,
-                    right: null,
-                    top: null,
-                    bottom: null
-                };
+                const candidates =
                 Transfork.snap.findCandidates(
                     {
                         target,
@@ -2481,155 +2450,40 @@
                         runtime: vm.runtime,
                         bounds
                     }
-                ).forEach(
-                    candidateTarget => {
-                        const otherTarget =
-                        candidateTarget.target;
+                );
 
-                        const otherBounds =
-                        candidateTarget.bounds;
-
-                        [
-                            {
-                                side: "left",
-                                sourceEdge: "left",
-                                targetEdge: "left",
-                                delta: otherBounds.left - bounds.left
-                            },
-                            {
-                                side: "left",
-                                sourceEdge: "right",
-                                targetEdge: "left",
-                                delta: otherBounds.right - bounds.left
-                            },
-                            {
-                                side: "right",
-                                sourceEdge: "left",
-                                targetEdge: "right",
-                                delta: otherBounds.left - bounds.right
-                            },
-                            {
-                                side: "right",
-                                sourceEdge: "right",
-                                targetEdge: "right",
-                                delta: otherBounds.right - bounds.right
-                            }
-                        ].forEach(
-                            candidate => {
-                                const delta =
-                                candidate.delta;
-
-                                if (
-                                    Math.abs(delta) <= snapDistance &&
-                                    (
-                                        candidateDeltas[candidate.side] === null ||
-                                        Math.abs(delta) <
-                                        Math.abs(candidateDeltas[candidate.side])
-                                    )
-                                ) {
-                                    candidateDeltas[candidate.side] =
-                                    delta;
-
-                                    snapCandidates[candidate.side] =
-                                    otherBounds;
-                                }
-
-                                if (
-                                    Math.abs(delta) <= snapDistance &&
-                                    (
-                                        snapX === null ||
-                                        Math.abs(delta) < Math.abs(snapX)
-                                    )
-                                ) {
-                                    snapX =
-                                    delta;
-
-                                    snapXTarget =
-                                    otherBounds;
-
-                                    snapXOtherTarget =
-                                    otherTarget;
-
-                                    snapXSourceEdge =
-                                    candidate.sourceEdge;
-
-                                    snapXTargetEdge =
-                                    candidate.targetEdge;
-                                }
-                            }
-                        );
-
-                        [
-                            {
-                                side: "top",
-                                sourceEdge: "top",
-                                targetEdge: "top",
-                                delta: otherBounds.top - bounds.top
-                            },
-                            {
-                                side: "top",
-                                sourceEdge: "bottom",
-                                targetEdge: "top",
-                                delta: otherBounds.bottom - bounds.top
-                            },
-                            {
-                                side: "bottom",
-                                sourceEdge: "top",
-                                targetEdge: "bottom",
-                                delta: otherBounds.top - bounds.bottom
-                            },
-                            {
-                                side: "bottom",
-                                sourceEdge: "bottom",
-                                targetEdge: "bottom",
-                                delta: otherBounds.bottom - bounds.bottom
-                            }
-                        ].forEach(
-                            candidate => {
-                                const delta =
-                                candidate.delta;
-
-                                if (
-                                    Math.abs(delta) <= snapDistance &&
-                                    (
-                                        candidateDeltas[candidate.side] === null ||
-                                        Math.abs(delta) <
-                                        Math.abs(candidateDeltas[candidate.side])
-                                    )
-                                ) {
-                                    candidateDeltas[candidate.side] =
-                                    delta;
-
-                                    snapCandidates[candidate.side] =
-                                    otherBounds;
-                                }
-
-                                if (
-                                    Math.abs(delta) <= snapDistance &&
-                                    (
-                                        snapY === null ||
-                                        Math.abs(delta) < Math.abs(snapY)
-                                    )
-                                ) {
-                                    snapY =
-                                    delta;
-
-                                    snapYTarget =
-                                    otherBounds;
-
-                                    snapYOtherTarget =
-                                    otherTarget;
-
-                                    snapYSourceEdge =
-                                    candidate.sourceEdge;
-
-                                    snapYTargetEdge =
-                                    candidate.targetEdge;
-                                }
-                            }
-                        );
+                const edgeResult =
+                Transfork.snap.solveEdges(
+                    {
+                        target,
+                        bounds,
+                        candidates,
+                        snapDistance
                     }
                 );
+
+                let snapX =
+                edgeResult.snapX;
+                let snapXTarget =
+                edgeResult.snapXTarget;
+                let snapXOtherTarget =
+                edgeResult.snapXOtherTarget;
+                let snapXSourceEdge =
+                edgeResult.snapXSourceEdge;
+                let snapXTargetEdge =
+                edgeResult.snapXTargetEdge;
+                let snapY =
+                edgeResult.snapY;
+                let snapYTarget =
+                edgeResult.snapYTarget;
+                let snapYOtherTarget =
+                edgeResult.snapYOtherTarget;
+                let snapYSourceEdge =
+                edgeResult.snapYSourceEdge;
+                let snapYTargetEdge =
+                edgeResult.snapYTargetEdge;
+                const snapCandidates =
+                edgeResult.snapCandidates;
                 if (
                     snapX !== null &&
                     snapY === null &&
