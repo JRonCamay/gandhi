@@ -54,6 +54,7 @@ window.BlokSearchTextFormat = {
         blockFrames.forEach(frame => {
             if (!frame.style || !frame.style.backgroundImage) return;
             this.cleanTrailingArtifacts(frame);
+            this.removeArtifactPills(frame);
         });
     },
 
@@ -71,8 +72,27 @@ window.BlokSearchTextFormat = {
 
         textNodes.forEach(node => {
             node.nodeValue = node.nodeValue
-                .replace(/\s+\?\s*\*+\s*$/g, "")
-                .replace(/\s+\*+\s*$/g, "");
+                .replace(/\s*[?]\s*[*]+\s*$/g, "")
+                .replace(/\s*[?]\s*$/g, "")
+                .replace(/\s*[*]+\s*$/g, "");
+        });
+    },
+
+    removeArtifactPills(root) {
+        const pills = root.querySelectorAll("span");
+
+        pills.forEach(pill => {
+            const text = (pill.textContent || "").trim();
+
+            if (text === "?" || text === "*" || text === "?*" || text === "? *") {
+                const previous = pill.previousSibling;
+
+                if (previous && previous.nodeType === Node.TEXT_NODE) {
+                    previous.nodeValue = previous.nodeValue.replace(/\s+$/g, "");
+                }
+
+                pill.remove();
+            }
         });
     }
 };
