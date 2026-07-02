@@ -13,6 +13,7 @@ const BLOKSEARCH_BLOCK_METRICS = {
 
     BOOLEAN_POINT: 16,
 
+    C_WIDTH: 128,
     C_TOP_BAR: 40,
     C_SPINE_WIDTH: 16,
     C_EMPTY_MOUTH: 24,
@@ -27,7 +28,7 @@ window.BlokSearchBlockShapes = {
 
     getBlockFrameStyle(entry, maxWidth) {
         const blockKind = this.getBlockKind(entry);
-        const shapeStyle = this.getShapeStyle(blockKind);
+        const shapeStyle = this.getShapeStyle(blockKind, entry.color);
 
         return `
             ${this.getBaseStyle(entry, maxWidth)}
@@ -83,7 +84,8 @@ window.BlokSearchBlockShapes = {
         return `
             box-sizing: border-box;
             display: inline-block;
-            background: ${entry.color};
+            position: relative;
+            background-color: transparent;
             color: #fff;
             font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
             font-size: ${m.FONT_SIZE}px;
@@ -95,159 +97,192 @@ window.BlokSearchBlockShapes = {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            box-shadow:
-                inset 0 1px 0 rgba(255,255,255,0.18),
-                inset 0 -3px 0 rgba(0,0,0,0.25),
-                0 1px 2px rgba(0,0,0,0.15);
+            filter: drop-shadow(0 1px 1px rgba(0,0,0,0.22));
+            background-repeat: no-repeat;
+            background-size: 100% 100%;
         `;
     },
 
-    getShapeStyle(kind) {
-        if (kind === "boolean") return this.getBooleanStyle();
-        if (kind === "reporter") return this.getReporterStyle();
-        if (kind === "hat") return this.getHatStyle();
-        if (kind === "c") return this.getCBlockStyle();
-        if (kind === "cap") return this.getCapStyle();
-        return this.getStackStyle();
+    getShapeStyle(kind, color) {
+        if (kind === "boolean") return this.getBooleanStyle(color);
+        if (kind === "reporter") return this.getReporterStyle(color);
+        if (kind === "hat") return this.getHatStyle(color);
+        if (kind === "c") return this.getCBlockStyle(color);
+        if (kind === "cap") return this.getCapStyle(color);
+        return this.getStackStyle(color);
     },
 
-    getBooleanStyle() {
+    getBooleanStyle(color) {
         const m = BLOKSEARCH_BLOCK_METRICS;
+        const w = 120;
+        const h = 32;
+        const p = m.BOOLEAN_POINT;
+        const path = `M ${p} 1 H ${w - p} L ${w - 1} ${h / 2} L ${w - p} ${h - 1} H ${p} L 1 ${h / 2} Z`;
 
         return `
-            min-height: 28px;
-            padding: 6px ${m.PADDING_X}px;
-            border-radius: 0;
-            clip-path: polygon(
-                ${m.BOOLEAN_POINT}px 0,
-                calc(100% - ${m.BOOLEAN_POINT}px) 0,
-                100% 50%,
-                calc(100% - ${m.BOOLEAN_POINT}px) 100%,
-                ${m.BOOLEAN_POINT}px 100%,
-                0 50%
-            );
+            min-height: ${h}px;
+            padding: 8px ${m.PADDING_X}px;
+            ${this.getSvgBackground(path, w, h, color)}
         `;
     },
 
-    getReporterStyle() {
+    getReporterStyle(color) {
         const m = BLOKSEARCH_BLOCK_METRICS;
+        const w = 120;
+        const h = 32;
+        const r = h / 2;
+        const path = `M ${r} 1 H ${w - r} A ${r - 1} ${r - 1} 0 0 1 ${w - r} ${h - 1} H ${r} A ${r - 1} ${r - 1} 0 0 1 ${r} 1 Z`;
 
         return `
-            min-height: 28px;
-            padding: 6px ${m.PADDING_X}px;
-            border-radius: 999px;
+            min-height: ${h}px;
+            padding: 8px ${m.PADDING_X}px;
+            ${this.getSvgBackground(path, w, h, color)}
         `;
     },
 
-    getHatStyle() {
+    getHatStyle(color) {
         const m = BLOKSEARCH_BLOCK_METRICS;
-        const notchEnd = m.NOTCH_X + m.NOTCH_WIDTH;
-        const tabStart = m.NOTCH_X;
-        const tabEnd = m.NOTCH_X + m.NOTCH_WIDTH;
+        const w = 160;
+        const h = m.BLOCK_HEIGHT;
+        const d = m.NOTCH_DEPTH;
+        const x = m.NOTCH_X;
+        const nw = m.NOTCH_WIDTH;
+        const path = [
+            `M 1 ${m.HAT_PEAK}`,
+            `Q 8 5 32 1`,
+            `Q 58 1 72 ${m.HAT_PEAK}`,
+            `H ${w - m.CORNER_RADIUS}`,
+            `Q ${w - 1} ${m.HAT_PEAK} ${w - 1} ${m.HAT_PEAK + m.CORNER_RADIUS}`,
+            `V ${h - d}`,
+            `H ${x + nw + 24}`,
+            `L ${x + nw + 18} ${h - 1}`,
+            `H ${x + 6}`,
+            `L ${x} ${h - d}`,
+            `H 1 Z`
+        ].join(" ");
 
         return `
-            min-height: ${m.BLOCK_HEIGHT}px;
+            min-height: ${h}px;
             padding: 18px ${m.PADDING_X}px 8px ${m.PADDING_X}px;
-            border-radius: ${m.CORNER_RADIUS}px;
-            clip-path: polygon(
-                0 ${m.HAT_PEAK}px,
-                4px 15px,
-                12px 7px,
-                24px 2px,
-                36px 0,
-                48px 2px,
-                60px 7px,
-                68px 15px,
-                72px ${m.HAT_PEAK}px,
-                100% ${m.HAT_PEAK}px,
-                100% calc(100% - ${m.NOTCH_DEPTH}px),
-                ${tabEnd + 24}px calc(100% - ${m.NOTCH_DEPTH}px),
-                ${tabEnd + 18}px 100%,
-                ${tabStart + 6}px 100%,
-                ${tabStart}px calc(100% - ${m.NOTCH_DEPTH}px),
-                0 calc(100% - ${m.NOTCH_DEPTH}px)
-            );
+            ${this.getSvgBackground(path, w, h, color)}
         `;
     },
 
-    getStackStyle() {
+    getStackStyle(color) {
         const m = BLOKSEARCH_BLOCK_METRICS;
-        const notchEnd = m.NOTCH_X + m.NOTCH_WIDTH;
-        const tabStart = m.NOTCH_X;
-        const tabEnd = m.NOTCH_X + m.NOTCH_WIDTH;
+        const w = 160;
+        const h = m.BLOCK_HEIGHT;
+        const path = this.getStackPath(w, h, true, true);
 
         return `
-            min-height: ${m.BLOCK_HEIGHT}px;
+            min-height: ${h}px;
             padding: 16px ${m.PADDING_X}px 10px ${m.PADDING_X}px;
-            border-radius: ${m.CORNER_RADIUS}px;
-            clip-path: polygon(
-                0 0,
-                ${m.NOTCH_X}px 0,
-                ${m.NOTCH_X + 6}px ${m.NOTCH_DEPTH}px,
-                ${notchEnd + 6}px ${m.NOTCH_DEPTH}px,
-                ${notchEnd + 12}px 0,
-                100% 0,
-                100% calc(100% - ${m.NOTCH_DEPTH}px),
-                ${tabEnd + 24}px calc(100% - ${m.NOTCH_DEPTH}px),
-                ${tabEnd + 18}px 100%,
-                ${tabStart + 6}px 100%,
-                ${tabStart}px calc(100% - ${m.NOTCH_DEPTH}px),
-                0 calc(100% - ${m.NOTCH_DEPTH}px)
-            );
+            ${this.getSvgBackground(path, w, h, color)}
         `;
     },
 
-    getCapStyle() {
+    getCapStyle(color) {
         const m = BLOKSEARCH_BLOCK_METRICS;
-        const notchEnd = m.NOTCH_X + m.NOTCH_WIDTH;
+        const w = 160;
+        const h = m.BLOCK_HEIGHT;
+        const path = this.getStackPath(w, h, true, false);
 
         return `
-            min-height: ${m.BLOCK_HEIGHT}px;
+            min-height: ${h}px;
             padding: 16px ${m.PADDING_X}px 10px ${m.PADDING_X}px;
-            border-radius: ${m.CORNER_RADIUS}px ${m.CORNER_RADIUS}px 12px 12px;
-            clip-path: polygon(
-                0 0,
-                ${m.NOTCH_X}px 0,
-                ${m.NOTCH_X + 6}px ${m.NOTCH_DEPTH}px,
-                ${notchEnd + 6}px ${m.NOTCH_DEPTH}px,
-                ${notchEnd + 12}px 0,
-                100% 0,
-                100% 100%,
-                0 100%
-            );
+            ${this.getSvgBackground(path, w, h, color)}
         `;
     },
 
-    getCBlockStyle() {
+    getCBlockStyle(color) {
         const m = BLOKSEARCH_BLOCK_METRICS;
-        const notchEnd = m.NOTCH_X + m.NOTCH_WIDTH;
+        const w = m.C_WIDTH;
+        const h = m.C_TOP_BAR + m.C_EMPTY_MOUTH + m.C_BOTTOM_WRAP;
+        const x = m.NOTCH_X;
+        const nw = m.NOTCH_WIDTH;
+        const d = m.NOTCH_DEPTH;
+        const r = m.CORNER_RADIUS;
+        const spine = m.C_SPINE_WIDTH;
         const mouthTop = m.C_TOP_BAR;
         const mouthBottom = m.C_TOP_BAR + m.C_EMPTY_MOUTH;
-        const totalHeight = m.C_TOP_BAR + m.C_EMPTY_MOUTH + m.C_BOTTOM_WRAP;
+
+        const path = [
+            `M ${r} 1`,
+            `H ${x}`,
+            `L ${x + 6} ${d + 1}`,
+            `H ${x + nw + 6}`,
+            `L ${x + nw + 12} 1`,
+            `H ${w - r}`,
+            `Q ${w - 1} 1 ${w - 1} ${r}`,
+            `V ${mouthTop - r}`,
+            `Q ${w - 1} ${mouthTop} ${w - r} ${mouthTop}`,
+            `H ${spine + r}`,
+            `Q ${spine} ${mouthTop} ${spine} ${mouthTop + r}`,
+            `V ${mouthBottom - r}`,
+            `Q ${spine} ${mouthBottom} ${spine + r} ${mouthBottom}`,
+            `H ${w - r}`,
+            `Q ${w - 1} ${mouthBottom} ${w - 1} ${mouthBottom + r}`,
+            `V ${h - d}`,
+            `H ${x + nw + 24}`,
+            `L ${x + nw + 18} ${h - 1}`,
+            `H ${x + 6}`,
+            `L ${x} ${h - d}`,
+            `H 1`,
+            `V ${r}`,
+            `Q 1 1 ${r} 1 Z`
+        ].join(" ");
 
         return `
-            min-width: 120px;
-            min-height: ${totalHeight}px;
+            min-width: ${w}px;
+            min-height: ${h}px;
             padding: 16px ${m.PADDING_X}px ${m.C_BOTTOM_WRAP + 22}px ${m.PADDING_X}px;
-            border-radius: ${m.CORNER_RADIUS}px;
-            clip-path: polygon(
-                0 0,
-                ${m.NOTCH_X}px 0,
-                ${m.NOTCH_X + 6}px ${m.NOTCH_DEPTH}px,
-                ${notchEnd + 6}px ${m.NOTCH_DEPTH}px,
-                ${notchEnd + 12}px 0,
-                100% 0,
-                100% ${mouthTop}px,
-                ${m.C_SPINE_WIDTH}px ${mouthTop}px,
-                ${m.C_SPINE_WIDTH}px ${mouthBottom}px,
-                100% ${mouthBottom}px,
-                100% calc(100% - ${m.NOTCH_DEPTH}px),
-                ${notchEnd + 24}px calc(100% - ${m.NOTCH_DEPTH}px),
-                ${notchEnd + 18}px 100%,
-                ${m.NOTCH_X + 6}px 100%,
-                ${m.NOTCH_X}px calc(100% - ${m.NOTCH_DEPTH}px),
-                0 calc(100% - ${m.NOTCH_DEPTH}px)
-            );
+            ${this.getSvgBackground(path, w, h, color)}
         `;
+    },
+
+    getStackPath(w, h, hasPrevious, hasNext) {
+        const m = BLOKSEARCH_BLOCK_METRICS;
+        const x = m.NOTCH_X;
+        const nw = m.NOTCH_WIDTH;
+        const d = m.NOTCH_DEPTH;
+        const r = m.CORNER_RADIUS;
+        const top = hasPrevious
+            ? `H ${x} L ${x + 6} ${d + 1} H ${x + nw + 6} L ${x + nw + 12} 1 H ${w - r}`
+            : `H ${w - r}`;
+        const bottom = hasNext
+            ? `V ${h - d} H ${x + nw + 24} L ${x + nw + 18} ${h - 1} H ${x + 6} L ${x} ${h - d} H 1`
+            : `V ${h - r} Q ${w - 1} ${h - 1} ${w - r} ${h - 1} H ${r} Q 1 ${h - 1} 1 ${h - r}`;
+
+        return [
+            `M ${r} 1`,
+            top,
+            `Q ${w - 1} 1 ${w - 1} ${r}`,
+            bottom,
+            `V ${r}`,
+            `Q 1 1 ${r} 1 Z`
+        ].join(" ");
+    },
+
+    getSvgBackground(path, width, height, color) {
+        const stroke = this.darkenColor(color, 0.78);
+        const svg = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+                <path d="${path}" fill="${color}" stroke="${stroke}" stroke-width="1"/>
+                <path d="${path}" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1" transform="translate(0 1)"/>
+                <path d="${path}" fill="none" stroke="rgba(0,0,0,0.18)" stroke-width="2" transform="translate(0 -1)"/>
+            </svg>
+        `;
+
+        return `background-image: url("data:image/svg+xml,${encodeURIComponent(svg)}");`;
+    },
+
+    darkenColor(color, factor) {
+        if (!color || !color.startsWith("#") || color.length !== 7) return "rgba(0,0,0,0.28)";
+
+        const r = Math.round(parseInt(color.slice(1, 3), 16) * factor);
+        const g = Math.round(parseInt(color.slice(3, 5), 16) * factor);
+        const b = Math.round(parseInt(color.slice(5, 7), 16) * factor);
+
+        return `rgb(${r},${g},${b})`;
     }
 };
