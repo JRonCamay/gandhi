@@ -21,6 +21,7 @@ Loads all BlokSearch modules from the same BlokSearch folder.
         'history.js',
         'blockly-adapter.js',
         'ui.js',
+        'bloksearch-block-shapes.js',
         'bloksearch-main.js'
     ];
 
