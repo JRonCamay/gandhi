@@ -1,6 +1,6 @@
 /*
 BlokSearch/bloksearch-search-engine.js
-Fuzzy fallback search helpers for the legacy BlokSearch main pipeline.
+Fuzzy fallback and context-aware ranking helpers for the legacy BlokSearch main pipeline.
 */
 window.BlokSearch = window.BlokSearch || {};
 
@@ -10,7 +10,7 @@ window.BlokSearch.searchEngine = {
 
         const reporterMode = !!context.reporterMode;
         const targetedConnection = context.targetedConnection;
-        const isBooleanTarget = !!context.isBooleanTarget;
+        const isBooleanTarget = !!context.isBooleanTarget || !!context.booleanMode;
 
         if (reporterMode && !entry.hasOutput) return false;
 
@@ -41,6 +41,13 @@ window.BlokSearch.searchEngine = {
         return true;
     },
 
+    normalizeCategory(value) {
+        return String(value || "")
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "")
+            .trim();
+    },
+
     getCandidateStrings(entry) {
         const values = [];
 
@@ -53,6 +60,45 @@ window.BlokSearch.searchEngine = {
         }
 
         return values;
+    },
+
+    getPersistenceBonus(entry) {
+        const persistence = window.BlokSearch && window.BlokSearch.persistenceManager;
+        if (!persistence || !entry || !entry.type) return 0;
+
+        if (typeof persistence.getPriority === "function") {
+            return Math.min(90, persistence.getPriority(entry.type));
+        }
+
+        return 0;
+    },
+
+    getContextBonus(entry, context) {
+        if (!entry || !context) return 0;
+
+        let bonus = 0;
+        const activeCategory = this.normalizeCategory(context.category || context.activeCategory);
+        const entryCategory = this.normalizeCategory(entry.category);
+
+        if (activeCategory && entryCategory && activeCategory === entryCategory) {
+            bonus += 45;
+        }
+
+        const isEntryBoolean =
+            entry.outputCheck &&
+            entry.outputCheck.includes("Boolean");
+
+        if (context.booleanMode && isEntryBoolean) bonus += 40;
+        if (context.reporterMode && entry.hasOutput && !isEntryBoolean) bonus += 28;
+        if (!context.reporterMode && !entry.hasOutput) bonus += 12;
+
+        return bonus;
+    },
+
+    scoreEntry(entry, baseScore, context) {
+        return baseScore +
+            this.getContextBonus(entry, context) +
+            this.getPersistenceBonus(entry);
     },
 
     findFuzzyResults(context) {
@@ -81,7 +127,7 @@ window.BlokSearch.searchEngine = {
 
             if (!match) continue;
 
-            entry.searchScore = 300 - match.distance;
+            entry.searchScore = this.scoreEntry(entry, 300 - match.distance, context);
             results.push(entry);
         }
 
