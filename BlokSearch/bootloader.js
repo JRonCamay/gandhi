@@ -24,6 +24,7 @@ Loads all BlokSearch modules from the same BlokSearch folder.
         'bloksearch-text-format.js',
         'bloksearch-block-shapes.js',
         'bloksearch-search-engine.js',
+        'search-controller.js',
         'bloksearch-main.js'
     ];
 
