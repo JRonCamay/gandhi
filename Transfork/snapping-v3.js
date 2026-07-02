@@ -12,6 +12,7 @@ Explicit edge-mode snapping engine for Transfork.
     const CORNER_FACTOR = 0.45;
     const SETTLE_LIMIT = 4;
     const ANCHOR_LIMIT = 6;
+    const VERIFY_LIMIT = 8;
 
     let lastSnap = null;
     let snapAnchor = null;
@@ -234,6 +235,15 @@ Explicit edge-mode snapping engine for Transfork.
         else result.y += delta;
     }
 
+    function verifySnapEdge(result, currentAABB, target, snap) {
+        applyAxisCorrection(result, currentAABB, target, snap, VERIFY_LIMIT);
+    }
+
+    function verifySnapResult(result, currentAABB, target, x, y) {
+        verifySnapEdge(result, currentAABB, target, x);
+        verifySnapEdge(result, currentAABB, target, y);
+    }
+
     function rememberSnap(target, x, y) {
         lastSnap = {
             target,
@@ -325,6 +335,8 @@ Explicit edge-mode snapping engine for Transfork.
             x: desiredX + (x ? x.delta : 0),
             y: desiredY + (y ? y.delta : 0)
         };
+
+        verifySnapResult(result, currentAABB, target, x, y);
 
         if (snapAnchor && snapAnchor.target === target && anchorIsValid(snapAnchor, r)) {
             applyAxisCorrection(result, currentAABB, target, snapAnchor, ANCHOR_LIMIT);
