@@ -7,11 +7,12 @@ const BLOKSEARCH_BLOCK_METRICS = {
     NOTCH_X: 12,
     NOTCH_WIDTH: 15,
     NOTCH_DEPTH: 8,
+    NOTCH_SHOULDER: 6,
 
     CORNER_RADIUS: 4,
     HAT_PEAK: 24,
 
-    BOOLEAN_POINT: 16,
+    BOOLEAN_POINT: 12,
 
     C_WIDTH: 128,
     C_TOP_BAR: 40,
@@ -85,6 +86,7 @@ window.BlokSearchBlockShapes = {
             box-sizing: border-box;
             display: inline-block;
             position: relative;
+            width: fit-content;
             background-color: transparent;
             color: #fff;
             font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -100,6 +102,8 @@ window.BlokSearchBlockShapes = {
             filter: drop-shadow(0 1px 1px rgba(0,0,0,0.22));
             background-repeat: no-repeat;
             background-size: 100% 100%;
+            background-position: center center;
+            vertical-align: middle;
         `;
     },
 
@@ -117,7 +121,21 @@ window.BlokSearchBlockShapes = {
         const w = 120;
         const h = 32;
         const p = m.BOOLEAN_POINT;
-        const path = `M ${p} 1 H ${w - p} L ${w - 1} ${h / 2} L ${w - p} ${h - 1} H ${p} L 1 ${h / 2} Z`;
+        const path = [
+            `M ${p + 2} 1`,
+            `H ${w - p - 2}`,
+            `Q ${w - p} 1 ${w - p + 2} 3`,
+            `L ${w - 2} ${h / 2 - 1}`,
+            `Q ${w} ${h / 2} ${w - 2} ${h / 2 + 1}`,
+            `L ${w - p + 2} ${h - 3}`,
+            `Q ${w - p} ${h - 1} ${w - p - 2} ${h - 1}`,
+            `H ${p + 2}`,
+            `Q ${p} ${h - 1} ${p - 2} ${h - 3}`,
+            `L 2 ${h / 2 + 1}`,
+            `Q 0 ${h / 2} 2 ${h / 2 - 1}`,
+            `L ${p - 2} 3`,
+            `Q ${p} 1 ${p + 2} 1 Z`
+        ].join(" ");
 
         return `
             min-height: ${h}px;
@@ -149,21 +167,18 @@ window.BlokSearchBlockShapes = {
         const nw = m.NOTCH_WIDTH;
         const path = [
             `M 1 ${m.HAT_PEAK}`,
-            `Q 8 5 32 1`,
-            `Q 58 1 72 ${m.HAT_PEAK}`,
+            `C 5 11 17 1 36 1`,
+            `C 55 1 68 11 72 ${m.HAT_PEAK}`,
             `H ${w - m.CORNER_RADIUS}`,
             `Q ${w - 1} ${m.HAT_PEAK} ${w - 1} ${m.HAT_PEAK + m.CORNER_RADIUS}`,
             `V ${h - d}`,
-            `H ${x + nw + 24}`,
-            `L ${x + nw + 18} ${h - 1}`,
-            `H ${x + 6}`,
-            `L ${x} ${h - d}`,
+            this.getBottomBumpPath(x, nw, d, h),
             `H 1 Z`
         ].join(" ");
 
         return `
             min-height: ${h}px;
-            padding: 18px ${m.PADDING_X}px 8px ${m.PADDING_X}px;
+            padding: 19px ${m.PADDING_X}px 8px ${m.PADDING_X}px;
             ${this.getSvgBackground(path, w, h, color)}
         `;
     },
@@ -176,7 +191,7 @@ window.BlokSearchBlockShapes = {
 
         return `
             min-height: ${h}px;
-            padding: 16px ${m.PADDING_X}px 10px ${m.PADDING_X}px;
+            padding: 15px ${m.PADDING_X}px 10px ${m.PADDING_X}px;
             ${this.getSvgBackground(path, w, h, color)}
         `;
     },
@@ -189,7 +204,7 @@ window.BlokSearchBlockShapes = {
 
         return `
             min-height: ${h}px;
-            padding: 16px ${m.PADDING_X}px 10px ${m.PADDING_X}px;
+            padding: 15px ${m.PADDING_X}px 10px ${m.PADDING_X}px;
             ${this.getSvgBackground(path, w, h, color)}
         `;
     },
@@ -208,10 +223,7 @@ window.BlokSearchBlockShapes = {
 
         const path = [
             `M ${r} 1`,
-            `H ${x}`,
-            `L ${x + 6} ${d + 1}`,
-            `H ${x + nw + 6}`,
-            `L ${x + nw + 12} 1`,
+            this.getTopNotchPath(x, nw, d),
             `H ${w - r}`,
             `Q ${w - 1} 1 ${w - 1} ${r}`,
             `V ${mouthTop - r}`,
@@ -223,10 +235,7 @@ window.BlokSearchBlockShapes = {
             `H ${w - r}`,
             `Q ${w - 1} ${mouthBottom} ${w - 1} ${mouthBottom + r}`,
             `V ${h - d}`,
-            `H ${x + nw + 24}`,
-            `L ${x + nw + 18} ${h - 1}`,
-            `H ${x + 6}`,
-            `L ${x} ${h - d}`,
+            this.getBottomBumpPath(x, nw, d, h),
             `H 1`,
             `V ${r}`,
             `Q 1 1 ${r} 1 Z`
@@ -235,8 +244,8 @@ window.BlokSearchBlockShapes = {
         return `
             min-width: ${w}px;
             min-height: ${h}px;
-            padding: 16px ${m.PADDING_X}px ${m.C_BOTTOM_WRAP + 22}px ${m.PADDING_X}px;
-            ${this.getSvgBackground(path, w, h, color)}
+            padding: 15px ${m.PADDING_X}px ${m.C_BOTTOM_WRAP + 22}px ${m.PADDING_X}px;
+            ${this.getSvgBackground(path, w, h, color, this.getLoopArrowSvg(w, h))}
         `;
     },
 
@@ -246,16 +255,15 @@ window.BlokSearchBlockShapes = {
         const nw = m.NOTCH_WIDTH;
         const d = m.NOTCH_DEPTH;
         const r = m.CORNER_RADIUS;
-        const top = hasPrevious
-            ? `H ${x} L ${x + 6} ${d + 1} H ${x + nw + 6} L ${x + nw + 12} 1 H ${w - r}`
-            : `H ${w - r}`;
+        const top = hasPrevious ? this.getTopNotchPath(x, nw, d) : `H ${w - r}`;
         const bottom = hasNext
-            ? `V ${h - d} H ${x + nw + 24} L ${x + nw + 18} ${h - 1} H ${x + 6} L ${x} ${h - d} H 1`
+            ? `V ${h - d} ${this.getBottomBumpPath(x, nw, d, h)} H 1`
             : `V ${h - r} Q ${w - 1} ${h - 1} ${w - r} ${h - 1} H ${r} Q 1 ${h - 1} 1 ${h - r}`;
 
         return [
             `M ${r} 1`,
             top,
+            `H ${w - r}`,
             `Q ${w - 1} 1 ${w - 1} ${r}`,
             bottom,
             `V ${r}`,
@@ -263,13 +271,46 @@ window.BlokSearchBlockShapes = {
         ].join(" ");
     },
 
-    getSvgBackground(path, width, height, color) {
+    getTopNotchPath(x, width, depth) {
+        const s = BLOKSEARCH_BLOCK_METRICS.NOTCH_SHOULDER;
+
+        return [
+            `H ${x}`,
+            `C ${x + 2} 1 ${x + 3} ${depth} ${x + s} ${depth}`,
+            `H ${x + width + s}`,
+            `C ${x + width + s + 3} ${depth} ${x + width + s + 4} 1 ${x + width + (s * 2)} 1`
+        ].join(" ");
+    },
+
+    getBottomBumpPath(x, width, depth, h) {
+        const s = BLOKSEARCH_BLOCK_METRICS.NOTCH_SHOULDER;
+        const y = h - depth;
+
+        return [
+            `H ${x + width + (s * 2)}`,
+            `C ${x + width + s + 4} ${y} ${x + width + s + 3} ${h - 1} ${x + width + s} ${h - 1}`,
+            `H ${x + s}`,
+            `C ${x + 3} ${h - 1} ${x + 2} ${y} ${x} ${y}`
+        ].join(" ");
+    },
+
+    getLoopArrowSvg(w, h) {
+        return `
+            <path d="M ${w - 34} ${h - 20} C ${w - 24} ${h - 12} ${w - 15} ${h - 18} ${w - 15} ${h - 28}"
+                fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+            <path d="M ${w - 21} ${h - 29} L ${w - 14} ${h - 29} L ${w - 15} ${h - 22} Z"
+                fill="#fff"/>
+        `;
+    },
+
+    getSvgBackground(path, width, height, color, extraSvg = "") {
         const stroke = this.darkenColor(color, 0.78);
         const svg = `
             <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
                 <path d="${path}" fill="${color}" stroke="${stroke}" stroke-width="1"/>
                 <path d="${path}" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1" transform="translate(0 1)"/>
                 <path d="${path}" fill="none" stroke="rgba(0,0,0,0.18)" stroke-width="2" transform="translate(0 -1)"/>
+                ${extraSvg}
             </svg>
         `;
 
