@@ -1,6 +1,7 @@
 /*
 BlokSearch/ui.js
-Shadow DOM container and isolated style helpers for the search panel.
+Safe DOM passthrough UI adapter for the search panel.
+This preserves the ui.js API expected by bloksearch-main.js without ShadowRoot event retargeting.
 */
 window.BlokSearch = window.BlokSearch || {};
 
@@ -12,32 +13,15 @@ window.BlokSearch.ui = {
 
     attachSearchPanel(panel) {
         this.removeSearchPanel();
-
-        const host = document.createElement("div");
-        host.id = this.hostId;
-        host.style.cssText = `
-            position: fixed;
-            inset: 0;
-            width: 0;
-            height: 0;
-            z-index: 2147483647;
-        `;
-
-        const root = host.attachShadow({ mode: "open" });
-
-        this.host = host;
-        this.shadowRoot = root;
-
-        document.body.appendChild(host);
+        document.body.appendChild(panel);
         this.flushPendingStyles();
-        root.appendChild(panel);
-
         return panel;
     },
 
     removeSearchPanel() {
-        if (this.host && this.host.parentNode) {
-            this.host.parentNode.removeChild(this.host);
+        const existingHost = document.getElementById(this.hostId);
+        if (existingHost && existingHost.parentNode) {
+            existingHost.parentNode.removeChild(existingHost);
         }
 
         this.host = null;
@@ -45,37 +29,25 @@ window.BlokSearch.ui = {
     },
 
     getRoot() {
-        return this.shadowRoot;
+        return document;
     },
 
     getElementById(id) {
-        if (this.shadowRoot) {
-            const found = this.shadowRoot.getElementById(id);
-            if (found) return found;
-        }
-
         return document.getElementById(id);
     },
 
     injectStyle(id, cssText) {
         if (!id || !cssText) return;
-
-        if (!this.shadowRoot) {
-            this.pendingStyles = this.pendingStyles.filter(item => item.id !== id);
-            this.pendingStyles.push({ id, cssText });
-            return;
-        }
-
-        if (this.shadowRoot.getElementById(id)) return;
+        if (document.getElementById(id)) return;
 
         const style = document.createElement("style");
         style.id = id;
         style.textContent = cssText;
-        this.shadowRoot.appendChild(style);
+        document.head.appendChild(style);
     },
 
     flushPendingStyles() {
-        if (!this.shadowRoot || !this.pendingStyles.length) return;
+        if (!this.pendingStyles.length) return;
 
         const styles = this.pendingStyles.slice();
         this.pendingStyles.length = 0;
