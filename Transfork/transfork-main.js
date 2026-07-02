@@ -2474,29 +2474,20 @@
                     top: null,
                     bottom: null
                 };
-                vm.runtime.targets.forEach(
-                    otherTarget => {
-                        if (
-                            otherTarget === target ||
-                            otherTarget.isStage
-                        ) {
-                            return;
-                        }
-
-                        const otherDrawable =
-                        renderer._allDrawables[
-                            otherTarget.drawableID
-                        ];
-
-                        if (
-                            !otherDrawable ||
-                            otherDrawable._visible === false
-                        ) {
-                            return;
-                        }
+                Transfork.snap.findCandidates(
+                    {
+                        target,
+                        renderer,
+                        runtime: vm.runtime,
+                        bounds
+                    }
+                ).forEach(
+                    candidateTarget => {
+                        const otherTarget =
+                        candidateTarget.target;
 
                         const otherBounds =
-                        otherDrawable.getAABB();
+                        candidateTarget.bounds;
 
                         [
                             {

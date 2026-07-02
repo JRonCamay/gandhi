@@ -27,6 +27,7 @@ Loads all Transfork modules from the same Transfork folder.
         'ui/overlay.js',
         'tools/move-tool.js',
         'snap-visuals.js',
+        'snap/candidate-solver.js',
         'snapping.js',
         'snapping-v2.js',
         'snapping-v3.js',
