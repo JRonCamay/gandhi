@@ -9,6 +9,8 @@ window.BlokSearch.ui = {
     host: null,
     shadowRoot: null,
     pendingStyles: [],
+    outsidePointerHandler: null,
+    keyShieldHandler: null,
 
     attachSearchPanel(panel) {
         this.removeSearchPanel();
@@ -32,6 +34,8 @@ window.BlokSearch.ui = {
         document.body.appendChild(host);
         this.flushPendingStyles();
         root.appendChild(panel);
+        this.installKeyboardShield(panel);
+        this.installOutsideClose(panel);
 
         if (window.BlokSearch.shadowEventProxy) {
             window.BlokSearch.shadowEventProxy.attach(root, host);
@@ -43,6 +47,16 @@ window.BlokSearch.ui = {
     removeSearchPanel() {
         if (window.BlokSearch.shadowEventProxy) {
             window.BlokSearch.shadowEventProxy.detach();
+        }
+
+        if (this.outsidePointerHandler) {
+            document.removeEventListener("pointerdown", this.outsidePointerHandler, true);
+            this.outsidePointerHandler = null;
+        }
+
+        if (this.keyShieldHandler) {
+            document.removeEventListener("keydown", this.keyShieldHandler, true);
+            this.keyShieldHandler = null;
         }
 
         const existingHost = document.getElementById(this.hostId);
@@ -97,5 +111,59 @@ window.BlokSearch.ui = {
         styles.forEach(item => {
             this.injectStyle(item.id, item.cssText);
         });
+    },
+
+    installKeyboardShield(panel) {
+        this.keyShieldHandler = event => {
+            if (!this.shadowRoot) return;
+
+            const active = this.shadowRoot.activeElement;
+            const isSearchInput = active && active.id === "gandi-input";
+
+            if (event.key === "Escape") {
+                event.preventDefault();
+                event.stopPropagation();
+                this.removeSearchPanel();
+                return;
+            }
+
+            if (!isSearchInput) return;
+
+            const protectedKeys = [
+                "Backspace",
+                "Delete",
+                "ArrowLeft",
+                "ArrowRight",
+                "Home",
+                "End"
+            ];
+
+            if (protectedKeys.includes(event.key) || event.key.length === 1) {
+                event.stopPropagation();
+            }
+        };
+
+        document.addEventListener("keydown", this.keyShieldHandler, true);
+    },
+
+    installOutsideClose(panel) {
+        this.outsidePointerHandler = event => {
+            if (!this.host || !this.shadowRoot) return;
+
+            const path = event.composedPath ? event.composedPath() : [];
+            const inside =
+                path.includes(this.host) ||
+                path.includes(this.shadowRoot) ||
+                path.includes(panel);
+
+            if (inside) return;
+
+            this.removeSearchPanel();
+        };
+
+        setTimeout(() => {
+            if (!this.host) return;
+            document.addEventListener("pointerdown", this.outsidePointerHandler, true);
+        }, 0);
     }
 };
