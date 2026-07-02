@@ -1453,9 +1453,6 @@
                 heightHandle,
                 "Height Scale"
             );
-            let resizing = false;
-            let resizeMode =
-            "uniform";
             function closeAssetToolsPanel() {
                 assetToolsPanel.style.display =
                 "none";
@@ -1529,35 +1526,20 @@
 
                     e.preventDefault();
                     e.stopPropagation();
-                    transformTarget = vm.editingTarget;
-
-                    const drawable =
-                    vm.runtime.renderer
-                    ._allDrawables[
-                        transformTarget.drawableID
-                    ];
-                    installShearHook(
-                        drawable,
-                        transformTarget
-                    );
-                    startScaleX =
-                    drawable.scale[0];
-
-                    startScaleY =
-                    drawable.scale[1];
-
-                    resizeMode =
-                    "width";
-
-                    resizing =
-                    true;
-
-                    startX =
-                    e.clientX;
-
-                    startSize =
-                    Math.abs(
-                        drawable.scale[0]
+                    Transfork.tools.resizeTool.begin(
+                        e,
+                        {
+                            target: vm.editingTarget,
+                            mode: "width",
+                            vm,
+                            getDrawable: target =>
+                                vm.runtime.renderer
+                                ._allDrawables[
+                                    target.drawableID
+                                ],
+                            installShearHook,
+                            getVisualFlipX: () => visualFlipX
+                        }
                     );
                 }
             );
@@ -1567,45 +1549,23 @@
 
                     e.preventDefault();
                     e.stopPropagation();
-                    transformTarget = vm.editingTarget;
-
-                    const drawable =
-                    vm.runtime.renderer
-                    ._allDrawables[
-                        transformTarget.drawableID
-                    ];
-                    installShearHook(
-                        drawable,
-                        transformTarget
-                    );
-                    startScaleX =
-                    drawable.scale[0];
-
-                    startScaleY =
-                    drawable.scale[1];
-
-                    resizeMode =
-                    "height";
-
-                    resizing =
-                    true;
-
-                    startX =
-                    e.clientX;
-                    startY =
-                    e.clientY;
-                    startSize =
-                    Math.abs(
-                        drawable.scale[1]
+                    Transfork.tools.resizeTool.begin(
+                        e,
+                        {
+                            target: vm.editingTarget,
+                            mode: "height",
+                            vm,
+                            getDrawable: target =>
+                                vm.runtime.renderer
+                                ._allDrawables[
+                                    target.drawableID
+                                ],
+                            installShearHook,
+                            getVisualFlipX: () => visualFlipX
+                        }
                     );
                 }
             );
-            let startX = 0;
-            let startY = 0;
-            let startSize = 0;
-            let startScaleX = 0;
-            let startScaleY = 0;
-            let startTargetSize = 100;
             let rotating = false;
             let rotateCenterX = 0;
             let rotateCenterY = 0;
@@ -1625,8 +1585,6 @@
             let alphaDragStartX = 0;
 
             let alphaStartValue = 100;
-            let uniformBaseScale = 0;
-            let lastUniformRatio = 1;
             let visualFlipX = false;
             let transformTarget = null;
             const snapLock = {
@@ -1686,17 +1644,21 @@
                 e => {
                     e.preventDefault();
                     e.stopPropagation();
-                    transformTarget = vm.editingTarget;
-                    resizing = true;
-                    startX = e.clientX;
-                    startY = e.clientY;
-
-                    const drawable = vm.runtime.renderer._allDrawables[transformTarget.drawableID];
-                    installShearHook(
-                        drawable,
-                        transformTarget
+                    Transfork.tools.resizeTool.begin(
+                        e,
+                        {
+                            target: vm.editingTarget,
+                            mode: "uniform",
+                            vm,
+                            getDrawable: target =>
+                                vm.runtime.renderer
+                                ._allDrawables[
+                                    target.drawableID
+                                ],
+                            installShearHook,
+                            getVisualFlipX: () => visualFlipX
+                        }
                     );
-                    startSize = Math.abs(drawable.scale[0]);
                 }
             );
 
@@ -1705,32 +1667,20 @@
                 e => {
                     e.preventDefault();
                     e.stopPropagation();
-                    transformTarget = vm.editingTarget;
-                    resizeMode =
-                    "uniform";
-                    resizing = true;
-                    startX = e.clientX;
-                    const drawable = vm.runtime.renderer._allDrawables[transformTarget.drawableID];
-                    installShearHook(
-                        drawable,
-                        transformTarget
-                    );
-                    startScaleX =
-                    drawable.scale[0];
-
-                    startScaleY =
-                    drawable.scale[1];
-                    startTargetSize =
-                    transformTarget.size;
-                    startSize = Math.abs(drawable.scale[0]);
-                    uniformBaseScale =
-                    Math.max(
-                        Math.abs(
-                            drawable.scale[0]
-                        ),
-                        Math.abs(
-                            drawable.scale[1]
-                        )
+                    Transfork.tools.resizeTool.begin(
+                        e,
+                        {
+                            target: vm.editingTarget,
+                            mode: "uniform",
+                            vm,
+                            getDrawable: target =>
+                                vm.runtime.renderer
+                                ._allDrawables[
+                                    target.drawableID
+                                ],
+                            installShearHook,
+                            getVisualFlipX: () => visualFlipX
+                        }
                     );
                 }
             );
@@ -2242,25 +2192,8 @@
 
                     Transfork.tools.moveTool.commit();
 
-                    if (
-                        resizing &&
-                        resizeMode === "uniform"
-                    ) {
+                    Transfork.tools.resizeTool.commit();
 
-                        const size =
-                        startTargetSize *
-                        lastUniformRatio;
-
-                        transformTarget.setSize(
-                            size
-                        );
-
-                        transformTarget.emitVisualChange();
-
-                        vm.runtime.requestRedraw();
-                    }
-
-                    resizing = false;
                     rotating = false;
                     transformTarget = null;
 
@@ -2294,7 +2227,7 @@
 
                     if (
                         Transfork.tools.moveTool.isActive() ||
-                        resizing ||
+                        Transfork.tools.resizeTool.isActive() ||
                         rotating ||
                         alphaDragging
                     ) {
@@ -2341,211 +2274,17 @@
                         vm.editingTarget
                         .emitVisualChange();
                     }
-                    if (resizing) {
-                        let delta;
-
-                        if (
-                            resizeMode ===
-                            "height"
-                        ) {
-
-                            delta =
-                            e.clientY -
-                            startY;
+                    Transfork.tools.resizeTool.update(
+                        e,
+                        {
+                            getDrawable: target =>
+                                vm.runtime.renderer
+                                ._allDrawables[
+                                    target.drawableID
+                                ],
+                            getVisualFlipX: () => visualFlipX
                         }
-                        else {
-
-                            delta =
-                            e.clientX -
-                            startX;
-
-                        }
-
-                        const drawable =
-                        vm.runtime.renderer
-                        ._allDrawables[
-                            transformTarget.drawableID
-                        ];
-                        installShearHook(
-                            drawable,
-                            transformTarget
-                        );
-
-                        const signX =
-                        visualFlipX ? -1 : 1;
-
-                        const signY =
-                        Math.sign(
-                            drawable.scale[1]
-                        ) || 1;
-
-                        const newScale =
-                        Math.max(
-                            0.01,
-                            startSize + delta
-                        );
-                        if (
-                            resizeMode ===
-                            "uniform"
-                        ) {
-
-                            const ratio =
-                            newScale /
-                            uniformBaseScale;
-
-                            lastUniformRatio =
-                            ratio;
-
-                            const oldBounds =
-                            drawable.getAABB();
-
-                            drawable.updateScale([
-                                    signX * Math.abs(
-                                        startScaleX
-                                    ) * ratio,
-                                    startScaleY * ratio
-                            ]);
-
-                            const newBounds =
-                            drawable.getAABB();
-
-                            const oldCenterX =
-                            (
-                                oldBounds.left +
-                                oldBounds.right
-                            ) / 2;
-
-                            const oldCenterY =
-                            (
-                                oldBounds.top +
-                                oldBounds.bottom
-                            ) / 2;
-
-                            const newCenterX =
-                            (
-                                newBounds.left +
-                                newBounds.right
-                            ) / 2;
-
-                            const newCenterY =
-                            (
-                                newBounds.top +
-                                newBounds.bottom
-                            ) / 2;
-
-                            transformTarget.setXY(
-                                transformTarget.x +
-                                oldCenterX -
-                                newCenterX,
-                                transformTarget.y +
-                                oldCenterY -
-                                newCenterY
-                            );
-                        }
-                        else if (
-                            resizeMode ===
-                            "width"
-                        ) {
-
-                            const oldBounds =
-                            drawable.getAABB();
-
-                            drawable.updateScale([
-                                    signX * newScale,
-                                    startScaleY
-                            ]);
-
-                            const newBounds =
-                            drawable.getAABB();
-
-                            const oldCenterX =
-                            (
-                                oldBounds.left +
-                                oldBounds.right
-                            ) / 2;
-
-                            const oldCenterY =
-                            (
-                                oldBounds.top +
-                                oldBounds.bottom
-                            ) / 2;
-
-                            const newCenterX =
-                            (
-                                newBounds.left +
-                                newBounds.right
-                            ) / 2;
-
-                            const newCenterY =
-                            (
-                                newBounds.top +
-                                newBounds.bottom
-                            ) / 2;
-
-                            transformTarget.setXY(
-                                transformTarget.x +
-                                oldCenterX -
-                                newCenterX,
-                                transformTarget.y +
-                                oldCenterY -
-                                newCenterY
-                            );
-                        }
-                        else if (
-                            resizeMode ===
-                            "height"
-                        ) {
-
-                            const oldBounds =
-                            drawable.getAABB();
-
-                            drawable.updateScale([
-                                    signX * Math.abs(
-                                        startScaleX
-                                    ),
-                                    signY * newScale
-                            ]);
-
-                            const newBounds =
-                            drawable.getAABB();
-
-                            const oldCenterX =
-                            (
-                                oldBounds.left +
-                                oldBounds.right
-                            ) / 2;
-
-                            const oldCenterY =
-                            (
-                                oldBounds.top +
-                                oldBounds.bottom
-                            ) / 2;
-
-                            const newCenterX =
-                            (
-                                newBounds.left +
-                                newBounds.right
-                            ) / 2;
-
-                            const newCenterY =
-                            (
-                                newBounds.top +
-                                newBounds.bottom
-                            ) / 2;
-
-                            transformTarget.setXY(
-                                transformTarget.x +
-                                oldCenterX -
-                                newCenterX,
-                                transformTarget.y +
-                                oldCenterY -
-                                newCenterY
-                            );
-                        }
-
-                        transformTarget
-                        .emitVisualChange();
-                    }
+                    );
 
                     if (rotating) {
                         const angle = Math.atan2(
