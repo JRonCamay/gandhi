@@ -46,6 +46,17 @@ Small replacement for snapping.js with stricter side/corner separation.
         return found;
     }
 
+    function bestPreferredTop(list, limit) {
+        const directTop = best(
+            list.filter(item => item.side === 'top' && item.sourceEdge === 'top'),
+            limit
+        );
+
+        if (directTop) return directTop;
+
+        return best(list, limit);
+    }
+
     function collect(target, bounds, r, limit) {
         const xs = [];
         const ys = [];
@@ -151,7 +162,7 @@ Small replacement for snapping.js with stricter side/corner separation.
             y = pair.y;
         } else {
             x = best(data.xs, limit);
-            y = best(data.ys, limit);
+            y = bestPreferredTop(data.ys, limit);
 
             if (x && y) {
                 if (Math.abs(x.delta) <= Math.abs(y.delta)) {
