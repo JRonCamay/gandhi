@@ -1,7 +1,6 @@
 /*
 BlokSearch/ui.js
-Safe DOM passthrough UI adapter for the search panel.
-This preserves the ui.js API expected by bloksearch-main.js without ShadowRoot event retargeting.
+ShadowRoot UI adapter for the search panel.
 */
 window.BlokSearch = window.BlokSearch || {};
 
@@ -13,15 +12,46 @@ window.BlokSearch.ui = {
 
     attachSearchPanel(panel) {
         this.removeSearchPanel();
-        document.body.appendChild(panel);
+
+        const host = document.createElement("div");
+        host.id = this.hostId;
+        host.style.cssText = `
+            position: fixed;
+            inset: 0;
+            width: 0;
+            height: 0;
+            z-index: 2147483647;
+            pointer-events: auto;
+        `;
+
+        const root = host.attachShadow({ mode: "open" });
+
+        this.host = host;
+        this.shadowRoot = root;
+
+        document.body.appendChild(host);
         this.flushPendingStyles();
+        root.appendChild(panel);
+
+        if (window.BlokSearch.shadowEventProxy) {
+            window.BlokSearch.shadowEventProxy.attach(root, host);
+        }
+
         return panel;
     },
 
     removeSearchPanel() {
+        if (window.BlokSearch.shadowEventProxy) {
+            window.BlokSearch.shadowEventProxy.detach();
+        }
+
         const existingHost = document.getElementById(this.hostId);
         if (existingHost && existingHost.parentNode) {
             existingHost.parentNode.removeChild(existingHost);
+        }
+
+        if (this.host && this.host.parentNode) {
+            this.host.parentNode.removeChild(this.host);
         }
 
         this.host = null;
@@ -29,25 +59,37 @@ window.BlokSearch.ui = {
     },
 
     getRoot() {
-        return document;
+        return this.shadowRoot || document;
     },
 
     getElementById(id) {
+        if (this.shadowRoot) {
+            const found = this.shadowRoot.getElementById(id);
+            if (found) return found;
+        }
+
         return document.getElementById(id);
     },
 
     injectStyle(id, cssText) {
         if (!id || !cssText) return;
-        if (document.getElementById(id)) return;
+
+        if (!this.shadowRoot) {
+            this.pendingStyles = this.pendingStyles.filter(item => item.id !== id);
+            this.pendingStyles.push({ id, cssText });
+            return;
+        }
+
+        if (this.shadowRoot.getElementById(id)) return;
 
         const style = document.createElement("style");
         style.id = id;
         style.textContent = cssText;
-        document.head.appendChild(style);
+        this.shadowRoot.appendChild(style);
     },
 
     flushPendingStyles() {
-        if (!this.pendingStyles.length) return;
+        if (!this.shadowRoot || !this.pendingStyles.length) return;
 
         const styles = this.pendingStyles.slice();
         this.pendingStyles.length = 0;
