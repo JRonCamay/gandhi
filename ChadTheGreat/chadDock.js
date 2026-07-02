@@ -5,6 +5,7 @@ window.Chad = window.Chad || {};
 
     const DOCK_ID = "gandhi-chad-monkey-dock";
     const PANEL_ID = "gandhi-chad-panel";
+    const STATE_KEY = "gandhi_chad_panel_state_v1";
 
     let renderChatiesStable = null;
     let lastActionAt = 0;
@@ -17,6 +18,14 @@ window.Chad = window.Chad || {};
         return document.querySelector("#" + PANEL_ID);
     }
 
+    function getSavedState() {
+        return localStorage.getItem(STATE_KEY) || "open";
+    }
+
+    function saveState(value) {
+        localStorage.setItem(STATE_KEY, value === "closed" ? "closed" : "open");
+    }
+
     function shouldIgnoreBounce() {
         return now() - lastActionAt < 180;
     }
@@ -25,30 +34,29 @@ window.Chad = window.Chad || {};
         lastActionAt = now();
     }
 
-    function openPanel() {
-        markAction();
+    function applySavedState() {
         const panel = getPanel();
         const dock = ensureDock();
+        const state = getSavedState();
 
         if (panel) {
-            panel.style.display = "block";
-            panel.dataset.chadDockState = "open";
+            panel.style.display = state === "closed" ? "none" : "block";
+            panel.dataset.chadDockState = state;
         }
 
-        dock.style.display = "none";
+        dock.style.display = state === "closed" ? "block" : "none";
+    }
+
+    function openPanel() {
+        markAction();
+        saveState("open");
+        applySavedState();
     }
 
     function closePanel() {
         markAction();
-        const panel = getPanel();
-        const dock = ensureDock();
-
-        if (panel) {
-            panel.style.display = "none";
-            panel.dataset.chadDockState = "closed";
-        }
-
-        dock.style.display = "block";
+        saveState("closed");
+        applySavedState();
     }
 
     function ensureDock(renderCallback) {
@@ -125,6 +133,8 @@ window.Chad = window.Chad || {};
         showDock,
         openPanel,
         closePanel,
+        applySavedState,
+        getSavedState,
         patchCloseButton
     };
 })();
