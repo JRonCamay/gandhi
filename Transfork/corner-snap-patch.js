@@ -309,6 +309,52 @@ Surgical source patch for corner snapping accuracy.
         );
 
         code = code.replace(
+`                if (lockedX) {
+                    snapX =
+                    lockedX.delta;
+
+                    snapXTarget =
+                    lockedX.bounds;
+                }
+`,
+`                if (lockedX && snapY === null) {
+                    snapX =
+                    lockedX.delta;
+
+                    snapXTarget =
+                    lockedX.bounds;
+                }
+                else if (lockedX && snapY !== null) {
+                    snapLock.x =
+                    null;
+                }
+`
+        );
+
+        code = code.replace(
+`                if (lockedY) {
+                    snapY =
+                    lockedY.delta;
+
+                    snapYTarget =
+                    lockedY.bounds;
+                }
+`,
+`                if (lockedY && snapX === null) {
+                    snapY =
+                    lockedY.delta;
+
+                    snapYTarget =
+                    lockedY.bounds;
+                }
+                else if (lockedY && snapX !== null) {
+                    snapLock.y =
+                    null;
+                }
+`
+        );
+
+        code = code.replace(
 `                window.Transfork.snapVisuals.update(
                     {
                         target,
