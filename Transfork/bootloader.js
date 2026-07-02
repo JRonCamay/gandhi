@@ -17,6 +17,8 @@ Loads all Transfork modules from the same Transfork folder.
     const MODULES = [
         'config.js',
         'utils.js',
+        'engine/simulation.js',
+        'engine/transform.js',
         'geometry.js',
         'snap-visuals.js',
         'snapping.js',
