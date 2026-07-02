@@ -41,9 +41,18 @@ Loads all BlokSearch modules from the same BlokSearch folder.
         new Function(code + '\n//# sourceURL=' + url)();
     }
 
-    async function loadModule(name) {
+    async function fetchModule(name, loadText) {
         const url = BASE + name;
+        const code = await loadText(url);
 
+        return {
+            name,
+            url,
+            code
+        };
+    }
+
+    async function boot() {
         const loadText =
             typeof BLOKSEARCH_LOAD_TEXT === 'function'
                 ? BLOKSEARCH_LOAD_TEXT
@@ -54,13 +63,12 @@ Loads all BlokSearch modules from the same BlokSearch folder.
                 ? BLOKSEARCH_RUN_CODE
                 : fallbackRun;
 
-        const code = await loadText(url);
-        runCode(code, url);
-    }
+        const loadedModules = await Promise.all(
+            MODULES.map(moduleName => fetchModule(moduleName, loadText))
+        );
 
-    async function boot() {
-        for (const moduleName of MODULES) {
-            await loadModule(moduleName);
+        for (const loadedModule of loadedModules) {
+            runCode(loadedModule.code, loadedModule.url);
         }
 
         console.log('[BlokSearch] loaded from:', BASE);
