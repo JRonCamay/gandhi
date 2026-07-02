@@ -6,12 +6,11 @@ Scope:
 - Owns move-drag calculations only.
 - No DOM creation.
 - No direct overlay rendering.
-- Uses engine transform when available.
-- Falls back to target.setXY for legacy compatibility.
+- Preserves legacy target.setXY move behavior.
 */
 
 (function () {
-    'use strict';
+    "use strict";
 
     window.Transfork = window.Transfork || {};
     window.Transfork.tools = window.Transfork.tools || {};
@@ -19,230 +18,234 @@ Scope:
     function makeState() {
         return {
             active: false,
+            source: "",
             target: null,
-            source: '',
-            startMouseX: 0,
-            startMouseY: 0,
-            startX: 0,
-            startY: 0,
-            lastX: null,
-            lastY: null,
             canvas: null,
-            renderer: null,
-            cleanup: []
+            dragging: false,
+            potentialStageDrag: false,
+            stageDraggingSprite: false,
+            stageSpriteDrag: false,
+            dragStartX: 0,
+            dragStartY: 0,
+            spriteStartX: 0,
+            spriteStartY: 0,
+            stageDragStartX: 0,
+            stageDragStartY: 0,
+            overlayDragDX: 0,
+            overlayDragDY: 0,
+            overlayStartLeft: 0,
+            overlayStartTop: 0,
+            lastX: null,
+            lastY: null
         };
     }
 
     let state = makeState();
 
-    function getRenderer() {
-        return window.Transfork?.geometry?.getRenderer?.() ||
-            window.vm?.renderer ||
-            window.vm?.runtime?.renderer ||
-            null;
+    function getOverlay() {
+        return document.getElementById("gandi-transform-box");
     }
 
-    function getCanvas(context) {
-        if (context?.canvas) return context.canvas;
-
-        const renderer = getRenderer();
-        if (renderer?.canvas) return renderer.canvas;
-
-        return document.querySelector('canvas');
+    function getStageSize() {
+        return window.vm.runtime.renderer.getNativeSize();
     }
 
-    function getNativeSize(renderer) {
-        if (renderer && typeof renderer.getNativeSize === 'function') {
-            return renderer.getNativeSize();
-        }
+    function begin(event, options) {
+        const target = options && options.target;
+        const canvas = options && options.canvas;
+        const source = options && options.source;
 
-        return [480, 360];
-    }
+        if (!target || !canvas) return false;
 
-    function getTarget(context) {
-        return context?.target || window.vm?.editingTarget || null;
-    }
-
-    function getSnapSolver(context) {
-        if (typeof context?.findSnapPosition === 'function') {
-            return context.findSnapPosition;
-        }
-
-        if (window.Transfork?.snapping?.findSnapPosition) {
-            return window.Transfork.snapping.findSnapPosition;
-        }
-
-        if (typeof window.findSnapPosition === 'function') {
-            return window.findSnapPosition;
-        }
-
-        return null;
-    }
-
-    function requestRedraw(target) {
-        if (target && typeof target.emitVisualChange === 'function') {
-            target.emitVisualChange();
-        }
-
-        const runtime = window.vm?.runtime;
-        if (runtime && typeof runtime.requestRedraw === 'function') {
-            runtime.requestRedraw();
-        }
-    }
-
-    function begin(event, context) {
-        const target = getTarget(context);
-        if (!target || target.isStage) return false;
-
-        const renderer = getRenderer();
-        const canvas = getCanvas(context);
-        if (!canvas || !renderer) return false;
+        const overlay = getOverlay();
 
         state.active = true;
+        state.source = source || "";
         state.target = target;
-        state.source = context?.source || 'move';
-        state.startMouseX = event.clientX;
-        state.startMouseY = event.clientY;
-        state.startX = target.x;
-        state.startY = target.y;
+        state.canvas = canvas;
+        state.dragStartX = event.clientX;
+        state.dragStartY = event.clientY;
+        state.stageDragStartX = event.clientX;
+        state.stageDragStartY = event.clientY;
+        state.spriteStartX = target.x;
+        state.spriteStartY = target.y;
+        state.overlayStartLeft = overlay ? parseFloat(overlay.style.left) || 0 : 0;
+        state.overlayStartTop = overlay ? parseFloat(overlay.style.top) || 0 : 0;
+        state.overlayDragDX = 0;
+        state.overlayDragDY = 0;
         state.lastX = target.x;
         state.lastY = target.y;
-        state.canvas = canvas;
-        state.renderer = renderer;
 
-        if (window.Transfork?.engine?.transform) {
-            window.Transfork.engine.transform.begin(
-                target,
-                { source: state.source }
+        state.dragging = source === "move-handle";
+        state.potentialStageDrag = source === "stage-drag";
+        state.stageDraggingSprite = false;
+        state.stageSpriteDrag = false;
+
+        return true;
+    }
+
+    function update(event, options) {
+        const findSnapPosition =
+            options &&
+            options.findSnapPosition;
+
+        if (
+            !state.active ||
+            typeof findSnapPosition !== "function" ||
+            !state.target ||
+            !state.canvas
+        ) {
+            return false;
+        }
+
+        if (
+            state.potentialStageDrag &&
+            !state.stageDraggingSprite
+        ) {
+            const thresholdX =
+                Math.abs(
+                    event.clientX -
+                    state.stageDragStartX
+                );
+
+            const thresholdY =
+                Math.abs(
+                    event.clientY -
+                    state.stageDragStartY
+                );
+
+            if (
+                thresholdX > 5 ||
+                thresholdY > 5
+            ) {
+                state.stageDraggingSprite = true;
+                state.stageSpriteDrag = true;
+                state.spriteStartX = state.target.x;
+                state.spriteStartY = state.target.y;
+                state.dragStartX = state.stageDragStartX;
+                state.dragStartY = state.stageDragStartY;
+            }
+        }
+
+        if (
+            state.stageSpriteDrag &&
+            state.target
+        ) {
+            updateTargetPosition(
+                event,
+                state.target,
+                "GANDHI DIRECT DRAG SNAP PATH",
+                findSnapPosition
             );
+            return true;
         }
 
-        return true;
+        if (state.dragging) {
+            updateTargetPosition(
+                event,
+                state.target,
+                "GANDHI MOVE HANDLE SNAP PATH",
+                findSnapPosition
+            );
+            return true;
+        }
+
+        return state.potentialStageDrag;
     }
 
-    function getDesiredPosition(event) {
-        const rect = state.canvas.getBoundingClientRect();
-        const native = getNativeSize(state.renderer);
-        const width = native[0] || 480;
-        const height = native[1] || 360;
+    function updateTargetPosition(
+        event,
+        target,
+        logLabel,
+        findSnapPosition
+    ) {
+        const rect =
+            state.canvas.getBoundingClientRect();
 
-        const dx = ((event.clientX - state.startMouseX) / rect.width) * width;
-        const dy = ((event.clientY - state.startMouseY) / rect.height) * height;
+        const [stageWidth, stageHeight] =
+            getStageSize();
 
-        return {
-            x: state.startX + dx,
-            y: state.startY - dy
-        };
-    }
+        const dx =
+            (
+                event.clientX -
+                state.dragStartX
+            ) /
+            rect.width *
+            stageWidth;
 
-    function solveSnap(desired, context) {
-        const solver = getSnapSolver(context);
-        if (!solver) return desired;
+        const dy =
+            (
+                event.clientY -
+                state.dragStartY
+            ) /
+            rect.height *
+            stageHeight;
 
-        return solver(
-            state.target,
-            desired.x,
-            desired.y
+        console.log(
+            logLabel,
+            {
+                target: target && target.sprite && target.sprite.name,
+                x: state.spriteStartX + dx,
+                y: state.spriteStartY - dy
+            }
         );
-    }
 
-    function applyPosition(position) {
-        if (
-            position.x === state.lastX &&
-            position.y === state.lastY
-        ) {
-            return;
-        }
+        const snapPosition =
+            findSnapPosition(
+                target,
+                state.spriteStartX + dx,
+                state.spriteStartY - dy
+            );
 
-        state.lastX = position.x;
-        state.lastY = position.y;
+        target.setXY(
+            snapPosition.x,
+            snapPosition.y
+        );
 
-        if (
-            window.Transfork?.engine?.transform?.isActive(
-                state.target
-            )
-        ) {
-            window.Transfork.engine.transform.update({
-                x: position.x,
-                y: position.y
-            });
-            return;
-        }
-
-        state.target.setXY(position.x, position.y);
-        requestRedraw(state.target);
-    }
-
-    function update(event, context) {
-        if (!state.active || !state.target) return false;
-        if (!state.canvas || !state.renderer) return false;
-
-        const desired = getDesiredPosition(event);
-        const snapped = solveSnap(desired, context);
-
-        applyPosition(snapped);
-        return true;
+        state.lastX = snapPosition.x;
+        state.lastY = snapPosition.y;
     }
 
     function commit() {
-        if (!state.active) return null;
-
-        let result = null;
-
-        if (
-            window.Transfork?.engine?.transform?.isActive(
-                state.target
-            )
-        ) {
-            result = window.Transfork.engine.transform.commit();
-        }
-        else if (state.target) {
-            requestRedraw(state.target);
-            result = {
-                target: state.target,
-                x: state.lastX,
-                y: state.lastY
-            };
-        }
+        const result =
+            state.active && state.target
+                ? {
+                    target: state.target,
+                    x: state.lastX,
+                    y: state.lastY
+                }
+                : null;
 
         reset();
         return result;
     }
 
     function cancel() {
-        if (!state.active) return false;
+        if (!state.active || !state.target) return false;
 
-        if (
-            window.Transfork?.engine?.transform?.isActive(
-                state.target
-            )
-        ) {
-            window.Transfork.engine.transform.cancel();
-        }
-        else if (state.target) {
-            state.target.setXY(state.startX, state.startY);
-            requestRedraw(state.target);
-        }
+        state.target.setXY(
+            state.spriteStartX,
+            state.spriteStartY
+        );
 
         reset();
         return true;
     }
 
     function reset() {
-        for (const cleanup of state.cleanup) {
-            try {
-                cleanup();
-            } catch (error) {
-                console.error('[Transfork move cleanup]', error);
-            }
-        }
-
         state = makeState();
     }
 
     function isActive(target) {
         if (!state.active) return false;
-        if (!target) return true;
+        if (!target) {
+            return (
+                state.dragging ||
+                state.potentialStageDrag ||
+                state.stageSpriteDrag
+            );
+        }
+
         return state.target === target || state.target?.id === target.id;
     }
 
@@ -251,10 +254,10 @@ Scope:
             active: state.active,
             target: state.target,
             source: state.source,
-            startMouseX: state.startMouseX,
-            startMouseY: state.startMouseY,
-            startX: state.startX,
-            startY: state.startY,
+            startMouseX: state.dragStartX,
+            startMouseY: state.dragStartY,
+            startX: state.spriteStartX,
+            startY: state.spriteStartY,
             lastX: state.lastX,
             lastY: state.lastY
         };
@@ -275,6 +278,4 @@ Scope:
         getSnapshot,
         dispose
     };
-
-    console.log('[Transfork tools] move tool loaded');
 })();

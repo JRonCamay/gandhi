@@ -555,47 +555,22 @@
                         e.preventDefault();
                         e.stopPropagation();
 
-                        dragTarget =
+                        const dragTarget =
                         vm.runtime.targets.find(
                             t =>
                             t.drawableID ===
                             drawableID
                         );
-                        potentialStageDrag =
-                        true;
 
-                        if (
-                            drawableID >= 0
-                        ) {
-
-                            potentialStageDrag =
-                            true;
-
-                        }
-                        stageDragStartX =
-                        e.clientX;
-
-                        stageDragStartY =
-                        e.clientY;
+                        Transfork.tools.moveTool.begin(
+                            e,
+                            {
+                                target: dragTarget,
+                                canvas,
+                                source: "stage-drag"
+                            }
+                        );
                     }
-                    overlayStartLeft =
-                    parseFloat(
-                        overlay.style.left
-                    ) || 0;
-
-                    overlayStartTop =
-                    parseFloat(
-                        overlay.style.top
-                    ) || 0;
-                    /* TEMP TEST:
-                    Disable stageDragActive to verify whether it is
-                    preventing the snapping pipeline on the normal stage.
-                    */
-                    stageDragStartX =
-                    e.clientX;
-
-                    stageDragStartY =
-                    e.clientY;
 
                 },
                 true
@@ -1631,11 +1606,6 @@
             let startScaleX = 0;
             let startScaleY = 0;
             let startTargetSize = 100;
-            let dragging = false;
-            let dragStartX = 0;
-            let dragStartY = 0;
-            let spriteStartX = 0;
-            let spriteStartY = 0;
             let rotating = false;
             let rotateCenterX = 0;
             let rotateCenterY = 0;
@@ -1655,19 +1625,6 @@
             let alphaDragStartX = 0;
 
             let alphaStartValue = 100;
-            let stageDragActive = false;
-
-            let stageDragStartX = 0;
-            let stageDragStartY = 0;
-
-            let overlayDragDX = 0;
-            let overlayDragDY = 0;
-            let overlayStartLeft = 0;
-            let overlayStartTop = 0;
-            let potentialStageDrag = false;
-            let stageDraggingSprite =false;
-            let stageSpriteDrag = false;
-            let dragTarget = null;
             let uniformBaseScale = 0;
             let lastUniformRatio = 1;
             let visualFlipX = false;
@@ -2268,20 +2225,13 @@
                     e.preventDefault();
                     e.stopPropagation();
                     if (activeSkewSession) return;
-                    transformTarget = vm.editingTarget;
-                    dragging = true;
-                    dragStartX = e.clientX;
-                    dragStartY = e.clientY;
-                    spriteStartX = transformTarget.x;
-                    spriteStartY = transformTarget.y;
-                    overlayStartLeft =
-                    parseFloat(
-                        overlay.style.left
-                    );
-
-                    overlayStartTop =
-                    parseFloat(
-                        overlay.style.top
+                    Transfork.tools.moveTool.begin(
+                        e,
+                        {
+                            target: vm.editingTarget,
+                            canvas,
+                            source: "move-handle"
+                        }
                     );
                 }
             );
@@ -2290,11 +2240,7 @@
                 "mouseup",
                 () => {
 
-                    potentialStageDrag =
-                    false;
-
-                    stageDraggingSprite =
-                    false;
+                    Transfork.tools.moveTool.commit();
 
                     if (
                         resizing &&
@@ -2315,24 +2261,11 @@
                     }
 
                     resizing = false;
-                    dragging = false;
                     rotating = false;
                     transformTarget = null;
 
                     alphaDragging =
                     false;
-
-                    stageDragActive =
-                    false;
-
-                    overlayDragDX = 0;
-                    overlayDragDY = 0;
-
-                    stageSpriteDrag =
-                    false;
-
-                    dragTarget =
-                    null;
 
                     snapLock.x =
                     null;
@@ -2352,132 +2285,15 @@
                         return;
                     }
 
-                    if (
-                        potentialStageDrag &&
-                        !stageDraggingSprite
-                    ) {
-
-                        const dx =
-                        Math.abs(
-                            e.clientX -
-                            stageDragStartX
-                        );
-
-                        const dy =
-                        Math.abs(
-                            e.clientY -
-                            stageDragStartY
-                        );
-
-                        if (
-                            dx > 5 ||
-                            dy > 5
-                        ) {
-
-                            stageDraggingSprite =
-                            true;
-                            if (true){
-
-                                stageSpriteDrag =
-                                true;
-
-                                spriteStartX =
-                                dragTarget.x;
-
-                                spriteStartY =
-                                dragTarget.y;
-
-                                dragStartX =
-                                stageDragStartX;
-
-                                dragStartY =
-                                stageDragStartY;
-                            }
-                            /* Keep transform box visible while dragging */
+                    Transfork.tools.moveTool.update(
+                        e,
+                        {
+                            findSnapPosition
                         }
-                    }
+                    );
+
                     if (
-                        stageSpriteDrag &&
-                        dragTarget
-                    ) {
-
-                        const canvas =
-                        getStageCanvas();
-
-                        const rect =
-                        canvas.getBoundingClientRect();
-
-                        const [stageWidth, stageHeight] =
-                        vm.runtime.renderer
-                        .getNativeSize();
-
-                        const dx =
-                        (
-                            e.clientX -
-                            dragStartX
-                        ) /
-                        rect.width *
-                        stageWidth;
-
-                        const dy =
-                        (
-                            e.clientY -
-                            dragStartY
-                        ) /
-                        rect.height *
-                        stageHeight;
-
-                        console.log(
-                            "GANDHI DIRECT DRAG SNAP PATH",
-                            {
-                                target: dragTarget && dragTarget.sprite && dragTarget.sprite.name,
-                                x: spriteStartX + dx,
-                                y: spriteStartY - dy
-                            }
-                        );
-
-                        const snapPosition =
-                        findSnapPosition(
-                            dragTarget,
-                            spriteStartX + dx,
-                            spriteStartY - dy
-                        );
-
-                        dragTarget.setXY(
-                            snapPosition.x,
-                            snapPosition.y
-                        );
-                    }
-                    if (
-                        stageDragActive &&
-                        !dragging &&
-                        !resizing &&
-                        !rotating &&
-                        !alphaDragging
-                    ) {
-
-                        overlay.style.left =
-                        (
-                            overlayStartLeft +
-                            (
-                                e.clientX -
-                                stageDragStartX
-                            )
-                        ) + "px";
-
-                        overlay.style.top =
-                        (
-                            overlayStartTop +
-                            (
-                                e.clientY -
-                                stageDragStartY
-                            )
-                        ) + "px";
-
-                        return;
-                    }
-                    if (
-                        dragging ||
+                        Transfork.tools.moveTool.isActive() ||
                         resizing ||
                         rotating ||
                         alphaDragging
@@ -2753,37 +2569,6 @@
                         ]);
                     }
 
-                    if (dragging) {
-                        const canvas = getStageCanvas();
-                        if (!canvas) return;
-
-                        const rect = canvas.getBoundingClientRect();
-                        const [stageWidth, stageHeight] = vm.runtime.renderer.getNativeSize();
-
-                        const dx = ((e.clientX - dragStartX) / rect.width) * stageWidth;
-                        const dy = ((e.clientY - dragStartY) / rect.height) * stageHeight;
-
-                        console.log(
-                            "GANDHI MOVE HANDLE SNAP PATH",
-                            {
-                                target: transformTarget && transformTarget.sprite && transformTarget.sprite.name,
-                                x: spriteStartX + dx,
-                                y: spriteStartY - dy
-                            }
-                        );
-
-                        const snapPosition =
-                        findSnapPosition(
-                            transformTarget,
-                            spriteStartX + dx,
-                            spriteStartY - dy
-                        );
-
-                        transformTarget.setXY(
-                            snapPosition.x,
-                            snapPosition.y
-                        );
-                    }
                 }
             );
 
