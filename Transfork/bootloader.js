@@ -27,6 +27,7 @@ Loads all Transfork modules from the same Transfork folder.
         'overlay-tools.js',
         'skew-tools.js',
         'corner-snap-patch.js',
+        'snap-settle-patch.js',
         'transfork-main.js'
     ];
 
