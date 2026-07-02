@@ -561,6 +561,40 @@ window.addEventListener("mousemove", e => {
             ">${match}</span>`;
         });
     }
+
+    function getBlockFrameStyle(entry, maxWidth) {
+        const isBooleanBlock = entry.outputCheck && entry.outputCheck.includes("Boolean");
+        const isReporterBlock = !isBooleanBlock && entry.hasOutput;
+        const shapeStyle = isBooleanBlock
+            ? `
+            border-radius: 0;
+            clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
+        `
+            : isReporterBlock
+                ? `
+            border-radius: 999px;
+        `
+                : `
+            border-radius: 4px;
+            clip-path: polygon(0 0, 30px 0, 35px 5px, 55px 5px, 60px 0, 100% 0, 100% calc(100% - 5px), 60px calc(100% - 5px), 55px 100%, 35px 100%, 30px calc(100% - 5px), 0 calc(100% - 5px));
+        `;
+
+        return `
+            background: ${entry.color};
+            color: white;
+            padding: 5px 10px;
+            font-size: 11px;
+            font-weight: 500;
+            ${shapeStyle}
+            border-left: 12px solid rgba(0,0,0,0.15);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -2px 0 rgba(0,0,0,0.28), 0 1px 2px rgba(0,0,0,0.15);
+            max-width: ${maxWidth};
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        `;
+    }
+
     function calculateSearchScore(entry, query) {
 
         if (!query) return 1;
@@ -631,20 +665,7 @@ window.addEventListener("mousemove", e => {
         else if (entry.hasOutput) borderFormatting = "12px";
 
         const blockFrame = document.createElement("div");
-        blockFrame.style.cssText = `
-            background: ${entry.color};
-            color: white;
-            padding: 5px 10px;
-            font-size: 11px;
-            font-weight: 500;
-            border-radius: ${borderFormatting};
-            border-left: 12px solid rgba(0,0,0,0.15);
-            box-shadow: inset 0 -2px 0 rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.15);
-            max-width: 90%;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        `;
+        blockFrame.style.cssText = getBlockFrameStyle(entry, "90%");
         blockFrame.innerHTML = formatParameterText(entry.label);
         itemRow.appendChild(blockFrame);
 
@@ -865,20 +886,7 @@ window.addEventListener("mousemove", e => {
                 else if (entry.hasOutput) borderFormatting = "12px";
 
                 const blockFrame = document.createElement("div");
-                blockFrame.style.cssText = `
-                    background: ${entry.color};
-                    color: white;
-                    padding: 5px 10px;
-                    font-size: 11px;
-                    font-weight: 500;
-                    border-radius: ${borderFormatting};
-                    border-left: 12px solid rgba(0,0,0,0.15);
-                    box-shadow: inset 0 -2px 0 rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.15);
-                    max-width: 75%;
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                `;
+                blockFrame.style.cssText = getBlockFrameStyle(entry, "75%");
 
                 blockFrame.innerHTML = formatParameterText(entry.label);
 
