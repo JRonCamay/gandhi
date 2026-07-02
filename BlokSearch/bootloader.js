@@ -29,6 +29,7 @@ Loads all BlokSearch modules from the same BlokSearch folder.
         'block-cache.js',
         'virtual-list-renderer.js',
         'persistence-manager.js',
+        'context-resolver.js',
         'canvas-injector.js',
         'app-orchestrator.js',
         'bloksearch-main.js'
