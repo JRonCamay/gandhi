@@ -28,6 +28,7 @@ Loads all BlokSearch modules from the same BlokSearch folder.
         'search-controller.js',
         'block-cache.js',
         'virtual-list-renderer.js',
+        'app-orchestrator.js',
         'bloksearch-main.js'
     ];
 
