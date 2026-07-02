@@ -17,6 +17,11 @@ window.Chad = window.Chad || {};
         }
     }
 
+    function restorePanelVisibility(panel, oldVisibility) {
+        if (!panel) return;
+        panel.style.visibility = oldVisibility || "";
+    }
+
     function patchAgentOpen() {
         const tabs = window.Chad.agentTabs;
         const identity = window.Chad.agentIdentity;
@@ -70,9 +75,12 @@ window.Chad = window.Chad || {};
             const state = window.Chad.storage && window.Chad.storage.state;
             const nextTab = state && state.activeTab ? state.activeTab : "";
             const enteringChaties = nextTab === "chaties" && lastTab !== "chaties";
+            const panel = document.querySelector("#gandhi-chad-panel");
+            const oldVisibility = panel ? panel.style.visibility : "";
 
             if (enteringChaties) {
                 clearExpandedAgents();
+                if (panel) panel.style.visibility = "hidden";
             }
 
             originalRender.apply(window.Chad.ui, arguments);
@@ -80,6 +88,10 @@ window.Chad = window.Chad || {};
 
             if (nextTab === "chaties" && window.Chad.agentFixes && window.Chad.agentFixes.renderChatiesStable) {
                 window.Chad.agentFixes.renderChatiesStable(true);
+            }
+
+            if (enteringChaties) {
+                requestAnimationFrame(() => restorePanelVisibility(panel, oldVisibility));
             }
         };
 
