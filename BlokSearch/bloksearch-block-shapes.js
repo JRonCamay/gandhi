@@ -374,11 +374,14 @@ window.BlokSearchTextFormat = {
     },
 
     applyPanelPolish() {
-        const panels = document.querySelectorAll("body *");
-        panels.forEach(root => {
-            if (!root.style || !root.style.backgroundImage) return;
-            this.cleanTrailingArtifacts(root);
-            this.removeArtifactPills(root);
+        const panel = document.getElementById("gandi-search");
+        if (!panel) return;
+
+        const blockFrames = panel.querySelectorAll("div");
+        blockFrames.forEach(frame => {
+            if (!frame.style || !frame.style.backgroundImage) return;
+            this.cleanTrailingArtifacts(frame);
+            this.removeArtifactPills(frame);
         });
     },
 
