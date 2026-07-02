@@ -43,8 +43,64 @@ Surgical source patch for corner snapping accuracy.
         return best;
     }
 
+    function setActiveCornerSnap(xEdge, yEdge) {
+        if (!xEdge || !yEdge) {
+            window.TransforkCornerSnapPatch.activeCorner = null;
+            return;
+        }
+
+        window.TransforkCornerSnapPatch.activeCorner = {
+            xEdge,
+            yEdge,
+            time: Date.now()
+        };
+    }
+
+    function findButton(overlay, text) {
+        return Array.from(overlay.children).find(
+            child => (child.textContent || '').trim() === text
+        );
+    }
+
+    function setTransform(button, transform) {
+        if (!button) return;
+        button.style.transform = transform || '';
+    }
+
+    function updateControlOffset(overlay) {
+        if (!overlay) return;
+
+        const active = window.TransforkCornerSnapPatch.activeCorner;
+        const fresh = active && Date.now() - active.time < 180;
+
+        const pushY = fresh && active.yEdge === 'top'
+            ? 10
+            : fresh && active.yEdge === 'bottom'
+                ? -10
+                : 0;
+
+        const leftTransform = fresh && active.xEdge === 'left'
+            ? `translate(-14px, ${pushY}px)`
+            : '';
+
+        const rightTransform = fresh && active.xEdge === 'right'
+            ? `translate(14px, ${pushY}px)`
+            : '';
+
+        ['⇋', '⇅', '⟲'].forEach(text => {
+            setTransform(findButton(overlay, text), leftTransform);
+        });
+
+        ['🛠', '↔', '↕', '◲'].forEach(text => {
+            setTransform(findButton(overlay, text), rightTransform);
+        });
+    }
+
     window.TransforkCornerSnapPatch = {
-        chooseClosestCornerDelta
+        chooseClosestCornerDelta,
+        setActiveCornerSnap,
+        updateControlOffset,
+        activeCorner: null
     };
 
     window.TRANSFORK_LOAD_TEXT = async function (url) {
@@ -253,18 +309,40 @@ Surgical source patch for corner snapping accuracy.
         );
 
         code = code.replace(
-            /left:\s*"-26px",\s*top:\s*"0px"/,
-            'left: "-38px",\n                    top: "8px"'
+`                window.Transfork.snapVisuals.update(
+                    {
+                        target,
+                        candidates: snapCandidates,
+                        result: snapResult
+                    }
+                );
+`,
+`                window.TransforkCornerSnapPatch.setActiveCornerSnap(
+                    snapX === null ? null : snapXTargetEdge,
+                    snapY === null ? null : snapYTargetEdge
+                );
+
+                window.Transfork.snapVisuals.update(
+                    {
+                        target,
+                        candidates: snapCandidates,
+                        result: snapResult
+                    }
+                );
+`
         );
 
         code = code.replace(
-            /left:\s*"-26px",\s*top:\s*"24px"/,
-            'left: "-38px",\n                    top: "32px"'
-        );
+`                if (document.activeElement !== alphaInput) {
+`,
+`                if (window.TransforkCornerSnapPatch) {
+                    window.TransforkCornerSnapPatch.updateControlOffset(
+                        overlay
+                    );
+                }
 
-        code = code.replace(
-            /left:\s*"-26px",\s*top:\s*"48px"/,
-            'left: "-38px",\n                    top: "56px"'
+                if (document.activeElement !== alphaInput) {
+`
         );
 
         console.log('[Transfork] corner snap accuracy patch applied');
