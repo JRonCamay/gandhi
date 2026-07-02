@@ -2,6 +2,14 @@ window.BlokSearchBlockShapes = {
     getBlockFrameStyle(entry, maxWidth) {
         const isBooleanBlock = entry.outputCheck && entry.outputCheck.includes("Boolean");
         const isReporterBlock = !isBooleanBlock && entry.hasOutput;
+        const isHatBlock =
+            entry.type === "event_whenflagclicked" ||
+            entry.type === "event_whenkeypressed" ||
+            entry.type === "event_whenthisspriteclicked" ||
+            entry.type === "event_whenbackdropswitchesto" ||
+            entry.type === "event_whengreaterthan" ||
+            entry.type === "event_whenbroadcastreceived" ||
+            entry.type === "control_start_as_clone";
         const isCBlock =
             entry.type === "control_if" ||
             entry.type === "control_if_else" ||
@@ -25,11 +33,34 @@ window.BlokSearchBlockShapes = {
             border-radius: 999px;
             clip-path: none;
         `
-                : isCBlock
+                : isHatBlock
                     ? `
+            border-radius: 18px 18px 4px 4px / 16px 16px 4px 4px;
+            padding: 9px 12px 7px 16px;
+            min-height: 24px;
+            clip-path: polygon(
+                0 28%,
+                4px 14%,
+                12px 5%,
+                24px 0,
+                42px 0,
+                56px 5%,
+                66px 14%,
+                72px 28%,
+                100% 28%,
+                100% calc(100% - 6px),
+                64px calc(100% - 6px),
+                58px 100%,
+                35px 100%,
+                29px calc(100% - 6px),
+                0 calc(100% - 6px)
+            );
+        `
+                    : isCBlock
+                        ? `
             border-radius: 4px;
-            padding: 5px 12px 18px 16px;
-            min-height: 34px;
+            padding: 5px 12px 19px 16px;
+            min-height: 36px;
             clip-path: polygon(
                 0 0,
                 30px 0,
@@ -37,25 +68,19 @@ window.BlokSearchBlockShapes = {
                 58px 6px,
                 64px 0,
                 100% 0,
-                100% 100%,
-                64px 100%,
-                58px calc(100% - 6px),
-                35px calc(100% - 6px),
-                29px 100%,
-                0 100%
+                100% 45%,
+                42px 45%,
+                42px 68%,
+                100% 68%,
+                100% calc(100% - 6px),
+                64px calc(100% - 6px),
+                58px 100%,
+                35px 100%,
+                29px calc(100% - 6px),
+                0 calc(100% - 6px)
             );
-            background-image:
-                linear-gradient(
-                    to bottom,
-                    transparent 0,
-                    transparent 18px,
-                    rgba(0,0,0,0.28) 18px,
-                    rgba(0,0,0,0.28) 24px,
-                    transparent 24px
-                );
-            background-blend-mode: multiply;
         `
-                : `
+                    : `
             border-radius: 4px;
             clip-path: polygon(
                 0 0,
