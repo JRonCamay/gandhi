@@ -1,6 +1,6 @@
 /*
 Transfork/corner-snap-patch.js
-Surgical source patch for corner snapping accuracy.
+Surgical source patch that delegates snapping to Transfork/snapping.js.
 */
 
 (function () {
@@ -24,23 +24,6 @@ Surgical source patch for corner snapping accuracy.
         }
 
         return response.text();
-    }
-
-    function chooseClosestCornerDelta(candidates, snapDistance) {
-        let best = null;
-
-        for (const candidate of candidates) {
-            if (Math.abs(candidate.delta) > snapDistance) continue;
-
-            if (
-                !best ||
-                Math.abs(candidate.delta) < Math.abs(best.delta)
-            ) {
-                best = candidate;
-            }
-        }
-
-        return best;
     }
 
     function setActiveCornerSnap(xEdge, yEdge) {
@@ -97,7 +80,6 @@ Surgical source patch for corner snapping accuracy.
     }
 
     window.TransforkCornerSnapPatch = {
-        chooseClosestCornerDelta,
         setActiveCornerSnap,
         updateControlOffset,
         activeCorner: null
@@ -113,269 +95,27 @@ Surgical source patch for corner snapping accuracy.
         }
 
         code = code.replace(
-`                    const topDelta =
-                    snapXTarget.top -
-                    bounds.top;
-
-                    const bottomDelta =
-                    snapXTarget.bottom -
-                    bounds.bottom;
-
-                    if (
-                        Math.abs(topDelta) <=
-                        snapDistance
-                    ) {
-
-                        snapY =
-                        topDelta;
-
-                        snapYTarget =
-                        snapXTarget;
-
-                        snapYOtherTarget =
-                        snapXOtherTarget;
-
-                        snapYSourceEdge =
-                        "top";
-
-                        snapYTargetEdge =
-                        "top";
-
-                    }
-                    else if (
-                        Math.abs(bottomDelta) <=
-                        snapDistance
-                    ) {
-
-                        snapY =
-                        bottomDelta;
-
-                        snapYTarget =
-                        snapXTarget;
-
-                        snapYOtherTarget =
-                        snapXOtherTarget;
-
-                        snapYSourceEdge =
-                        "bottom";
-
-                        snapYTargetEdge =
-                        "bottom";
-
-                    }
-`,
-`                    const cornerY =
-                    window.TransforkCornerSnapPatch.chooseClosestCornerDelta(
-                        [
-                            {
-                                delta: snapXTarget.top - bounds.top,
-                                sourceEdge: "top",
-                                targetEdge: "top"
-                            },
-                            {
-                                delta: snapXTarget.bottom - bounds.top,
-                                sourceEdge: "bottom",
-                                targetEdge: "top"
-                            },
-                            {
-                                delta: snapXTarget.top - bounds.bottom,
-                                sourceEdge: "top",
-                                targetEdge: "bottom"
-                            },
-                            {
-                                delta: snapXTarget.bottom - bounds.bottom,
-                                sourceEdge: "bottom",
-                                targetEdge: "bottom"
-                            }
-                        ],
-                        snapDistance
-                    );
-
-                    if (cornerY) {
-                        snapY =
-                        cornerY.delta;
-
-                        snapYTarget =
-                        snapXTarget;
-
-                        snapYOtherTarget =
-                        snapXOtherTarget;
-
-                        snapYSourceEdge =
-                        cornerY.sourceEdge;
-
-                        snapYTargetEdge =
-                        cornerY.targetEdge;
-                    }
-`
-        );
-
-        code = code.replace(
-`                    const leftDelta =
-                    snapYTarget.left -
-                    bounds.left;
-
-                    const rightDelta =
-                    snapYTarget.right -
-                    bounds.right;
-
-                    if (
-                        Math.abs(leftDelta) <=
-                        snapDistance
-                    ) {
-
-                        snapX =
-                        leftDelta;
-
-                        snapXTarget =
-                        snapYTarget;
-
-                        snapXOtherTarget =
-                        snapYOtherTarget;
-
-                        snapXSourceEdge =
-                        "left";
-
-                        snapXTargetEdge =
-                        "left";
-
-                    }
-                    else if (
-                        Math.abs(rightDelta) <=
-                        snapDistance
-                    ) {
-
-                        snapX =
-                        rightDelta;
-
-                        snapXTarget =
-                        snapYTarget;
-
-                        snapXOtherTarget =
-                        snapYOtherTarget;
-
-                        snapXSourceEdge =
-                        "right";
-
-                        snapXTargetEdge =
-                        "right";
-
-                    }
-`,
-`                    const cornerX =
-                    window.TransforkCornerSnapPatch.chooseClosestCornerDelta(
-                        [
-                            {
-                                delta: snapYTarget.left - bounds.left,
-                                sourceEdge: "left",
-                                targetEdge: "left"
-                            },
-                            {
-                                delta: snapYTarget.right - bounds.left,
-                                sourceEdge: "right",
-                                targetEdge: "left"
-                            },
-                            {
-                                delta: snapYTarget.left - bounds.right,
-                                sourceEdge: "left",
-                                targetEdge: "right"
-                            },
-                            {
-                                delta: snapYTarget.right - bounds.right,
-                                sourceEdge: "right",
-                                targetEdge: "right"
-                            }
-                        ],
-                        snapDistance
-                    );
-
-                    if (cornerX) {
-                        snapX =
-                        cornerX.delta;
-
-                        snapXTarget =
-                        snapYTarget;
-
-                        snapXOtherTarget =
-                        snapYOtherTarget;
-
-                        snapXSourceEdge =
-                        cornerX.sourceEdge;
-
-                        snapXTargetEdge =
-                        cornerX.targetEdge;
-                    }
-`
-        );
-
-        code = code.replace(
-`                if (lockedX) {
-                    snapX =
-                    lockedX.delta;
-
-                    snapXTarget =
-                    lockedX.bounds;
-                }
-`,
-`                if (lockedX && snapY !== null && snapLock.x.target === snapYOtherTarget) {
-                    snapLock.x =
-                    null;
-                }
-                else if (lockedX) {
-                    snapX =
-                    lockedX.delta;
-
-                    snapXTarget =
-                    lockedX.bounds;
-                }
-`
-        );
-
-        code = code.replace(
-`                if (lockedY) {
-                    snapY =
-                    lockedY.delta;
-
-                    snapYTarget =
-                    lockedY.bounds;
-                }
-`,
-`                if (lockedY && snapX !== null && snapLock.y.target === snapXOtherTarget) {
-                    snapLock.y =
-                    null;
-                }
-                else if (lockedY) {
-                    snapY =
-                    lockedY.delta;
-
-                    snapYTarget =
-                    lockedY.bounds;
-                }
-`
-        );
-
-        code = code.replace(
-`                window.Transfork.snapVisuals.update(
-                    {
+            /            function findSnapPosition\(target, desiredX, desiredY\) \{[\s\S]*?\n            function getShearAdjustedBounds/,
+`            function findSnapPosition(target, desiredX, desiredY) {
+                if (
+                    window.Transfork &&
+                    window.Transfork.snapping &&
+                    typeof window.Transfork.snapping.findSnapPosition === "function"
+                ) {
+                    return window.Transfork.snapping.findSnapPosition(
                         target,
-                        candidates: snapCandidates,
-                        result: snapResult
-                    }
-                );
-`,
-`                window.TransforkCornerSnapPatch.setActiveCornerSnap(
-                    snapX === null ? null : snapXTargetEdge,
-                    snapY === null ? null : snapYTargetEdge
-                );
+                        desiredX,
+                        desiredY
+                    );
+                }
 
-                window.Transfork.snapVisuals.update(
-                    {
-                        target,
-                        candidates: snapCandidates,
-                        result: snapResult
-                    }
-                );
-`
+                return {
+                    x: desiredX,
+                    y: desiredY
+                };
+            }
+
+            function getShearAdjustedBounds`
         );
 
         code = code.replace(
@@ -391,7 +131,7 @@ Surgical source patch for corner snapping accuracy.
 `
         );
 
-        console.log('[Transfork] corner snap accuracy patch applied');
+        console.log('[Transfork] snapping delegated to module');
         return code;
     };
 })();
