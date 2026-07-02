@@ -6,6 +6,10 @@ window.Chad = window.Chad || {};
     const api = {};
     const DONE_KEY = "gandhi_chad_task_done_flash_v1";
     const EXPANDED_KEY = "gandhi_chad_expanded_agent_v3";
+    const EVENT_PREFIX = "chad:chaties:";
+
+    let visibleFilesByAgent = {};
+    let lastTab = "";
 
     function nowStamp() {
         return new Date().toLocaleString();
@@ -26,6 +30,16 @@ window.Chad = window.Chad || {};
             height: "calc(100vh - 158px)",
             background: "#ffffff"
         };
+    }
+
+    function emit(name, detail) {
+        window.dispatchEvent(new CustomEvent(EVENT_PREFIX + name, { detail: detail || {} }));
+    }
+
+    function on(name, handler) {
+        window.addEventListener(EVENT_PREFIX + name, function (event) {
+            handler(event.detail || {});
+        });
     }
 
     function button(label, fn, extra) {
@@ -85,6 +99,15 @@ window.Chad = window.Chad || {};
         }
     }
 
+    function clearVisibleFileData() {
+        visibleFilesByAgent = {};
+    }
+
+    function resetChatiesView() {
+        clearVisibleFileData();
+        closeAllAgents();
+    }
+
     function renderFile(agent, file) {
         const wrap = createEl("div", {
             style: {
@@ -104,13 +127,8 @@ window.Chad = window.Chad || {};
         wrap.appendChild(createEl("div", { style: { display: "flex", gap: "4px", flexWrap: "wrap" } }, [
             file.url ? button("OPEN", () => window.open(file.url, "_blank")) : null,
             button("COPY", () => window.Chad.actions.copyText(file.url || file.name)),
-            button("DELETE", () => {
-                const identity = window.Chad.agentIdentity;
-                const agents = identity.getAgents();
-                const current = agents.find(item => item.id === agent.id);
-                if (!current) return;
-                current.files = (current.files || []).filter(item => item.id !== file.id);
-                identity.saveAgents(agents);
+            button("CLEAR", () => {
+                visibleFilesByAgent[agent.id] = (visibleFilesByAgent[agent.id] || []).filter(item => item.id !== file.id);
                 renderIntoPanel();
             }, { bg: "#fee2e2", border: "#fecaca" })
         ]));
@@ -174,20 +192,28 @@ window.Chad = window.Chad || {};
         const { identity } = getDeps();
         const agents = identity.getAgents().filter(agent => agent.id !== agentId);
         identity.saveAgents(agents);
+        delete visibleFilesByAgent[agentId];
         if (identity.getActiveId() === agentId) {
             identity.setActiveId(agents[0] ? agents[0].id : "");
         }
         renderIntoPanel();
     }
 
+    function scanFilesForAgent(agent) {
+        const { files } = getDeps();
+        visibleFilesByAgent[agent.id] = files.scanVisibleChatFiles(agent);
+        emit("scan-files", { agentId: agent.id });
+        renderIntoPanel();
+    }
+
     function renderAgentDetails(agent) {
-        const { identity, files } = getDeps();
-        const shownFiles = files.visibleFilesForAgent(agent);
+        const shownFiles = visibleFilesByAgent[agent.id] || [];
         const detail = createEl("div", { style: { marginTop: "6px" } });
 
         detail.appendChild(createEl("div", { style: { display: "flex", gap: "4px", flexWrap: "wrap" } }, [
-            button("SCAN FILES", () => { files.mergeFiles(agent.id); renderIntoPanel(); }, { bg: "#dcfce7", border: "#86efac", bold: true }),
+            button("SCAN FILES", () => scanFilesForAgent(agent), { bg: "#dcfce7", border: "#86efac", bold: true }),
             button("USE THIS CHAT", () => {
+                const { identity } = getDeps();
                 const agents = identity.getAgents();
                 const current = agents.find(item => item.id === agent.id);
                 if (!current) return;
@@ -195,6 +221,7 @@ window.Chad = window.Chad || {};
                 current.updatedAt = nowStamp();
                 identity.saveAgents(agents);
                 identity.setActiveId(agent.id);
+                clearVisibleFileData();
                 renderIntoPanel();
             }, { bg: "#e0f2fe", border: "#7dd3fc" }),
             button("COPY LINK", () => window.Chad.actions.copyText(agent.chatUrl || "")),
@@ -203,7 +230,7 @@ window.Chad = window.Chad || {};
 
         if (!shownFiles.length) {
             detail.appendChild(createEl("div", {
-                text: "No files yet. Click SCAN FILES.",
+                text: "No file data loaded. Click SCAN FILES.",
                 style: { color: "#64748b", fontSize: "11px", padding: "7px 2px 0" }
             }));
         }
@@ -232,7 +259,10 @@ window.Chad = window.Chad || {};
 
         box.appendChild(createEl("div", { style: { display: "flex", gap: "6px", alignItems: "center" } }, [
             button(expanded ? "▾" : "▸", () => {
-                identity.setExpanded(agent.id, !identity.isExpanded(agent.id));
+                const next = !identity.isExpanded(agent.id);
+                identity.setExpanded(agent.id, next);
+                if (!next) delete visibleFilesByAgent[agent.id];
+                emit(next ? "agent-expanded" : "agent-collapsed", { agentId: agent.id });
                 renderIntoPanel();
             }, { bg: "#ffffff", border: "#cbd5e1", bold: true }),
             button(`${agent.icon || "🤖"} ${agent.name || "Agent"}`, () => tabs.openAgent(agent), {
@@ -263,7 +293,7 @@ window.Chad = window.Chad || {};
         }
 
         wrap.appendChild(createEl("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "7px" } }, [
-            createEl("div", { html: `<b>Chaties</b><br><span style="color:#64748b">Agents stay minimized until you click the arrow.</span>` }),
+            createEl("div", { html: `<b>Chaties</b><br><span style="color:#64748b">File data loads only after SCAN FILES.</span>` }),
             button("+", addAgent, { bg: "#dcfce7", border: "#86efac", bold: true })
         ]));
 
@@ -284,36 +314,56 @@ window.Chad = window.Chad || {};
 
     function patchUiRender() {
         const ui = window.Chad.ui;
-        if (!ui || ui.__uiChatiesPatched) return;
+        if (!ui || ui.__uiChatiesEventPatched) return;
 
         const originalRender = ui.render;
         ui.render = function () {
             const state = window.Chad.storage && window.Chad.storage.state;
             const nextTab = state && state.activeTab ? state.activeTab : "";
-            if (nextTab === "chaties") closeAllAgents();
+            const changed = nextTab !== lastTab;
+
+            if (changed) {
+                emit("tab-changed", { from: lastTab, to: nextTab });
+                resetChatiesView();
+            }
+            if (nextTab === "chaties") {
+                emit("chaties-opened", {});
+                resetChatiesView();
+            }
 
             originalRender.apply(ui, arguments);
+            lastTab = nextTab;
 
             if (nextTab === "chaties") {
                 renderIntoPanel();
             }
         };
 
-        ui.__uiChatiesPatched = true;
+        ui.__uiChatiesEventPatched = true;
     }
 
     function patchAgentFixes() {
         const fixes = window.Chad.agentFixes;
-        if (!fixes || fixes.__uiChatiesPatched) return;
+        if (!fixes || fixes.__uiChatiesEventPatched) return;
 
         fixes.renderChatiesStable = function () {
             renderIntoPanel();
         };
-        fixes.__uiChatiesPatched = true;
+        fixes.__uiChatiesEventPatched = true;
+    }
+
+    function bindEvents() {
+        on("tab-changed", clearVisibleFileData);
+        on("chaties-opened", clearVisibleFileData);
+        on("agent-collapsed", payload => {
+            if (payload.agentId) delete visibleFilesByAgent[payload.agentId];
+        });
     }
 
     function start() {
-        closeAllAgents();
+        resetChatiesView();
+        bindEvents();
+        emit("loaded", {});
         patchUiRender();
         patchAgentFixes();
         setInterval(() => {
@@ -325,7 +375,8 @@ window.Chad = window.Chad || {};
     api.render = render;
     api.renderIntoPanel = renderIntoPanel;
     api.patchUiRender = patchUiRender;
-    api.closeAllAgents = closeAllAgents;
+    api.clearVisibleFileData = clearVisibleFileData;
+    api.resetChatiesView = resetChatiesView;
 
     window.Chad.uiChaties = api;
     start();
