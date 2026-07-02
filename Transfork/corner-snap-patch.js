@@ -317,16 +317,16 @@ Surgical source patch for corner snapping accuracy.
                     lockedX.bounds;
                 }
 `,
-`                if (lockedX && snapY === null) {
+`                if (lockedX && snapY !== null && snapLock.x.target === snapYOtherTarget) {
+                    snapLock.x =
+                    null;
+                }
+                else if (lockedX) {
                     snapX =
                     lockedX.delta;
 
                     snapXTarget =
                     lockedX.bounds;
-                }
-                else if (lockedX && snapY !== null) {
-                    snapLock.x =
-                    null;
                 }
 `
         );
@@ -340,16 +340,16 @@ Surgical source patch for corner snapping accuracy.
                     lockedY.bounds;
                 }
 `,
-`                if (lockedY && snapX === null) {
+`                if (lockedY && snapX !== null && snapLock.y.target === snapXOtherTarget) {
+                    snapLock.y =
+                    null;
+                }
+                else if (lockedY) {
                     snapY =
                     lockedY.delta;
 
                     snapYTarget =
                     lockedY.bounds;
-                }
-                else if (lockedY && snapX !== null) {
-                    snapLock.y =
-                    null;
                 }
 `
         );
