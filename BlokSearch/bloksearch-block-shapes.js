@@ -58,26 +58,28 @@ window.BlokSearchBlockShapes = {
         `
                     : isCBlock
                         ? `
+            box-sizing: border-box;
+            display: inline-block;
+            min-width: 112px;
+            min-height: 78px;
+            padding: 15px 12px 39px 14px;
+            line-height: 14px;
             border-radius: 6px;
-            padding: 7px 12px 30px 16px;
-            min-height: 54px;
-            line-height: 16px;
             clip-path: polygon(
                 0 0,
-                30px 0,
-                36px 10px,
-                58px 10px,
-                70px 0,
+                12px 0,
+                18px 10px,
+                42px 10px,
+                48px 0,
                 100% 0,
                 100% 32%,
-                35px 32%,
-                35px 68%,
-                100% 68%,
-                100% calc(100% - 8px),
-                64px calc(100% - 8px),
-                58px 100%,
-                35px 100%,
-                29px calc(100% - 8px),
+                24px 32%,
+                24px 62%,
+                100% 62%,
+                100% 100%,
+                30px 100%,
+                24px calc(100% - 8px),
+                12px calc(100% - 8px),
                 0 calc(100% - 8px)
             );
         `
