@@ -4,8 +4,52 @@ window.Chad = window.Chad || {};
     "use strict";
 
     const DOCK_ID = "gandhi-chad-monkey-dock";
+    const PANEL_ID = "gandhi-chad-panel";
 
     let renderChatiesStable = null;
+    let lastActionAt = 0;
+
+    function now() {
+        return Date.now();
+    }
+
+    function getPanel() {
+        return document.querySelector("#" + PANEL_ID);
+    }
+
+    function shouldIgnoreBounce() {
+        return now() - lastActionAt < 180;
+    }
+
+    function markAction() {
+        lastActionAt = now();
+    }
+
+    function openPanel() {
+        markAction();
+        const panel = getPanel();
+        const dock = ensureDock();
+
+        if (panel) {
+            panel.style.display = "block";
+            panel.dataset.chadDockState = "open";
+        }
+
+        dock.style.display = "none";
+    }
+
+    function closePanel() {
+        markAction();
+        const panel = getPanel();
+        const dock = ensureDock();
+
+        if (panel) {
+            panel.style.display = "none";
+            panel.dataset.chadDockState = "closed";
+        }
+
+        dock.style.display = "block";
+    }
 
     function ensureDock(renderCallback) {
         if (typeof renderCallback === "function") {
@@ -33,40 +77,54 @@ window.Chad = window.Chad || {};
                 boxShadow: "0 8px 24px rgba(15,23,42,.25)",
                 display: "none"
             });
-            dock.addEventListener("click", () => {
-                const panel = document.querySelector("#gandhi-chad-panel");
-                if (panel) panel.style.display = "block";
-                dock.style.display = "none";
+
+            dock.addEventListener("click", event => {
+                event.preventDefault();
+                event.stopPropagation();
+                event.stopImmediatePropagation();
+
+                openPanel();
+
                 if (typeof renderChatiesStable === "function") {
-                    renderChatiesStable(true);
+                    setTimeout(() => renderChatiesStable(true), 0);
                 }
-            });
+            }, true);
+
             document.body.appendChild(dock);
         }
+
         return dock;
     }
 
     function showDock() {
-        ensureDock().style.display = "block";
+        closePanel();
     }
 
     function patchCloseButton() {
-        const panel = document.querySelector("#gandhi-chad-panel");
+        const panel = getPanel();
         if (!panel) return;
-        const close = Array.from(panel.querySelectorAll("button")).find(btn => btn.textContent.trim() === "✕");
+
+        const close = Array.from(panel.querySelectorAll("button")).find(btn => {
+            return btn.textContent.trim() === "✕" && btn.closest("#" + PANEL_ID) === panel;
+        });
+
         if (!close || close.dataset.chadDockClose === "1") return;
         close.dataset.chadDockClose = "1";
-        close.onclick = event => {
+
+        close.addEventListener("click", event => {
             event.preventDefault();
             event.stopPropagation();
-            panel.style.display = "none";
-            showDock();
-        };
+            event.stopImmediatePropagation();
+            if (shouldIgnoreBounce()) return;
+            closePanel();
+        }, true);
     }
 
     window.Chad.chadDock = {
         ensureDock,
         showDock,
+        openPanel,
+        closePanel,
         patchCloseButton
     };
 })();
