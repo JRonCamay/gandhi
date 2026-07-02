@@ -22,6 +22,7 @@ Loads all BlokSearch modules from the same BlokSearch folder.
         'blockly-adapter.js',
         'ui.js',
         'bloksearch-block-shapes.js',
+        'bloksearch-search-engine.js',
         'bloksearch-main.js'
     ];
 
@@ -52,6 +53,44 @@ Loads all BlokSearch modules from the same BlokSearch folder.
         };
     }
 
+    function patchMainSearchPipeline(code) {
+        const target = `filteredEntries = [
+                ...smartResults,
+                ...normalResults
+            ];`;
+
+        const replacement = `filteredEntries = [
+                ...smartResults,
+                ...normalResults
+            ];
+
+            if (
+                filteredEntries.length === 0 &&
+                window.BlokSearch &&
+                window.BlokSearch.searchEngine &&
+                window.BlokSearch.searchEngine.findFuzzyResults
+            ) {
+                filteredEntries = window.BlokSearch.searchEngine.findFuzzyResults({
+                    cachedBlocks,
+                    q,
+                    reporterMode,
+                    targetedConnection,
+                    isBooleanTarget
+                });
+            }`;
+
+        if (!code.includes(target)) return code;
+        return code.replace(target, replacement);
+    }
+
+    function prepareModuleCode(loadedModule) {
+        if (loadedModule.name === 'bloksearch-main.js') {
+            return patchMainSearchPipeline(loadedModule.code);
+        }
+
+        return loadedModule.code;
+    }
+
     async function boot() {
         const loadText =
             typeof BLOKSEARCH_LOAD_TEXT === 'function'
@@ -68,7 +107,7 @@ Loads all BlokSearch modules from the same BlokSearch folder.
         );
 
         for (const loadedModule of loadedModules) {
-            runCode(loadedModule.code, loadedModule.url);
+            runCode(prepareModuleCode(loadedModule), loadedModule.url);
         }
 
         console.log('[BlokSearch] loaded from:', BASE);
