@@ -13,6 +13,7 @@ Explicit edge-mode snapping engine for Transfork.
     const SETTLE_LIMIT = 4;
     const ANCHOR_LIMIT = 6;
     const VERIFY_LIMIT = 8;
+    const FINAL_VERIFY_LIMIT = 12;
 
     let lastSnap = null;
     let snapAnchor = null;
@@ -215,7 +216,10 @@ Explicit edge-mode snapping engine for Transfork.
 
     function correctionFromSnap(bounds, snap, limit) {
         if (!snap) return 0;
-        const delta = snap.otherBounds[snap.otherEdge] - bounds[snap.activeEdge];
+        const otherBounds = snap.otherTarget
+            ? getFreshAABB(snap.otherTarget, renderer()) || snap.otherBounds
+            : snap.otherBounds;
+        const delta = otherBounds[snap.otherEdge] - bounds[snap.activeEdge];
         return Math.abs(delta) <= limit ? delta : 0;
     }
 
@@ -242,6 +246,44 @@ Explicit edge-mode snapping engine for Transfork.
     function verifySnapResult(result, currentAABB, target, x, y) {
         verifySnapEdge(result, currentAABB, target, x);
         verifySnapEdge(result, currentAABB, target, y);
+    }
+
+    function rendererAABBAt(target, x, y, r) {
+        const oldX = target.x;
+        const oldY = target.y;
+
+        target.setXY(x, y);
+        target.emitVisualChange();
+        window.vm?.runtime?.requestRedraw();
+        window.Transfork?.geometry?.clear(target);
+
+        const bounds = getFreshAABB(target, r);
+
+        target.setXY(oldX, oldY);
+        target.emitVisualChange();
+        window.vm?.runtime?.requestRedraw();
+        window.Transfork?.geometry?.clear(target);
+
+        return bounds;
+    }
+
+    function rendererVerifiedMove(target, dx, dy, r) {
+        let finalX = target.x + dx;
+        let finalY = target.y + dy;
+
+        const probeBounds = rendererAABBAt(target, finalX, finalY, r);
+        if (!probeBounds) return { dx, dy };
+
+        const verifyX = correctionFromSnap(probeBounds, lastSnap.x, FINAL_VERIFY_LIMIT);
+        const verifyY = correctionFromSnap(probeBounds, lastSnap.y, FINAL_VERIFY_LIMIT);
+
+        if (verifyX && lastSnap.x) finalX += verifyX;
+        if (verifyY && lastSnap.y) finalY += verifyY;
+
+        return {
+            dx: finalX - target.x,
+            dy: finalY - target.y
+        };
     }
 
     function rememberSnap(target, x, y) {
@@ -280,8 +322,12 @@ Explicit edge-mode snapping engine for Transfork.
 
         const anchorMove = settleAnchor(target, r, bounds) || { dx: 0, dy: 0 };
         const afterAnchor = shift(bounds, anchorMove.dx, anchorMove.dy);
-        const dx = anchorMove.dx + settleAxis(afterAnchor, lastSnap.x);
-        const dy = anchorMove.dy + settleAxis(afterAnchor, lastSnap.y);
+        let dx = anchorMove.dx + settleAxis(afterAnchor, lastSnap.x);
+        let dy = anchorMove.dy + settleAxis(afterAnchor, lastSnap.y);
+
+        const verified = rendererVerifiedMove(target, dx, dy, r);
+        dx = verified.dx;
+        dy = verified.dy;
 
         snapAnchor = null;
 
