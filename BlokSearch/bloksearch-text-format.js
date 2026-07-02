@@ -1,16 +1,23 @@
+/*
+BlokSearch/bloksearch-text-format.js
+ShadowRoot-scoped text formatting styles for BlokSearch previews.
+*/
 window.BlokSearchTextFormat = {
     start() {
         this.injectStyle();
-        this.observePanels();
-        this.applyPanelPolish();
     },
 
     injectStyle() {
-        if (document.getElementById("bloksearch-text-format-style")) return;
+        const cssText = `
+            :host {
+                all: initial;
+            }
 
-        const style = document.createElement("style");
-        style.id = "bloksearch-text-format-style";
-        style.textContent = `
+            #gandi-search,
+            #gandi-search * {
+                box-sizing: border-box;
+            }
+
             #gandi-search span[style*="Consolas"],
             #gandi-search span[style*="Monaco"],
             #gandi-search span[style*="Courier New"] {
@@ -29,71 +36,13 @@ window.BlokSearchTextFormat = {
                 margin: 0 2px !important;
             }
         `;
-        document.head.appendChild(style);
-    },
 
-    observePanels() {
-        if (this.observer) return;
-
-        this.observer = new MutationObserver(() => {
-            this.applyPanelPolish();
-        });
-
-        this.observer.observe(document.body, {
-            childList: true,
-            subtree: true,
-            characterData: true
-        });
-    },
-
-    applyPanelPolish() {
-        const panel = document.getElementById("gandi-search");
-        if (!panel) return;
-
-        const blockFrames = panel.querySelectorAll("div");
-        blockFrames.forEach(frame => {
-            if (!frame.style || !frame.style.backgroundImage) return;
-            this.cleanTrailingArtifacts(frame);
-            this.removeArtifactPills(frame);
-        });
-    },
-
-    cleanTrailingArtifacts(root) {
-        const walker = document.createTreeWalker(
-            root,
-            NodeFilter.SHOW_TEXT,
-            null
-        );
-
-        const textNodes = [];
-        while (walker.nextNode()) {
-            textNodes.push(walker.currentNode);
+        if (window.BlokSearch?.ui?.injectStyle) {
+            window.BlokSearch.ui.injectStyle(
+                "bloksearch-text-format-style",
+                cssText
+            );
         }
-
-        textNodes.forEach(node => {
-            node.nodeValue = node.nodeValue
-                .replace(/\s*[?]\s*[*]+\s*$/g, "")
-                .replace(/\s*[?]\s*$/g, "")
-                .replace(/\s*[*]+\s*$/g, "");
-        });
-    },
-
-    removeArtifactPills(root) {
-        const pills = root.querySelectorAll("span");
-
-        pills.forEach(pill => {
-            const text = (pill.textContent || "").trim();
-
-            if (text === "?" || text === "*" || text === "?*" || text === "? *") {
-                const previous = pill.previousSibling;
-
-                if (previous && previous.nodeType === Node.TEXT_NODE) {
-                    previous.nodeValue = previous.nodeValue.replace(/\s+$/g, "");
-                }
-
-                pill.remove();
-            }
-        });
     }
 };
 
