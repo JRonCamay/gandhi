@@ -8,6 +8,41 @@ window.BlokSearch.CanvasInjector = class CanvasInjector {
     constructor(options = {}) {
         this.persistence = options.persistence || window.BlokSearch.persistenceManager || null;
         this.pendingFrame = 0;
+        this.injectWarpStyle();
+    }
+
+    injectWarpStyle() {
+        if (document.getElementById("bloksearch-warp-style")) return;
+
+        const style = document.createElement("style");
+        style.id = "bloksearch-warp-style";
+        style.textContent = `
+            @keyframes bloksearch-warp-in {
+                0% {
+                    transform: scale(0.82);
+                    filter: drop-shadow(0 0 0 rgba(76, 151, 255, 0));
+                    opacity: 0.35;
+                }
+                55% {
+                    transform: scale(1.08);
+                    filter: drop-shadow(0 0 10px rgba(76, 151, 255, 0.85));
+                    opacity: 1;
+                }
+                100% {
+                    transform: scale(1);
+                    filter: drop-shadow(0 0 0 rgba(76, 151, 255, 0));
+                    opacity: 1;
+                }
+            }
+
+            .bloksearch-warp-in {
+                transform-box: fill-box;
+                transform-origin: center;
+                will-change: transform, filter, opacity;
+                animation: bloksearch-warp-in 180ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+            }
+        `;
+        document.head.appendChild(style);
     }
 
     resolveBlockly() {
@@ -41,7 +76,9 @@ window.BlokSearch.CanvasInjector = class CanvasInjector {
     resolveActiveStack(workspace) {
         if (!workspace) return null;
 
-        const selected = window.Blockly?.selected || workspace.getSelected?.();
+        const Blockly = this.resolveBlockly();
+        const selected = Blockly?.selected || workspace.getSelected?.();
+
         if (selected && selected.workspace === workspace) {
             return this.getBottomBlock(selected);
         }
@@ -122,10 +159,20 @@ window.BlokSearch.CanvasInjector = class CanvasInjector {
         return block;
     }
 
+    moveBlockTo(block, x, y) {
+        if (!block || !block.moveBy) return;
+
+        const current = block.getRelativeToSurfaceXY
+            ? block.getRelativeToSurfaceXY()
+            : { x: 0, y: 0 };
+
+        block.moveBy(x - current.x, y - current.y);
+    }
+
     magneticSnap(block, point) {
         if (!block || !point) return;
 
-        block.moveBy(point.x, point.y);
+        this.moveBlockTo(block, point.x, point.y);
 
         if (point.stackBottom?.nextConnection && block.previousConnection) {
             try {
@@ -136,6 +183,24 @@ window.BlokSearch.CanvasInjector = class CanvasInjector {
         }
 
         block.select?.();
+        this.playWarpEffect(block);
+    }
+
+    playWarpEffect(block) {
+        const svgRoot = block?.getSvgRoot ? block.getSvgRoot() : null;
+        if (!svgRoot || !svgRoot.classList) return;
+
+        svgRoot.classList.remove("bloksearch-warp-in");
+
+        requestAnimationFrame(() => {
+            svgRoot.classList.add("bloksearch-warp-in");
+
+            window.setTimeout(() => {
+                if (svgRoot && svgRoot.classList) {
+                    svgRoot.classList.remove("bloksearch-warp-in");
+                }
+            }, 220);
+        });
     }
 
     teleport(entry, context = {}) {
