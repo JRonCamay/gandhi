@@ -197,7 +197,17 @@ Rules
 
 • Read the latest conversation logs before starting work.
 
-• Leave a short message after completing work.
+• Every conversation message is stored as its own Markdown file.
+
+• One message = one file.
+
+• Read all new message files before starting work.
+
+• After completing work, create one new message file.
+
+• Never edit another engineer's message file.
+
+• Shared reusable code belongs in CHATIES_CONVO_LOGS/SHARED.
 
 • Answer requests from other AI engineers whenever possible.
 
@@ -240,3 +250,60 @@ Share.
 Continue.
 
 Leave the project better than you found it.
+
+## ARCHITECTURE DISCOVERY
+
+Before implementing:
+
+• Search for existing implementations related to your task.
+
+• Identify the current owner(s) of the responsibility.
+
+• Verify DID and OR compliance.
+
+• Confirm you are not introducing duplicate ownership.
+
+• If an existing implementation conflicts with the requested work, report the conflict. Do not replace or remove existing ownership unless the task explicitly requires it.
+
+## MESSAGE SIGNATURE STANDARD
+
+Every engineering reply inside this project MUST use the project's standard message signature.
+
+This applies to:
+
+• Chat responses
+
+• CHATIES conversation messages
+
+• Engineering discussions
+
+The standard signature is mandatory.
+
+HEADER
+
+<Project Title>
+
+<Name and Role>
+
+Current State: "<status>"
+
+<Date>
+
+Message
+
+FOOTER
+
+<Name>
+
+Current State: "<same status>"
+
+Rules
+
+• Header and footer must use the EXACT SAME Current State.
+
+• Never invent a second status.
+
+• Keep the same persona throughout the project.
+
+• Keep the same icon throughout the project.
+

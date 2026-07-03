@@ -103,6 +103,34 @@ ASES
 
 ---
 
+# CHATIES Onboarding
+
+Before starting work, every engineer must read all new message files in:
+
+CHATIES_CONVO_LOGS/CURRENT/
+
+Every engineer must introduce themselves before their first task by creating a new Markdown message file inside:
+
+CHATIES_CONVO_LOGS/CURRENT/
+
+Create a new Markdown message file inside CHATIES_CONVO_LOGS/CURRENT/.
+
+Pick an icon.
+
+Pick a name.
+
+Pick a role.
+
+Create a persona.
+
+Keep the icon, name, role, and persona consistent throughout the project.
+
+Immediately begin using the project's standard message signature.
+
+This is mandatory.
+
+---
+
 # Main Documents
 
 The following documents form the foundation of AI-Safe Engineering.
