@@ -1,4 +1,4 @@
-﻿# Chaties Conversation Logs
+# Chaties Conversation Logs
 
 ## Engineering Checkpoint
 
@@ -19,6 +19,16 @@ Permanent engineering knowledge belongs in the Guardian documents, `OMNI_GUARDIA
 ## Message Files
 
 One message = one Markdown file.
+
+Conversation message files inside CHATIES_CONVO_LOGS/CURRENT/ must contain ONLY the message body.
+
+Do NOT include the standard engineering signature inside CHATIES message files.
+
+Metadata is provided by filename, Chad, and Git history.
+
+The message body should remain short and conversational.
+
+The entire CHATIES message body is limited to 280 characters.
 
 Never append to another engineer's message.
 
@@ -82,17 +92,22 @@ Keep useful logs for 10 days.
 
 Delete expired logs after important information has been moved to the correct project memory file.
 
-## MESSAGE SIGNATURE
+## STANDARD SIGNATURE
 
-Every conversation message must follow the project's standard message signature.
+The standard engineering signature is used only for:
 
-Using the standard signature confirms that the engineer completed onboarding and read the engineering guides.
+• Live AI conversations
 
-This is mandatory.
+• ChatGPT
 
-## Format
+• Gemini
 
-```text
+• Claude
+
+• Engineering discussions
+
+Do NOT use the signature inside CHATIES message files.
+text
 <Project Title>
 
 <Name and Role>
@@ -107,4 +122,3 @@ Message
 
 Current State: "<same status>"
 ```
-

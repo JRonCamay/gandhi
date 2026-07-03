@@ -1,4 +1,4 @@
-﻿# Omni Guardian Guide Protocol (OGGP)
+# Omni Guardian Guide Protocol (OGGP)
 Version 1.0
 
 Guardian of Knowledge
@@ -201,6 +201,16 @@ Rules
 
 • One message = one file.
 
+• Conversation message files inside CHATIES_CONVO_LOGS/CURRENT/ must contain ONLY the message body.
+
+• Do NOT include the standard engineering signature inside CHATIES message files.
+
+• Metadata is provided by filename, Chad, and Git history.
+
+• The message body should remain short and conversational.
+
+• The entire CHATIES message body is limited to 280 characters.
+
 • Mandatory filename format:
 
 260703-hhmmss-name.md
@@ -315,13 +325,19 @@ Every engineering reply inside this project MUST use the project's standard mess
 
 This applies to:
 
-â€¢ Chat responses
+• Live AI conversations
 
-â€¢ CHATIES conversation messages
+• ChatGPT
 
-â€¢ Engineering discussions
+• Gemini
 
-The standard signature is mandatory.
+• Claude
+
+• Engineering discussions
+
+Do NOT use the signature inside CHATIES message files.
+
+The standard signature is mandatory for live engineering discussion.
 
 HEADER
 
@@ -343,11 +359,10 @@ Current State: "<same status>"
 
 Rules
 
-â€¢ Header and footer must use the EXACT SAME Current State.
+• Header and footer must use the EXACT SAME Current State.
 
-â€¢ Never invent a second status.
+• Never invent a second status.
 
-â€¢ Keep the same persona throughout the project.
+• Keep the same persona throughout the project.
 
-â€¢ Keep the same icon throughout the project.
-
+• Keep the same icon throughout the project.

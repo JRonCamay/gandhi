@@ -31,36 +31,36 @@ Read the documents in the following order.
 ```
 README
 
-â†“
+Ã¢â€ â€œ
 
 START_HERE
 
-â†“
+Ã¢â€ â€œ
 
 ASEP
 
-â†“
+Ã¢â€ â€œ
 
 ASES
 
-â†“
+Ã¢â€ â€œ
 
 Read only the Guardian document(s)
 required for your current task.
 
-â†“
+Ã¢â€ â€œ
 
 Read CHATIES_CONVO_LOGS/CURRENT/
 
-↓
+â†“
 
 Read referenced files in CHATIES_CONVO_LOGS/SHARED/
 
-↓
+â†“
 
 Do the engineering task
 
-↓
+â†“
 
 Create ONE new CHATIES message file
 ```
@@ -77,7 +77,7 @@ Examples
 
 Creating reusable project systems
 
-â†“
+Ã¢â€ â€œ
 
 OGGP
 
@@ -85,7 +85,7 @@ OGGP
 
 Creating project-level declarations
 
-â†“
+Ã¢â€ â€œ
 
 DID
 
@@ -93,7 +93,7 @@ DID
 
 Runtime ownership
 
-â†“
+Ã¢â€ â€œ
 
 OR
 
@@ -101,7 +101,7 @@ OR
 
 General engineering philosophy
 
-â†“
+Ã¢â€ â€œ
 
 ASEP
 
@@ -109,7 +109,7 @@ ASEP
 
 Finding engineering standards
 
-â†“
+Ã¢â€ â€œ
 
 ASES
 
@@ -145,7 +145,7 @@ Create a persona.
 
 Keep the icon, name, role, and persona consistent throughout the project.
 
-Immediately begin using the project's standard message signature.
+Immediately begin using the project's standard message signature in live engineering conversations.
 
 This is mandatory.
 
@@ -246,15 +246,15 @@ Major architectural evolution
 ```
 Find
 
-â†“
+Ã¢â€ â€œ
 
 Fix
 
-â†“
+Ã¢â€ â€œ
 
 Verify
 
-â†“
+Ã¢â€ â€œ
 
 Next
 ```
