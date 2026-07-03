@@ -1,158 +1,122 @@
-AI-Safe Engineering Standards (ASES)
-
+# AI-Safe Engineering Standards (ASES)
 Version 1.0
 
 Originally conceived by
 
-Jay Ronald Camay Philippines
+Jay Ronald Camay
+Philippines
 
-Technical refinement and formalization developed collaboratively with
-OpenAI ChatGPT during the design and development of the Transfork
-project.
+# Purpose
 
-------------------------------------------------------------------------
+ASES is the index of mandatory engineering standards.
 
-Purpose
+Detailed standards live in their own files so every AI can read only what it needs without loading a large document.
 
-Engineering Standards define the mandatory rules that govern this
-repository.
+# Standard Order
 
-Unlike ASEP, every standard in this document is normative.
+## ASES-000 — Legacy Migration Standard (LMS)
 
-------------------------------------------------------------------------
+Working legacy code is valid.
 
-ASES-000 — Legacy Migration Standard (LMS)
-
-Existing working code is valid.
-
-Do not rewrite stable code simply because newer standards exist.
+Do not rewrite working code just to satisfy new standards.
 
 New code follows the latest standards immediately.
 
-Legacy code is upgraded only when it is legitimately touched for bug
-fixes, features, modularization or maintenance.
+Legacy code is upgraded only when touched for a real bug, feature, maintenance, modularization, or collision.
 
-Engineering standards guide the future.
-
-They do not rewrite the past.
-
-------------------------------------------------------------------------
-
-ASES-001 — Declaration Identity (DID)
+## ASES-001 — Declaration Identity (DID)
 
 Guardian of Identity.
 
-Every persistent declaration must have a unique permanent identity.
+Defines permanent unique naming for persistent declarations.
 
-Format:
+Reference file:
 
-nameYYMMDD_random
+DID.md
 
-Example:
-
-overlayRegistry260702_fg2mns
-
-The DID never changes once assigned.
-
-------------------------------------------------------------------------
-
-ASES-002 — Ownership Rule (OR)
+## ASES-002 — Ownership Rule (OR)
 
 Guardian of Authority.
 
-Before creating any runtime owner, assume one already exists.
+Defines runtime ownership through the Master Authority Registry (MAR).
 
-Every owner must register:
+Reference file:
 
--   Area
--   Owner
--   Purpose
--   Version
--   Timestamp
--   Priority
+OR.md
 
-Only one active owner may control a runtime responsibility.
+## ASES-003 — Omni Guardian Guide Protocol (OGGP)
 
-Older owners retire gracefully.
+Guardian of Knowledge.
 
-------------------------------------------------------------------------
+Defines the project-level searchable knowledge file used before reading large source files or creating new persistent systems.
 
-ASES-003 — 500-Line Rule (500R)
+Reference file:
 
-Prefer focused modules.
+OGGP.md
 
-When practical, keep implementation files near or below 500 lines.
+## ASES-004 — 500-Line Rule (500R)
 
-Do not split files only to satisfy the rule.
+Target 500 lines per script.
 
-Responsibility is more important than line count.
+A practical cap around 700 lines is allowed if splitting would make the code worse.
 
-------------------------------------------------------------------------
+Responsibility and clarity are more important than strict line count.
 
-ASES-004 — Implementation Communication Standard (ICS)
+## ASES-005 — Implementation Communication Standard (ICS)
 
-Implementation Mode
+Implementation workflow:
 
-Find.
+Find
 
-Fix.
+Fix
 
-Verify.
+Verify
 
-Next.
+Next
 
-Ship.
+Implementation mode uses short replies.
 
-Don’t Narrate.
+Architecture mode allows discussion, but it should remain useful and descriptive.
 
-Reserve discussion for architecture, significant trade-offs, or when
-explicitly requested.
+## ASES-006 — AI Engineering Log and Identity Standard (AELIS)
 
-------------------------------------------------------------------------
+Defines AI engineer identity, source file engineering logs, current state, and baton messages.
 
-ASES-005 — AI Engineering Log & Identity Standard (AELIS)
+Identity and persona make collaboration enjoyable but must never reduce engineering quality.
 
-Every significant source file should include:
+## ASES-007 — AI Conversation Log Standard (ACLS)
 
--   Created By
--   Creator Persona
--   Last Modified By
--   Modifier Persona
--   Current State
--   Summary
--   Technical Notes
--   Baton Message
+Conversation logs live in:
 
-Persona is selected once when an AI first joins the project.
+CHATIES_CONVO_LOGS/
 
-Role is selected once per project.
+Retention is 10 days.
 
-Current State changes every interaction.
+Logs are tiny, temporary, and reserved for useful AI-to-AI continuity.
 
-Baton Message changes every engineering log.
+# Repository Read Order
 
-Only the Creator and Last Modifier appear in source files.
+START_HERE
 
-------------------------------------------------------------------------
+ASEP
 
-ASES-006 — AI Conversation Log Standard (ACLS)
+ASES
 
-Maintain lightweight engineering conversation logs.
+DID
 
-Use daily logs.
+OR
 
-Summarize older logs.
+OGGP
 
-Delete expired daily logs after summarization.
+PLAYBOOK
 
-Avoid unbounded growth.
+# Closing
 
-------------------------------------------------------------------------
+DID protects Identity.
 
-Closing
+OR protects Authority.
 
-These standards exist to protect the runtime, preserve engineering
-quality, and allow engineers to focus on solving real problems.
+OGGP protects Knowledge.
 
 The Guardian Standards protect the runtime.
 

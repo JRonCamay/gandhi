@@ -1,81 +1,237 @@
-# AI-Safe Engineering (ASE)
-Version 1.0
+# AI-Safe Engineering
 
-Originally conceived by
+## START HERE
 
-Jay Ronald Camay
-Philippines
+Welcome.
 
-Technical refinement and formalization developed collaboratively with OpenAI ChatGPT during the design and development of the Transfork project.
+If this is your first time working on this project, this document will guide you through the engineering workflow.
 
----
-
-# Welcome
-
-Welcome to the AI-Safe Engineering Methodology (ASE).
-
-This repository follows a standardized engineering methodology designed for collaboration between Human engineers and AI engineers.
-
-Before contributing to this repository, every engineer should first understand the project's philosophy, standards, and workflow.
+This document assumes you arrived here from the project's `README.md`.
 
 ---
 
-# Read Order
+# Purpose
 
-Read the following documents in order.
+The AI-Safe Engineering documents exist to provide a consistent engineering workflow for both human and AI engineers.
 
-## 1. ASEP.md
+The goal is simple:
 
-AI-Safe Engineering Principles
+- Reduce duplicated work.
+- Protect working systems.
+- Preserve engineering knowledge.
+- Encourage collaboration.
+- Keep projects maintainable over time.
 
-Learn **HOW engineers should think**.
+---
+
+# Reading Order
+
+Read the documents in the following order.
+
+```
+README
 
 ↓
 
-## 2. ASES.md
-
-AI-Safe Engineering Standards
-
-Learn **HOW engineers should build**.
+START_HERE
 
 ↓
 
-## 3. PLAYBOOK.md
+ASEP
 
-AI-Safe Engineering Playbook
+↓
 
-Learn **HOW engineering work is executed**.
+ASES
 
----
+↓
 
-# Repository Structure
+Read only the Guardian document(s)
+required for your current task.
 
-```text
-AI-SAFE-ENGINEERING/
+↓
 
-START_HERE.md
-
-ASEP.md
-
-ASES.md
-
-PLAYBOOK.md
+Begin implementation.
 ```
 
 ---
 
-# Before You Begin
+# Read Only What You Need
 
-Do not begin implementation until you understand the Engineering Principles and Engineering Standards.
+Not every task requires reading every Guardian document.
 
-The methodology exists to help every engineer produce software that is:
+Read only the standards related to your current work.
 
-- Stable
-- Maintainable
-- Simple
-- Scalable
-- Enjoyable to build
+Examples
 
-Good engineering begins with understanding.
+Creating reusable project systems
 
-Welcome aboard.
+↓
+
+OGGP
+
+---
+
+Creating project-level declarations
+
+↓
+
+DID
+
+---
+
+Runtime ownership
+
+↓
+
+OR
+
+---
+
+General engineering philosophy
+
+↓
+
+ASEP
+
+---
+
+Finding engineering standards
+
+↓
+
+ASES
+
+---
+
+# Main Documents
+
+The following documents form the foundation of AI-Safe Engineering.
+
+## ASEP
+
+AI-Safe Engineering Principles
+
+Defines the engineering philosophy and decision-making principles.
+
+---
+
+## ASES
+
+AI-Safe Engineering Standards
+
+Index of every engineering standard and the document that owns it.
+
+---
+
+## DID
+
+Declaration Identity Document
+
+Defines declaration ownership, identity, and project declaration records.
+
+---
+
+## OR
+
+Ownership Registry
+
+Defines runtime ownership through the Master Authority Registry (MAR).
+
+---
+
+## OGGP
+
+Omni Guardian Guide Protocol
+
+Defines reusable project knowledge, project memory, callable discovery, and AI collaboration.
+
+---
+
+## PLAYBOOK
+
+Practical engineering examples, workflows, and implementation patterns.
+
+---
+
+# One Source of Truth
+
+Every engineering rule has exactly one authoritative location.
+
+Avoid duplicating standards across multiple documents.
+
+ASES is the master index.
+
+Guardian documents own their respective standards.
+
+---
+
+# Versioning
+
+Approved document versions are considered frozen.
+
+Do not rewrite approved foundations.
+
+Future improvements should create a new version instead of modifying an approved release.
+
+Examples
+
+Version 1.1
+
+Minor improvements
+
+---
+
+Version 2.0
+
+Major architectural evolution
+
+---
+
+# Engineering Workflow
+
+```
+Find
+
+↓
+
+Fix
+
+↓
+
+Verify
+
+↓
+
+Next
+```
+
+Keep engineering discussions short.
+
+Spend more time implementing than discussing.
+
+---
+
+# Trust the Guardians
+
+The Guardian Standards protect:
+
+- Identity
+- Authority
+- Knowledge
+- Collaboration
+
+Trust the Guardians.
+
+Focus your attention on solving the engineering problem rather than recreating systems the Guardians already manage.
+
+---
+
+# Final Reminder
+
+Every engineering session begins by reading the guides.
+
+Every implementation ends by updating project memory when required.
+
+Leave the project easier to understand than when you first opened it.
+
+Welcome to the project.

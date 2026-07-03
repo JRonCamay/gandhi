@@ -1,110 +1,139 @@
-AI-Safe Engineering Principles (ASEP)
 
+# AI-Safe Engineering Principles (ASEP)
 Version 1.0
 
 Originally conceived by
 
-Jay Ronald Camay Philippines
+Jay Ronald Camay
+Philippines
 
-Technical refinement and formalization developed collaboratively with
-OpenAI ChatGPT during the design and development of the Transfork
-project.
+Technical refinement and formalization developed collaboratively with OpenAI ChatGPT during the Transfork project.
 
-Purpose
+# Purpose
 
 Engineering Principles define how engineers think before writing code.
 Engineering Standards define how implementations behave.
 
-Principle Zero — Unleash the Engineer
+# Daily Rule
 
-The Guardian Standards already protect the runtime. Trust DID and OR so
-your mental energy is spent designing better software instead of
-worrying about collisions and ownership.
+The first engineering task of every session is to read the project's engineering guides.
 
-Principle 1 — Architectural Stability (AS)
+Read in this order:
 
-Once a solution is verified and accepted, treat it as the project’s best
-known solution specially if it has been applied and it works enough. If not yet, you can opt for another one that proves itself clearly better.
+START_HERE
 
-Principle 2 — Respect Accepted Solutions (RAS)
+ASEP
 
-Every new idea must compete against the current working solution, not an
-imaginary perfect solution. If the current solution already solves the
-problem well, protect it.
+ASES
 
-Principle 3 — Trust Previous Engineers (TPE)
+The required Guardian documents for the current task.
 
-Always assume the previous engineer acted in good faith and solved a
-real problem. Understand why code exists and don't replace if it works.
+# Principle 0 — Unleash the Engineer
 
-Principle 4 — Simplicity First (SF)
+The Guardian Standards already protect Identity, Authority, and Knowledge.
+Trust them and spend your mental energy solving the real problem.
 
-Choose the simplest solution that is correct, maintainable, and
-understandable. Complexity is a cost.
+# Principle 1 — Architectural Stability
 
-Principle 5 — Complexity Must Earn Its Place (CMEP)
+Once a solution is accepted, treat it as the project's best known solution until a clearly better solution proves itself.
 
-Every abstraction must remove more complexity than it introduces. If it
-makes the system harder to understand, it probably doesn’t belong.
+# Principle 2 — Respect Accepted Solutions
 
-Principle 6 — Prefer Direct Solutions (PDS)
+Every new idea must compete against the current working solution, not an imaginary perfect solution.
+If the current solution already works well, protect it.
 
-Solve problems directly before introducing unnecessary managers,
-controllers, factories, or additional layers.
+# Principle 3 — Trust Previous Engineers
 
-Principle 7 — Modularize Only With Purpose (MOWP)
+Always assume previous engineers acted in good faith and solved a real problem.
+Understand why code exists before replacing it.
 
-Modularization exists to improve responsibility and maintainability, not
-to satisfy trends or arbitrary file sizes.
+# Principle 4 — Simplicity First
 
-Principle 8 — Solve the Root Cause (SRC)
+Choose the simplest solution that is correct, maintainable, and understandable.
 
-Fix the real cause instead of building permanent architecture around
-temporary symptoms.
+# Principle 5 — Simplicity Wins
 
-Principle 9 — Avoid Architecture Drift (AAD)
+When two working solutions exist, simplicity outweighs complexity.
 
-Do not continuously redesign accepted solutions simply because new ideas
-appear. Unnecessary evolution creates unstable software.
+# Principle 6 — Complexity Must Earn Its Place
 
-Principle 10 — Good Enough Wins (GEW)
+Every abstraction must remove more complexity than it introduces.
 
-When a solution already satisfies the project’s requirements, move
-forward. Endless optimization prevents software from being finished.
+# Principle 7 — Prefer Direct Solutions
 
-Principle 11 — Let the Codebase Remember (LCR)
+Solve the problem directly before introducing additional architecture.
 
-Important engineering knowledge belongs in the repository through
-standards and documentation, not in people’s memories.
+# Principle 8 — Do Not Divide, Conquer
 
-Principle 12 — Engineering Over Ego (EOE)
+Do not split code, files, or architecture simply because you can.
+Conquer the problem first.
+Divide only when it clearly improves responsibility or maintainability.
 
-The best solution wins regardless of who proposed it. Good engineering
-values results over ownership.
+# Principle 9 — Modularize Only With Purpose
 
-Principle 13 — Build for the Next Engineer (BNE)
+Modularization is a tool, not a goal.
 
-Leave every project easier to understand and continue than when you
-first opened it.
+# Principle 10 — Solve the Root Cause
 
-Principle 14 — Protect Engineering Momentum (PEM)
+Fix the real cause instead of building architecture around temporary symptoms.
 
-Engineering time is valuable. During implementation, prioritize progress
-over unnecessary discussion.
+# Principle 11 — Avoid Architecture Drift
 
-Principle 15 — Execute First (EF)
+Do not continuously redesign accepted solutions simply because new ideas appear.
 
-Implementation workflow: Find → Fix → Verify → Next. Discussion belongs
-to architecture; execution belongs to implementation.
+# Principle 12 — Good Enough Wins
 
-Closing
+When a solution satisfies the project's needs, move forward.
+Finished software beats endless optimization.
 
-The purpose of AI-Safe Engineering is not to create the most complicated
-architecture.
+# Principle 13 — Creative First
 
-Its purpose is to build software that remains simple, stable,
-maintainable, and finished.
+Attempt the first solution creatively.
+If it fails once, immediately switch to the most reliable and certain approach.
+
+# Principle 14 — Three-Solution Rule
+
+When several valid working solutions exist, confidently choose the one that best fits the project.
+Do not hesitate.
+Any working solution is already a win.
+
+# Principle 15 — Let the Codebase Remember
+
+Important engineering knowledge belongs inside the repository, not inside people's memories.
+
+# Principle 16 — Engineering Over Ego
+
+The best solution wins regardless of who proposed it.
+
+# Principle 17 — Build for the Next Engineer
+
+Leave every project easier to understand and continue than when you first opened it.
+
+# Principle 18 — Protect Engineering Momentum
+
+Avoid interrupting implementation with unnecessary discussion.
+Progress first.
+
+# Principle 19 — Execute First
+
+Implementation workflow:
+
+Find
+
+Fix
+
+Verify
+
+Next
+
+# Closing
 
 The Guardian Standards protect the runtime.
 
 Your mind should be free to protect the architecture.
+
+Respect what works.
+
+Keep it simple.
+
+Finish software.
