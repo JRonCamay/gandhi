@@ -3,7 +3,23 @@ window.Chad = window.Chad || {};
 (function () {
     "use strict";
 
+    const MODULE_KEY = "renderDebug";
     const LABEL_ID = "gandhi-chad-render-debug";
+    const runtimeSwitchboard = window.Chad.runtimeSwitchboard;
+
+    runtimeSwitchboard.register({
+        key: MODULE_KEY,
+        file: "chadRenderDebug.js",
+        creator: "Manuel",
+        purpose: "Temporary Chaties renderer debug label",
+        timestamp: 260703,
+        parent: "ChadTheGreat",
+        on: false
+    });
+
+    function isModuleOn() {
+        return runtimeSwitchboard.isOn(MODULE_KEY);
+    }
 
     function getPanel() {
         return document.querySelector("#gandhi-chad-panel");
@@ -48,6 +64,8 @@ window.Chad = window.Chad || {};
     }
 
     function mark() {
+        if (!isModuleOn()) return;
+
         const panel = getPanel();
         const state = window.Chad.storage && window.Chad.storage.state;
         if (!panel || !state || state.activeTab !== "chaties") return;
@@ -62,7 +80,10 @@ window.Chad = window.Chad || {};
 
     function start() {
         mark();
-        setInterval(mark, 300);
+        setInterval(() => {
+            if (!isModuleOn()) return;
+            mark();
+        }, 300);
     }
 
     window.Chad.renderDebug = {

@@ -3,7 +3,23 @@ window.Chad = window.Chad || {};
 (function () {
     "use strict";
 
+    const MODULE_KEY = "legacyFolderToggle";
     const OPEN_KEY = "gandhi_chad_folder_open_agent_v1";
+    const runtimeSwitchboard = window.Chad.runtimeSwitchboard;
+
+    runtimeSwitchboard.register({
+        key: MODULE_KEY,
+        file: "legacyChatiesFolderToggle.js",
+        creator: "Manuel",
+        purpose: "Legacy Chaties folder toggle runtime patch",
+        timestamp: 260703,
+        parent: "ChadTheGreat",
+        on: false
+    });
+
+    function isModuleOn() {
+        return runtimeSwitchboard.isOn(MODULE_KEY);
+    }
 
     function activeTabIsChaties() {
         return !!(
@@ -64,6 +80,7 @@ window.Chad = window.Chad || {};
         });
 
         btn.addEventListener("click", event => {
+            if (!isModuleOn()) return;
             event.preventDefault();
             event.stopPropagation();
             setOpenAgent(isOpen ? "" : agentId);
@@ -116,6 +133,8 @@ window.Chad = window.Chad || {};
     }
 
     function apply() {
+        if (!isModuleOn()) return;
+
         if (!activeTabIsChaties()) {
             resetOpenAgent();
             return;
@@ -131,11 +150,17 @@ window.Chad = window.Chad || {};
     }
 
     function patchUiRender() {
+        if (!isModuleOn()) return false;
+
         const ui = window.Chad && window.Chad.ui;
         if (!ui || !ui.render || ui.__legacyFolderTogglePatched) return false;
 
         const originalRender = ui.render;
         ui.render = function () {
+            if (!isModuleOn()) {
+                return originalRender.apply(ui, arguments);
+            }
+
             const previousTab = window.Chad.storage && window.Chad.storage.state
                 ? window.Chad.storage.state.activeTab
                 : "";
@@ -160,6 +185,7 @@ window.Chad = window.Chad || {};
         patchUiRender();
         apply();
         setInterval(() => {
+            if (!isModuleOn()) return;
             patchUiRender();
             apply();
         }, 400);

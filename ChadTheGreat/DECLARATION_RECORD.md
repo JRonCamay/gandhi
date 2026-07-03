@@ -40,7 +40,47 @@ Notes:
 
 ## Current Entries
 
-No entries registered yet.
+Name:
+ChadMAR
+
+Type:
+Global object
+
+Creator:
+Manuel
+
+Location:
+ChadTheGreat/runtimeSwitchboard.js
+
+Purpose:
+Master Authority Registry for ChadTheGreat runtime module gating.
+
+Status:
+Active
+
+Notes:
+Exposed as `window.ChadMAR` and `window.Chad.runtimeSwitchboard`.
+
+Name:
+runtimeSwitchboard260703_mr4k9q
+
+Type:
+Runtime bridge
+
+Creator:
+Manuel
+
+Location:
+ChadTheGreat/runtimeSwitchboard.js
+
+Purpose:
+Chad namespace bridge to the project MAR.
+
+Status:
+Active
+
+Notes:
+Use `window.Chad.runtimeSwitchboard` for module registration and runtime checks.
 
 ## AI Maintenance Rule
 

@@ -48,7 +48,38 @@ Notes:
 
 ## Current Entries
 
-No entries registered yet.
+Name:
+runtimeSwitchboard260703_mr4k9q
+
+Type:
+Runtime bridge
+
+Visibility:
+Project
+
+Creator:
+Manuel
+
+Location:
+ChadTheGreat/runtimeSwitchboard.js
+
+Purpose:
+Provides ChadTheGreat's Master Authority Registry for enabling and disabling runtime modules.
+
+Parameters:
+register(entry), isOn(key), set(key, value), enable(key), disable(key), get(key), list()
+
+Returns:
+Runtime switchboard API.
+
+Used By:
+4
+
+Status:
+Active
+
+Notes:
+Loaded before runtime modules in `manifest.json`. Current registered keys include `agentFixes`, `uiChaties`, `legacyFolderToggle`, and `renderDebug`.
 
 ## AI Maintenance Rule
 

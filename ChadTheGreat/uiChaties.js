@@ -3,9 +3,25 @@ window.Chad = window.Chad || {};
 (function () {
     "use strict";
 
+    const MODULE_KEY = "uiChaties";
     const api = {};
     const DONE_KEY = "gandhi_chad_task_done_flash_v1";
     const EXPANDED_KEY = "gandhi_chad_expanded_agent_v3";
+    const runtimeSwitchboard = window.Chad.runtimeSwitchboard;
+
+    runtimeSwitchboard.register({
+        key: MODULE_KEY,
+        file: "uiChaties.js",
+        creator: "Manuel",
+        purpose: "Current Chaties renderer and panel runtime",
+        timestamp: 260703,
+        parent: "ChadTheGreat",
+        on: true
+    });
+
+    function isModuleOn() {
+        return runtimeSwitchboard.isOn(MODULE_KEY);
+    }
 
     let visibleFilesByAgent = {};
     let lastTab = "";
@@ -57,6 +73,7 @@ window.Chad = window.Chad || {};
         });
 
         btn.addEventListener("click", event => {
+            if (!isModuleOn()) return;
             event.preventDefault();
             event.stopPropagation();
             fn(event);
@@ -87,6 +104,8 @@ window.Chad = window.Chad || {};
     }
 
     function closeAllAgents() {
+        if (!isModuleOn()) return;
+
         visibleFilesByAgent = {};
         localStorage.setItem(EXPANDED_KEY, "{}");
         if (window.Chad.agentIdentity && window.Chad.agentIdentity.setExpandedMap) {
@@ -281,6 +300,8 @@ window.Chad = window.Chad || {};
     }
 
     function render() {
+        if (!isModuleOn()) return null;
+
         const { identity, files } = deps();
         const wrap = createEl("div", { style: bodyStyle() });
 
@@ -299,6 +320,8 @@ window.Chad = window.Chad || {};
     }
 
     function renderIntoPanel() {
+        if (!isModuleOn()) return;
+
         const panel = document.querySelector("#gandhi-chad-panel");
         const state = window.Chad.storage && window.Chad.storage.state;
         if (!panel || !state || state.activeTab !== "chaties") return;
@@ -309,11 +332,17 @@ window.Chad = window.Chad || {};
     }
 
     function patchUiRender() {
+        if (!isModuleOn()) return;
+
         const ui = window.Chad.ui;
         if (!ui || ui.__uiChatiesClosedIconPatched) return;
 
         const originalRender = ui.render;
         ui.render = function () {
+            if (!isModuleOn()) {
+                return originalRender.apply(ui, arguments);
+            }
+
             const state = window.Chad.storage && window.Chad.storage.state;
             const nextTab = state && state.activeTab ? state.activeTab : "";
             const enteringChaties = nextTab === "chaties" && lastTab !== "chaties";
@@ -331,6 +360,8 @@ window.Chad = window.Chad || {};
     }
 
     function patchAgentFixes() {
+        if (!isModuleOn()) return;
+
         const fixes = window.Chad.agentFixes;
         if (!fixes || fixes.__uiChatiesClosedIconPatched) return;
         fixes.renderChatiesStable = function () {
@@ -344,6 +375,7 @@ window.Chad = window.Chad || {};
         patchUiRender();
         patchAgentFixes();
         setInterval(() => {
+            if (!isModuleOn()) return;
             patchUiRender();
             patchAgentFixes();
         }, 500);
