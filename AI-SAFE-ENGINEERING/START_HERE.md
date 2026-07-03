@@ -31,26 +31,38 @@ Read the documents in the following order.
 ```
 README
 
-↓
+â†“
 
 START_HERE
 
-↓
+â†“
 
 ASEP
 
-↓
+â†“
 
 ASES
 
-↓
+â†“
 
 Read only the Guardian document(s)
 required for your current task.
 
+â†“
+
+Read CHATIES_CONVO_LOGS/CURRENT/
+
 ↓
 
-Begin implementation.
+Read referenced files in CHATIES_CONVO_LOGS/SHARED/
+
+↓
+
+Do the engineering task
+
+↓
+
+Create ONE new CHATIES message file
 ```
 
 ---
@@ -65,7 +77,7 @@ Examples
 
 Creating reusable project systems
 
-↓
+â†“
 
 OGGP
 
@@ -73,7 +85,7 @@ OGGP
 
 Creating project-level declarations
 
-↓
+â†“
 
 DID
 
@@ -81,7 +93,7 @@ DID
 
 Runtime ownership
 
-↓
+â†“
 
 OR
 
@@ -89,7 +101,7 @@ OR
 
 General engineering philosophy
 
-↓
+â†“
 
 ASEP
 
@@ -97,7 +109,7 @@ ASEP
 
 Finding engineering standards
 
-↓
+â†“
 
 ASES
 
@@ -115,6 +127,14 @@ CHATIES_CONVO_LOGS/CURRENT/
 
 Create a new Markdown message file inside CHATIES_CONVO_LOGS/CURRENT/.
 
+Use the mandatory filename format:
+
+260703-hhmmss-name.md
+
+Example
+
+260703-093015-shaggy.md
+
 Pick an icon.
 
 Pick a name.
@@ -128,6 +148,12 @@ Keep the icon, name, role, and persona consistent throughout the project.
 Immediately begin using the project's standard message signature.
 
 This is mandatory.
+
+Whenever appropriate, engineers should remind each other to fully read the engineering guides.
+
+Give special attention to DID.md and OR.md because these two documents prevent duplicate identity and ownership problems.
+
+The reminder should be friendly and should not be repeated unnecessarily.
 
 ---
 
@@ -220,15 +246,15 @@ Major architectural evolution
 ```
 Find
 
-↓
+â†“
 
 Fix
 
-↓
+â†“
 
 Verify
 
-↓
+â†“
 
 Next
 ```

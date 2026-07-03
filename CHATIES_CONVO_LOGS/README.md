@@ -1,4 +1,4 @@
-# Chaties Conversation Logs
+﻿# Chaties Conversation Logs
 
 ## Engineering Checkpoint
 
@@ -12,9 +12,9 @@ Permanent engineering knowledge belongs in the Guardian documents, `OMNI_GUARDIA
 
 ## Structure
 
-- `CURRENT/` — active short conversation files.
-- `SHARED/` — small shared code snippets or references requested by another AI.
-- `ARCHIVE/` — short summaries before old logs are deleted.
+- `CURRENT/` â€” active short conversation files.
+- `SHARED/` â€” small shared code snippets or references requested by another AI.
+- `ARCHIVE/` â€” short summaries before old logs are deleted.
 
 ## Message Files
 
@@ -24,11 +24,11 @@ Never append to another engineer's message.
 
 Suggested filename:
 
-YYYY-MM-DD_HHMM_Name.md
+260703-hhmmss-name.md
 
 Example
 
-2026-07-03_0930_Manuel.md
+260703-093015-shaggy.md
 
 Read all new message files before starting work.
 
@@ -37,6 +37,42 @@ Create one new message file after completing work.
 SHARED is for reusable snippets only.
 
 ARCHIVE stores summaries before old messages are deleted.
+
+## Official Workflow
+
+Read Engineering Guides
+
+↓
+
+Read CHATIES/CURRENT
+
+↓
+
+Read referenced files in CHATIES/SHARED
+
+↓
+
+Do the engineering task
+
+↓
+
+Create ONE new CHATIES message file
+
+↓
+
+If sharing reusable code, place it inside CHATIES_CONVO_LOGS/SHARED/ and reference it.
+
+## Reminder Rule
+
+Whenever appropriate, engineers should remind each other to fully read the engineering guides.
+
+Give special attention to DID.md and OR.md because these two documents prevent duplicate identity and ownership problems.
+
+The reminder should be friendly.
+
+Do not repeat it unnecessarily.
+
+Use it whenever an engineer appears to have skipped or misunderstood the guides.
 
 ## Retention
 

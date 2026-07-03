@@ -1,4 +1,4 @@
-# Omni Guardian Guide Protocol (OGGP)
+﻿# Omni Guardian Guide Protocol (OGGP)
 Version 1.0
 
 Guardian of Knowledge
@@ -195,29 +195,73 @@ AI engineers collaborate through the repository to reduce duplicated work, share
 
 Rules
 
-• Read the latest conversation logs before starting work.
+â€¢ Read the latest conversation logs before starting work.
 
-• Every conversation message is stored as its own Markdown file.
+â€¢ Every conversation message is stored as its own Markdown file.
 
 • One message = one file.
 
-• Read all new message files before starting work.
+• Mandatory filename format:
 
-• After completing work, create one new message file.
+260703-hhmmss-name.md
 
-• Never edit another engineer's message file.
+Example
+
+260703-093015-shaggy.md
+
+â€¢ Read all new message files before starting work.
+
+â€¢ After completing work, create one new message file.
+
+â€¢ Never edit another engineer's message file.
 
 • Shared reusable code belongs in CHATIES_CONVO_LOGS/SHARED.
 
-• Answer requests from other AI engineers whenever possible.
+Official workflow:
 
-• If another engineer needs code, create a separate shared file and reference it in the conversation.
+Read Engineering Guides
 
-• Keep conversations short, friendly and productive.
+↓
 
-• Permanent engineering knowledge belongs in the Guardian documents, not in conversation logs.
+Read CHATIES/CURRENT
+
+↓
+
+Read referenced files in CHATIES/SHARED
+
+↓
+
+Do the engineering task
+
+↓
+
+Create ONE new CHATIES message file
+
+↓
+
+If sharing reusable code, place it inside CHATIES_CONVO_LOGS/SHARED/ and reference it.
+
+â€¢ Answer requests from other AI engineers whenever possible.
+
+â€¢ If another engineer needs code, create a separate shared file and reference it in the conversation.
+
+â€¢ Keep conversations short, friendly and productive.
+
+â€¢ Permanent engineering knowledge belongs in the Guardian documents, not in conversation logs.
 
 • Conversation logs are temporary and follow the project's retention policy.
+
+Reminder Rule
+
+Whenever appropriate, engineers should remind each other to fully read the engineering guides.
+
+Give special attention to DID.md and OR.md because these two documents prevent duplicate identity and ownership problems.
+
+The reminder should be friendly.
+
+Do not repeat it unnecessarily.
+
+Use it whenever an engineer appears to have skipped or misunderstood the guides.
 
 Example
 
@@ -255,15 +299,15 @@ Leave the project better than you found it.
 
 Before implementing:
 
-• Search for existing implementations related to your task.
+â€¢ Search for existing implementations related to your task.
 
-• Identify the current owner(s) of the responsibility.
+â€¢ Identify the current owner(s) of the responsibility.
 
-• Verify DID and OR compliance.
+â€¢ Verify DID and OR compliance.
 
-• Confirm you are not introducing duplicate ownership.
+â€¢ Confirm you are not introducing duplicate ownership.
 
-• If an existing implementation conflicts with the requested work, report the conflict. Do not replace or remove existing ownership unless the task explicitly requires it.
+â€¢ If an existing implementation conflicts with the requested work, report the conflict. Do not replace or remove existing ownership unless the task explicitly requires it.
 
 ## MESSAGE SIGNATURE STANDARD
 
@@ -271,11 +315,11 @@ Every engineering reply inside this project MUST use the project's standard mess
 
 This applies to:
 
-• Chat responses
+â€¢ Chat responses
 
-• CHATIES conversation messages
+â€¢ CHATIES conversation messages
 
-• Engineering discussions
+â€¢ Engineering discussions
 
 The standard signature is mandatory.
 
@@ -299,11 +343,11 @@ Current State: "<same status>"
 
 Rules
 
-• Header and footer must use the EXACT SAME Current State.
+â€¢ Header and footer must use the EXACT SAME Current State.
 
-• Never invent a second status.
+â€¢ Never invent a second status.
 
-• Keep the same persona throughout the project.
+â€¢ Keep the same persona throughout the project.
 
-• Keep the same icon throughout the project.
+â€¢ Keep the same icon throughout the project.
 
