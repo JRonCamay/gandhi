@@ -40,6 +40,13 @@ window.Chad = window.Chad || {};
         return new Date().toLocaleString();
     }
 
+    function timeValue(value) {
+        if (typeof value === "number" && Number.isFinite(value)) return value;
+        if (!value) return 0;
+        const parsed = Date.parse(value);
+        return Number.isFinite(parsed) ? parsed : 0;
+    }
+
     function createEl(tag, props, children) {
         if (window.Chad.ui && window.Chad.ui.createEl) {
             return window.Chad.ui.createEl(tag, props || {}, children || []);
@@ -158,19 +165,119 @@ window.Chad = window.Chad || {};
     }
 
     function addMessage(role, text, status) {
+        const now = Date.now();
         const messages = loadMessages();
         messages.push({
-            id: "msg-" + Date.now(),
+            id: "msg-" + now,
             role,
+            icon: role === "user" ? "👤" : "🤖",
+            name: role === "user" ? "Jay" : "Chad",
             text,
             status: status || "sent",
-            createdAt: stamp()
+            createdAt: stamp(),
+            timestamp: now
         });
-        saveMessages(messages.slice(-80));
+        saveMessages(messages.slice(-120));
+    }
+
+    function normalizeMessage(raw, fallback) {
+        if (!raw || typeof raw !== "object") return null;
+
+        const text = raw.text || raw.message || raw.content || raw.body || raw.value || "";
+        if (!String(text).trim()) return null;
+
+        const role = raw.role || raw.senderRole || raw.type || fallback.role || "buddy";
+        const isUser = role === "user" || role === "me" || role === "jay";
+        const icon = raw.icon || raw.pic || raw.avatar || raw.emoji || (isUser ? "👤" : fallback.icon || "🤖");
+        const name = raw.name || raw.agentName || raw.sender || raw.author || raw.from || (isUser ? "Jay" : fallback.name || "Buddy");
+        const rawTime = raw.timestamp || raw.createdAt || raw.updatedAt || raw.time || raw.date || fallback.timestamp || 0;
+        const ms = timeValue(rawTime) || fallback.index || 0;
+
+        return {
+            id: raw.id || `${fallback.source}-${fallback.index}`,
+            source: fallback.source || "local",
+            role,
+            icon,
+            name,
+            text: String(text),
+            status: raw.status || "",
+            createdAt: raw.createdAt || raw.time || raw.date || (ms ? new Date(ms).toLocaleString() : ""),
+            timestamp: ms
+        };
+    }
+
+    function collectMessageObjects(value, bucket, source, depth) {
+        if (!value || depth > 4) return;
+
+        if (Array.isArray(value)) {
+            value.forEach(item => collectMessageObjects(item, bucket, source, depth + 1));
+            return;
+        }
+
+        if (typeof value !== "object") return;
+
+        const maybe = normalizeMessage(value, {
+            source,
+            index: bucket.length + 1,
+            name: source.includes("buddy") ? "Buddy" : "Chad",
+            icon: source.includes("buddy") ? "🤝" : "🤖"
+        });
+
+        if (maybe) bucket.push(maybe);
+
+        ["messages", "chats", "history", "items", "threads", "records"].forEach(key => {
+            if (value[key]) collectMessageObjects(value[key], bucket, source, depth + 1);
+        });
+    }
+
+    function loadLocalBuddyMessages() {
+        const messages = [];
+
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i) || "";
+            const lower = key.toLowerCase();
+            const looksRelevant = lower.includes("buddy") || lower.includes("buddies") || lower.includes("local") || lower.includes("agent_chat");
+            if (!looksRelevant || key === CHAT_KEY) continue;
+
+            try {
+                const parsed = JSON.parse(localStorage.getItem(key));
+                collectMessageObjects(parsed, messages, key, 0);
+            }
+            catch {}
+        }
+
+        return messages;
+    }
+
+    function getDisplayMessages() {
+        const own = loadMessages().map((message, index) => normalizeMessage(message, {
+            source: CHAT_KEY,
+            index,
+            name: message.role === "user" ? "Jay" : "Chad",
+            icon: message.role === "user" ? "👤" : "🤖",
+            timestamp: message.timestamp || message.createdAt
+        })).filter(Boolean);
+
+        const buddies = loadLocalBuddyMessages();
+        const map = new Map();
+
+        own.concat(buddies).forEach((message, index) => {
+            const key = `${message.source}|${message.id}|${message.text}|${message.timestamp || index}`;
+            if (!map.has(key)) map.set(key, message);
+        });
+
+        return Array.from(map.values()).sort((a, b) => {
+            const left = a.timestamp || 0;
+            const right = b.timestamp || 0;
+            if (left !== right) return left - right;
+            return String(a.createdAt || "").localeCompare(String(b.createdAt || ""));
+        });
     }
 
     function renderMessage(message) {
-        const isUser = message.role === "user";
+        const isUser = message.role === "user" || message.name === "Jay";
+        const timestamp = message.createdAt || (message.timestamp ? new Date(message.timestamp).toLocaleString() : "");
+
         return createEl("div", {
             style: {
                 border: "1px solid " + (isUser ? "#bfdbfe" : "#e2e8f0"),
@@ -181,16 +288,16 @@ window.Chad = window.Chad || {};
             }
         }, [
             createEl("div", {
-                html: `<b>${isUser ? "You" : "Chad"}</b> <span style="color:#64748b">${escapeHTML(message.createdAt || "")}</span>`,
-                style: { fontSize: "11px", marginBottom: "4px" }
+                html: `${escapeHTML(message.icon || "🤖")} <b>${escapeHTML(message.name || "Agent")}:</b> ${escapeHTML(message.text || "")}`,
+                style: { whiteSpace: "pre-wrap", lineHeight: "1.35", color: "#0f172a" }
             }),
             createEl("div", {
-                text: message.text || "",
-                style: { whiteSpace: "pre-wrap", lineHeight: "1.35", color: "#0f172a" }
+                text: timestamp,
+                style: { color: "#64748b", fontSize: "10px", marginTop: "4px", paddingLeft: "22px" }
             }),
             message.status === "copied" ? createEl("div", {
                 text: "Prompt box not found. Message copied instead.",
-                style: { color: "#ca8a04", fontSize: "11px", marginTop: "5px" }
+                style: { color: "#ca8a04", fontSize: "11px", marginTop: "5px", paddingLeft: "22px" }
             }) : null
         ]);
     }
@@ -205,7 +312,7 @@ window.Chad = window.Chad || {};
             }
         });
 
-        const messages = loadMessages();
+        const messages = getDisplayMessages();
         const list = createEl("div", {
             style: {
                 flex: "1",
@@ -215,7 +322,7 @@ window.Chad = window.Chad || {};
         });
 
         list.appendChild(createEl("div", {
-            html: "<b>Chad Chat</b><br><span style='color:#64748b'>Type here. SEND forwards the message to the main ChatGPT input.</span>",
+            html: "<b>Chad Chat</b><br><span style='color:#64748b'>Messages display oldest to newest. Format: pic + name: message.</span>",
             style: { marginBottom: "8px", lineHeight: "1.35" }
         }));
 
@@ -361,7 +468,9 @@ window.Chad = window.Chad || {};
     window.Chad.chadChat = {
         render: renderChatBody,
         addMessage,
-        sendToMainChat
+        sendToMainChat,
+        getDisplayMessages,
+        loadLocalBuddyMessages
     };
 
     start();
