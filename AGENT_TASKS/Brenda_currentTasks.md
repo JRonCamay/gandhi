@@ -3,33 +3,27 @@
 Current objective:
 Fix the Convo area using Jay's layout system.
 
-Required layout:
-Parent Column layout
-> Fixed sized Column layout
-> fixed row layout
-> message area
-> scrollbar
-> row layout
-> input field
-> send
+Status:
+Implemented in repo.
 
-Constraints:
-- Convo owns messages, input, send.
-- Chaties owns agents/profile features only.
-- Message area must scroll by itself.
-- Input row must stay visible.
-- No viewport-height magic that pushes input out.
-- Keep fix scoped to Convo layout.
+Completed:
+1. Updated ChadTheGreat/chadChat.js renderChatBody().
+2. Replaced flat wrapper with nested layout:
+   - parentColumn
+   - fixedColumn
+   - messageRow
+   - scrollable message area
+   - inputRow
+   - input field
+   - SEND button
+3. Message area owns vertical scrolling.
+4. Input row is flex: 0 0 auto and should stay visible.
+5. Removed textarea flex growth that could push SEND/input out.
+6. Verified updated lines by reading chadChat.js after update.
 
-Files being edited:
-- AGENT_TASKS/Brenda_currentTasks.md
+Files edited:
 - ChadTheGreat/chadChat.js
+- AGENT_TASKS/Brenda_currentTasks.md
 
-Pending subtasks:
-1. Read current chadChat.js relevant layout.
-2. Replace Convo body layout with nested parent column / fixed message column / input row.
-3. Verify textarea and SEND remain visible.
-4. Update task file.
-
-Stopping point:
-Task ledger updated before layout fix.
+Current stopping point:
+Ready for Manuel/Codex sync and browser reload test.
