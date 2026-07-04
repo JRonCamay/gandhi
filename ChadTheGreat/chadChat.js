@@ -47,6 +47,54 @@ window.Chad = window.Chad || {};
         return Number.isFinite(parsed) ? parsed : 0;
     }
 
+    function seedSampleMessages() {
+        if (loadMessages().length) return;
+
+        const now = Date.now();
+        saveMessages([
+            {
+                id: "sample-001",
+                role: "agent",
+                icon: "👱🏻‍♀️",
+                name: "Brenda",
+                text: "Chad chat display test online. Oldest message first.",
+                status: "sample",
+                createdAt: new Date(now - 180000).toLocaleString(),
+                timestamp: now - 180000
+            },
+            {
+                id: "sample-002",
+                role: "buddy",
+                icon: "🧔",
+                name: "Shaggy",
+                text: "Local buddy sample message. If this sorts right, I appear second.",
+                status: "sample",
+                createdAt: new Date(now - 120000).toLocaleString(),
+                timestamp: now - 120000
+            },
+            {
+                id: "sample-003",
+                role: "user",
+                icon: "👤",
+                name: "Jay",
+                text: "Testing pic + name: message format.",
+                status: "sample",
+                createdAt: new Date(now - 60000).toLocaleString(),
+                timestamp: now - 60000
+            },
+            {
+                id: "sample-004",
+                role: "agent",
+                icon: "🛠️",
+                name: "Chad",
+                text: "Bottom input is ready. Send button should forward text to ChatGPT.",
+                status: "sample",
+                createdAt: new Date(now).toLocaleString(),
+                timestamp: now
+            }
+        ]);
+    }
+
     function createEl(tag, props, children) {
         if (window.Chad.ui && window.Chad.ui.createEl) {
             return window.Chad.ui.createEl(tag, props || {}, children || []);
@@ -456,6 +504,7 @@ window.Chad = window.Chad || {};
     }
 
     function start() {
+        seedSampleMessages();
         patchUiRender();
         patchAfterRender();
         setInterval(() => {
@@ -470,7 +519,8 @@ window.Chad = window.Chad || {};
         addMessage,
         sendToMainChat,
         getDisplayMessages,
-        loadLocalBuddyMessages
+        loadLocalBuddyMessages,
+        seedSampleMessages
     };
 
     start();
