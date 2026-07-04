@@ -5,13 +5,16 @@ window.Chad = window.Chad || {};
 
     const MODULE_KEY = "chadChat";
     const CHAT_KEY = "gandhi_chad_chat_messages_v1";
+    const JAY_FILE_KEY = "gandhi_chad_convo_file_jay_v1";
     const runtimeSwitchboard = window.Chad.runtimeSwitchboard;
+
+    if (!runtimeSwitchboard) return;
 
     runtimeSwitchboard.register({
         key: MODULE_KEY,
         file: "chadChat.js",
         creator: "Brenda",
-        purpose: "Adds a Chad chat tab with bottom message input and send button",
+        purpose: "Adds the Convo tab with messages, input, send, and Jay convo-file storage",
         timestamp: 260704,
         parent: "ChadTheGreat",
         on: true
@@ -21,19 +24,28 @@ window.Chad = window.Chad || {};
         return runtimeSwitchboard.isOn(MODULE_KEY);
     }
 
-    function loadMessages() {
+    function loadJSON(key, fallback) {
         try {
-            const raw = localStorage.getItem(CHAT_KEY);
-            const parsed = raw ? JSON.parse(raw) : [];
-            return Array.isArray(parsed) ? parsed : [];
+            const raw = localStorage.getItem(key);
+            const parsed = raw ? JSON.parse(raw) : fallback;
+            return parsed || fallback;
         }
         catch {
-            return [];
+            return fallback;
         }
     }
 
+    function saveJSON(key, value) {
+        localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    function loadMessages() {
+        const messages = loadJSON(CHAT_KEY, []);
+        return Array.isArray(messages) ? messages : [];
+    }
+
     function saveMessages(messages) {
-        localStorage.setItem(CHAT_KEY, JSON.stringify(messages));
+        saveJSON(CHAT_KEY, messages.slice(-120));
     }
 
     function stamp() {
@@ -57,7 +69,7 @@ window.Chad = window.Chad || {};
                 role: "agent",
                 icon: "👱🏻‍♀️",
                 name: "Brenda",
-                text: "Chad chat display test online. Oldest message first.",
+                text: "Convo tab online. Messages display oldest to newest.",
                 status: "sample",
                 createdAt: new Date(now - 180000).toLocaleString(),
                 timestamp: now - 180000
@@ -67,7 +79,7 @@ window.Chad = window.Chad || {};
                 role: "buddy",
                 icon: "🧔",
                 name: "Shaggy",
-                text: "Local buddy sample message. If this sorts right, I appear second.",
+                text: "Chaties keeps agents. Convo keeps messages.",
                 status: "sample",
                 createdAt: new Date(now - 120000).toLocaleString(),
                 timestamp: now - 120000
@@ -77,20 +89,10 @@ window.Chad = window.Chad || {};
                 role: "user",
                 icon: "👤",
                 name: "Jay",
-                text: "Testing pic + name: message format.",
+                text: "Testing Jay convo-file save.",
                 status: "sample",
                 createdAt: new Date(now - 60000).toLocaleString(),
                 timestamp: now - 60000
-            },
-            {
-                id: "sample-004",
-                role: "agent",
-                icon: "🛠️",
-                name: "Chad",
-                text: "Bottom input is ready. Send button should forward text to ChatGPT.",
-                status: "sample",
-                createdAt: new Date(now).toLocaleString(),
-                timestamp: now
             }
         ]);
     }
@@ -117,7 +119,7 @@ window.Chad = window.Chad || {};
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;");
+            .replace(/\"/g, "&quot;");
     }
 
     function button(label, fn, extra) {
@@ -147,11 +149,13 @@ window.Chad = window.Chad || {};
         return btn;
     }
 
+    function isInsideChadPanel(element) {
+        return !!(element && element.closest && element.closest("#gandhi-chad-panel"));
+    }
+
     function findPromptBox() {
-        return document.querySelector("#prompt-textarea") ||
-            document.querySelector("textarea[data-id='root']") ||
-            document.querySelector("textarea") ||
-            document.querySelector("[contenteditable='true']");
+        const candidates = Array.from(document.querySelectorAll("#prompt-textarea, textarea[data-id='root'], [contenteditable='true'], textarea"));
+        return candidates.find(element => !isInsideChadPanel(element)) || null;
     }
 
     function setNativeValue(element, value) {
@@ -162,8 +166,9 @@ window.Chad = window.Chad || {};
                 : null;
 
         if (proto) {
-            const setter = Object.getOwnPropertyDescriptor(proto, "value").set;
-            setter.call(element, value);
+            const descriptor = Object.getOwnPropertyDescriptor(proto, "value");
+            if (descriptor && descriptor.set) descriptor.set.call(element, value);
+            else element.value = value;
         }
         else {
             element.textContent = value;
@@ -176,6 +181,7 @@ window.Chad = window.Chad || {};
     function clickMainSendButton() {
         const buttons = Array.from(document.querySelectorAll("button"));
         const sendButton = buttons.find(btn => {
+            if (isInsideChadPanel(btn)) return false;
             const label = (btn.getAttribute("aria-label") || btn.textContent || "").toLowerCase();
             return !btn.disabled && (label.includes("send") || label.includes("submit"));
         });
@@ -212,6 +218,19 @@ window.Chad = window.Chad || {};
         return true;
     }
 
+    function saveJayConvoFile(messages) {
+        const jayMessages = messages.filter(message => message.role === "user" || message.name === "Jay");
+        const content = jayMessages.map(message => {
+            return `## ${message.createdAt || ""}\n${message.text || ""}`;
+        }).join("\n\n");
+
+        saveJSON(JAY_FILE_KEY, {
+            name: "Jay_convo.md",
+            updatedAt: stamp(),
+            content
+        });
+    }
+
     function addMessage(role, text, status) {
         const now = Date.now();
         const messages = loadMessages();
@@ -225,7 +244,8 @@ window.Chad = window.Chad || {};
             createdAt: stamp(),
             timestamp: now
         });
-        saveMessages(messages.slice(-120));
+        saveMessages(messages);
+        saveJayConvoFile(messages);
     }
 
     function normalizeMessage(raw, fallback) {
@@ -285,7 +305,7 @@ window.Chad = window.Chad || {};
             const key = localStorage.key(i) || "";
             const lower = key.toLowerCase();
             const looksRelevant = lower.includes("buddy") || lower.includes("buddies") || lower.includes("local") || lower.includes("agent_chat");
-            if (!looksRelevant || key === CHAT_KEY) continue;
+            if (!looksRelevant || key === CHAT_KEY || key === JAY_FILE_KEY) continue;
 
             try {
                 const parsed = JSON.parse(localStorage.getItem(key));
@@ -370,7 +390,7 @@ window.Chad = window.Chad || {};
         });
 
         list.appendChild(createEl("div", {
-            html: "<b>Chad Chat</b><br><span style='color:#64748b'>Messages display oldest to newest. Format: pic + name: message.</span>",
+            html: "<b>Convo</b><br><span style='color:#64748b'>Conversation messages only. Chaties keeps agent profiles.</span>",
             style: { marginBottom: "8px", lineHeight: "1.35" }
         }));
 
@@ -385,7 +405,7 @@ window.Chad = window.Chad || {};
         }
 
         const input = createEl("textarea", {
-            placeholder: "Message Brenda...",
+            placeholder: "Message as Jay...",
             style: {
                 flex: "1",
                 minHeight: "44px",
@@ -437,7 +457,6 @@ window.Chad = window.Chad || {};
 
         setTimeout(() => {
             list.scrollTop = list.scrollHeight;
-            input.focus();
         }, 0);
 
         return wrap;
@@ -449,20 +468,24 @@ window.Chad = window.Chad || {};
 
         const header = panel.children[0];
         const tabRow = header.children[1];
-        if (!tabRow || tabRow.querySelector("button[data-chad-chat-tab='1']")) return;
+        if (!tabRow) return;
+
+        const old = tabRow.querySelector("button[data-chad-chat-tab='1']");
+        if (old) old.remove();
+        if (tabRow.querySelector("button[data-chad-convo-tab='1']")) return;
 
         const state = window.Chad.storage && window.Chad.storage.state;
-        const btn = button("Chad", () => {
+        const btn = button("Convo", () => {
             if (!state) return;
-            state.activeTab = "chadChat";
+            state.activeTab = "convo";
             if (window.Chad.ui && window.Chad.ui.render) window.Chad.ui.render();
         }, {
-            bg: state && state.activeTab === "chadChat" ? "#2563eb" : "#ffffff",
-            color: state && state.activeTab === "chadChat" ? "#ffffff" : "#0f172a",
-            border: state && state.activeTab === "chadChat" ? "#2563eb" : "#cbd5e1",
-            bold: state && state.activeTab === "chadChat"
+            bg: state && state.activeTab === "convo" ? "#2563eb" : "#ffffff",
+            color: state && state.activeTab === "convo" ? "#ffffff" : "#0f172a",
+            border: state && state.activeTab === "convo" ? "#2563eb" : "#cbd5e1",
+            bold: state && state.activeTab === "convo"
         });
-        btn.dataset.chadChatTab = "1";
+        btn.dataset.chadConvoTab = "1";
 
         const firstButton = tabRow.querySelector("button");
         if (firstButton && firstButton.nextSibling) tabRow.insertBefore(btn, firstButton.nextSibling);
@@ -471,7 +494,7 @@ window.Chad = window.Chad || {};
 
     function replaceBodyIfNeeded() {
         const state = window.Chad.storage && window.Chad.storage.state;
-        if (!state || state.activeTab !== "chadChat") return;
+        if (!state || state.activeTab !== "convo") return;
 
         const panel = document.querySelector("#gandhi-chad-panel");
         if (!panel) return;
@@ -490,7 +513,7 @@ window.Chad = window.Chad || {};
 
     function patchUiRender() {
         const ui = window.Chad && window.Chad.ui;
-        if (!ui || !ui.render || ui.__chadChatPatched) return false;
+        if (!ui || !ui.render || ui.__chadConvoPatched260704) return false;
 
         const originalRender = ui.render;
         ui.render = function () {
@@ -499,7 +522,7 @@ window.Chad = window.Chad || {};
             return result;
         };
 
-        ui.__chadChatPatched = true;
+        ui.__chadConvoPatched260704 = true;
         return true;
     }
 
@@ -520,7 +543,10 @@ window.Chad = window.Chad || {};
         sendToMainChat,
         getDisplayMessages,
         loadLocalBuddyMessages,
-        seedSampleMessages
+        seedSampleMessages,
+        getJayConvoFile: function () {
+            return loadJSON(JAY_FILE_KEY, { name: "Jay_convo.md", content: "", updatedAt: "" });
+        }
     };
 
     start();
