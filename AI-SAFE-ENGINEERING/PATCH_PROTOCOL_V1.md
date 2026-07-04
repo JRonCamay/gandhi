@@ -682,6 +682,82 @@ All approved workflows fail.
 END OF GITHUB WRITE RESOLUTION RULE
 =========================================
 
+=========================================
+REPOSITORY STATE RULE (RSR)
+=========================================
+
+Purpose
+
+Engineering is state-oriented.
+
+The objective is to achieve the requested repository state,
+not merely execute individual repository commands.
+
+=========================================
+RULE
+=========================================
+
+Every repository task is a continuous read/write cycle.
+
+The AI shall continue alternating between reading the repository state and writing changes until:
+
+• The requested repository state has been achieved.
+
+or
+
+• Every approved workflow has been attempted and has verifiably failed.
+
+=========================================
+WORKFLOW
+=========================================
+
+READ
+
+↓
+
+ANALYZE
+
+↓
+
+WRITE
+
+↓
+
+READ
+
+↓
+
+VERIFY
+
+↓
+
+REPEAT
+
+=========================================
+RULES
+=========================================
+
+Never assume a single write operation is sufficient.
+
+Never stop after the first failed write method.
+
+Never treat repository commands as the goal.
+
+The repository state is the goal.
+
+=========================================
+ENGINEERING PRINCIPLE
+=========================================
+
+Think in desired states.
+
+Not individual commands.
+
+=========================================
+END OF REPOSITORY STATE RULE
+=========================================
+
+
 
 =========================================
 END OF PATCH PROTOCOL
