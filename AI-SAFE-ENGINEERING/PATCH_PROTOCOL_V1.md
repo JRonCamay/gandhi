@@ -1,7 +1,7 @@
 =========================================
 AI-SAFE ENGINEERING
 PATCH PROTOCOL (APP)
-Version: 1.0
+Version: 1.6
 =========================================
 
 *Strictly must be followed
@@ -756,7 +756,194 @@ Not individual commands.
 =========================================
 END OF REPOSITORY STATE RULE
 =========================================
+=========================================
+SHA RESOLUTION RULE (SRR)
+Version 2.0
+=========================================
 
+Purpose
+
+Determine the correct repository write workflow through
+repository state verification.
+
+Never guess.
+
+Never infer.
+
+Always verify.
+
+=========================================
+RULE
+=========================================
+
+Every repository write begins by determining
+the current repository state.
+
+Repository state—not assumptions—
+determines the write workflow.
+
+=========================================
+WORKFLOW
+=========================================
+
+READ
+
+↓
+
+fetch_file(path)
+
+↓
+
+Result?
+
+─────────────────────────────────────────
+
+FILE EXISTS
+
+↓
+
+Capture SHA
+
+↓
+
+update_file(path, content, sha)
+
+↓
+
+READ
+
+↓
+
+fetch_file(path)
+
+↓
+
+Verify repository state
+
+─────────────────────────────────────────
+
+FILE NOT FOUND (404)
+
+↓
+
+create_file(path, content)
+
+↓
+
+Result?
+
+─────────────────────────────────────────
+
+SUCCESS
+
+↓
+
+READ
+
+↓
+
+fetch_file(path)
+
+↓
+
+Verify repository state
+
+─────────────────────────────────────────
+
+CREATE REQUESTS SHA
+
+↓
+
+Do NOT assume the file exists.
+
+Do NOT assume the connector is broken.
+
+Treat create_file as unreliable for the
+current connector behavior.
+
+↓
+
+Attempt the approved fallback workflow.
+
+Git Object Workflow
+
+create_blob
+
+↓
+
+create_tree
+
+↓
+
+create_commit
+
+↓
+
+update_ref
+
+↓
+
+READ
+
+↓
+
+fetch_file(path)
+
+↓
+
+Verify repository state
+
+=========================================
+VERIFICATION RULE
+=========================================
+
+A repository write is complete ONLY when
+the repository state has been verified by
+reading it again.
+
+Never assume success from a successful
+write response alone.
+
+Always verify.
+
+=========================================
+PROHIBITED
+=========================================
+
+Never call update_file without a valid SHA.
+
+Never guess the SHA.
+
+Never assume create_file implies the file
+does not exist.
+
+Never assume a SHA request means the file
+does exist.
+
+Never stop after the first failed write
+method.
+
+Never conclude repository failure until
+every approved write workflow has been
+attempted.
+
+=========================================
+ENGINEERING PRINCIPLE
+=========================================
+
+Repository state is the source of truth.
+
+Read determines Write.
+
+Write is incomplete until Read verifies it.
+
+Think in repository state.
+
+Not repository commands.
+
+=========================================
+END OF SHA RESOLUTION RULE
+=========================================
 
 
 =========================================
