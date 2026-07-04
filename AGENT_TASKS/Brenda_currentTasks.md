@@ -1,29 +1,21 @@
 # Brenda Current Tasks
 
 Current objective:
-Fix the Convo area using Jay's layout system.
+Fix Convo input visibility. The message box is still below the visible panel.
 
-Status:
-Implemented in repo.
+Approach:
+Use actual Chad panel geometry. Set Convo body height from panel height minus header height. Keep message area scrolling. Keep input row visible.
 
-Completed:
-1. Updated ChadTheGreat/chadChat.js renderChatBody().
-2. Replaced flat wrapper with nested layout:
-   - parentColumn
-   - fixedColumn
-   - messageRow
-   - scrollable message area
-   - inputRow
-   - input field
-   - SEND button
-3. Message area owns vertical scrolling.
-4. Input row is flex: 0 0 auto and should stay visible.
-5. Removed textarea flex growth that could push SEND/input out.
-6. Verified updated lines by reading chadChat.js after update.
+Constraints:
+- Do not redesign.
+- Do not move Convo into Chaties.
+- Keep agent profile UI unchanged.
+- Keep fix scoped to Convo visibility.
 
-Files edited:
-- ChadTheGreat/chadChat.js
+Files being edited:
 - AGENT_TASKS/Brenda_currentTasks.md
+- ChadTheGreat/manifest.json
+- ChadTheGreat/chadConvoLayoutFix.js
 
-Current stopping point:
-Ready for Manuel/Codex sync and browser reload test.
+Stopping point:
+Task ledger updated before visibility patch.
