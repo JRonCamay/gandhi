@@ -1,24 +1,29 @@
 # Brenda Current Tasks
 
-Current objective:
-Fix Convo input visibility. The message box was still below the visible panel.
+Objective:
+Move Convo under the main ui.js renderer, add more sample messages, fix Convo scrollbar visibility, fix Convo input focus jumping to ChatGPT main input, and prepare Manuel prompt after verification.
 
-Status:
-Implemented in repo.
+Constraints:
+- Main ui.js renderer must own Convo tab/body.
+- No second renderer fighting ui.js.
+- Chaties remains agents/profile only.
+- Use PATCH_PROTOCOL_V1 for large existing source edits.
+- Keep scope to Convo rendering and related focus/layout behavior.
 
-Completed:
-1. Added ChadTheGreat/chadConvoLayoutFix.js.
-2. Loaded it after chadChat.js in manifest.json.
-3. The fix uses actual Chad panel geometry.
-4. It calculates body height from panel height minus header height.
-5. It keeps Convo body overflow hidden.
-6. It keeps the inner column at full body height.
-7. It reapplies on mutation, resize, and interval.
-
-Files edited:
-- ChadTheGreat/chadConvoLayoutFix.js
+Files involved:
+- ChadTheGreat/ui.js
+- ChadTheGreat/chadChat.js
 - ChadTheGreat/manifest.json
 - AGENT_TASKS/Brenda_currentTasks.md
+- AGENT_DESK/BRENDA temporary patch split files
 
-Current stopping point:
-Ready for Manuel/Codex sync and browser reload test.
+Pending subtasks:
+1. Split target files before editing.
+2. Save split files under AGENT_DESK/BRENDA.
+3. Patch ui.js to own Convo tab and body selection.
+4. Patch chadChat.js so it exports render only and does not inject/replace tabs.
+5. Remove layout patch module from manifest if native render makes it unnecessary.
+6. Verify and prepare Manuel prompt.
+
+Stopping point:
+Task file updated. Next is patch split/save.
