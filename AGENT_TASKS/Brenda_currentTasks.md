@@ -3,28 +3,26 @@
 Current objective:
 Create a dedicated Convo tab beside Chaties. Put all conversation UI there. Restore agent profile UI to Chaties. Add input, send, and save Jay messages.
 
-Constraints:
-- Chaties = agents and profile features only.
-- Convo = messages, input, send only.
-- Do not redesign unrelated systems.
-- Use existing runtime switchboard style.
+Status:
+Implemented in repo.
 
-Files being edited:
-- AGENT_TASKS/Brenda_currentTasks.md
+Completed:
+1. Updated ChadTheGreat/chadChat.js.
+2. Tab label is now Convo.
+3. Active tab state is now convo.
+4. Message input appears only in Convo body.
+5. Send forwards text to ChatGPT main prompt.
+6. Sent Jay messages save into local Jay_convo.md object under localStorage key gandhi_chad_convo_file_jay_v1.
+7. Removed automatic input.focus() so Convo textarea should not steal keyboard focus.
+8. Updated manifest to stop loading chatiesConvoWindowSafe.js.
+
+Files edited:
+- ChadTheGreat/chadChat.js
 - ChadTheGreat/manifest.json
-- ChadTheGreat/chadChat.js or safer new Convo module
-- Remove previous wrong Chaties convo loader if needed.
+- AGENT_TASKS/Brenda_currentTasks.md
 
-Pending subtasks:
-1. Inspect current files.
-2. Remove wrong Chaties convo display.
-3. Add Convo tab label.
-4. Add input and send under Convo.
-5. Save Jay messages.
-6. Verify.
+Not completed:
+- Could not delete unused ChadTheGreat/chatiesConvoWindowSafe.js because delete was blocked. It is no longer loaded by manifest.
 
-Decisions:
-Previous Chaties convo injection was wrong. Convo tab owns conversation features.
-
-Stopping point:
-Task ledger updated before code work.
+Current stopping point:
+Ready for Manuel/Codex sync to deployed local extension folder, then browser reload test.
