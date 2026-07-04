@@ -3,32 +3,30 @@
 Objective:
 Put all Chad/Chaties tabs under one renderer only so tab panels display properly.
 
-Constraints:
-- Use JRonCamay/gandhi as source of truth.
-- Follow PATCH_PROTOCOL_V1 v1.6.
-- Do not create competing tab/body renderers.
-- Preserve existing working code unless touched for this task.
-- Verify by repository state after writes.
+Status:
+Completed repository patch and verification.
 
-Files being investigated:
-- ChadTheGreat/ui.js
-- ChadTheGreat/chadChat.js
-- ChadTheGreat/chadConvoLayoutFix.js
-- ChadTheGreat/manifest or loader file if present
+Files edited:
+- ChadTheGreat/uiSingleRenderer.js
+- ChadTheGreat/manifest.json
 
-Pending subtasks:
-1. Search project files for tab renderers and panel renderers.
-2. Identify current owner of tab UI.
-3. Patch so one main renderer owns all tab headers and bodies.
-4. Remove or disable competing render paths.
-5. Verify relevant files after write.
+Implementation:
+- Added uiSingleRenderer.js as the single active coordinator for extra tab integration.
+- uiSingleRenderer injects/owns the Convo tab integration through one patched ui.render coordinator.
+- uiSingleRenderer disables competing chadChat and chadConvoLayoutFix panel render activity through runtimeSwitchboard.
+- chadChat remains loaded only as a render/helper provider for Convo body.
+- Removed chadConvoLayoutFix.js from manifest load list.
+- Added additional Convo sample messages for scrollbar testing.
+- Added panel focus guard to prevent panel inputs from bubbling into ChatGPT main input behavior.
 
-Decisions already made:
-- Main renderer should own tabs and bodies.
-- Helper files may provide rendering helpers but must not inject competing panels.
+Verification:
+- Fetched uiSingleRenderer.js after create.
+- Fetched manifest.json after update.
+- manifest version is now 0.2.5.
+- manifest loads uiSingleRenderer.js and no longer loads chadConvoLayoutFix.js.
 
 Current stopping point:
-Investigating repository source.
+Ready for Jay to sync/reload extension and browser-test.
 
 Questions:
 None.
