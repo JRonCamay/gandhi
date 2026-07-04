@@ -24,7 +24,6 @@ window.Chad = window.Chad || {};
     }
 
     let visibleFilesByAgent = {};
-    let lastTab = "";
 
     function nowStamp() {
         return new Date().toLocaleString();
@@ -111,6 +110,43 @@ window.Chad = window.Chad || {};
         if (window.Chad.agentIdentity && window.Chad.agentIdentity.setExpandedMap) {
             window.Chad.agentIdentity.setExpandedMap({});
         }
+    }
+
+    function isPanelInput(target) {
+        if (!target || !target.closest) return false;
+        return !!target.closest("input, textarea, select, [contenteditable='true'], [role='textbox'], .ProseMirror");
+    }
+
+    function refocusPanelInput(target) {
+        if (!target || typeof target.focus !== "function") return;
+        setTimeout(() => {
+            try {
+                target.focus({ preventScroll: true });
+            }
+            catch {
+                try { target.focus(); }
+                catch {}
+            }
+        }, 0);
+    }
+
+    function installPanelFocusGuard() {
+        const panel = document.querySelector("#gandhi-chad-panel");
+        if (!panel || panel.__chadPanelFocusGuard) return;
+
+        const protect = event => {
+            if (!isModuleOn()) return;
+            const target = event.target;
+            if (!target || !panel.contains(target) || !isPanelInput(target)) return;
+            event.stopPropagation();
+            refocusPanelInput(target.closest("input, textarea, select, [contenteditable='true'], [role='textbox'], .ProseMirror") || target);
+        };
+
+        ["mousedown", "mouseup", "click", "focusin", "keydown", "keyup", "input"].forEach(type => {
+            panel.addEventListener(type, protect, false);
+        });
+
+        panel.__chadPanelFocusGuard = true;
     }
 
     function renderFile(agent, file) {
@@ -321,53 +357,32 @@ window.Chad = window.Chad || {};
 
     function renderIntoPanel() {
         if (!isModuleOn()) return;
-
-        const panel = document.querySelector("#gandhi-chad-panel");
-        const state = window.Chad.storage && window.Chad.storage.state;
-        if (!panel || !state || state.activeTab !== "chaties") return;
-        const oldBody = panel.children[1];
-        const newBody = render();
-        if (oldBody) oldBody.replaceWith(newBody);
-        else panel.appendChild(newBody);
+        installPanelFocusGuard();
+        if (window.Chad.ui && window.Chad.ui.render && !window.Chad.__uiChatiesMainRenderActive) {
+            window.Chad.__uiChatiesMainRenderActive = true;
+            try {
+                window.Chad.ui.render();
+            }
+            finally {
+                window.Chad.__uiChatiesMainRenderActive = false;
+            }
+        }
     }
 
     function patchUiRender() {
         if (!isModuleOn()) return;
-
-        const ui = window.Chad.ui;
-        if (!ui || ui.__uiChatiesClosedIconPatched) return;
-
-        const originalRender = ui.render;
-        ui.render = function () {
-            if (!isModuleOn()) {
-                return originalRender.apply(ui, arguments);
-            }
-
-            const state = window.Chad.storage && window.Chad.storage.state;
-            const nextTab = state && state.activeTab ? state.activeTab : "";
-            const enteringChaties = nextTab === "chaties" && lastTab !== "chaties";
-
-            if (enteringChaties) closeAllAgents();
-            if (nextTab !== "chaties" && lastTab === "chaties") closeAllAgents();
-
-            originalRender.apply(ui, arguments);
-            lastTab = nextTab;
-
-            if (nextTab === "chaties") renderIntoPanel();
-        };
-
-        ui.__uiChatiesClosedIconPatched = true;
+        installPanelFocusGuard();
     }
 
     function patchAgentFixes() {
         if (!isModuleOn()) return;
 
         const fixes = window.Chad.agentFixes;
-        if (!fixes || fixes.__uiChatiesClosedIconPatched) return;
+        if (!fixes || fixes.__uiChatiesSingleRendererPatched) return;
         fixes.renderChatiesStable = function () {
             renderIntoPanel();
         };
-        fixes.__uiChatiesClosedIconPatched = true;
+        fixes.__uiChatiesSingleRendererPatched = true;
     }
 
     function start() {
