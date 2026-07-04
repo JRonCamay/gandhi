@@ -371,20 +371,44 @@ window.Chad = window.Chad || {};
     }
 
     function renderChatBody() {
-        const wrap = createEl("div", {
+        const parentColumn = createEl("div", {
             style: {
                 height: "calc(100vh - 158px)",
+                minHeight: "0",
+                overflow: "hidden",
                 background: "#ffffff",
                 display: "flex",
                 flexDirection: "column"
             }
         });
 
+        const fixedColumn = createEl("div", {
+            style: {
+                flex: "1 1 auto",
+                minHeight: "0",
+                overflow: "hidden",
+                display: "flex",
+                flexDirection: "column"
+            }
+        });
+
+        const messageRow = createEl("div", {
+            style: {
+                flex: "1 1 auto",
+                minHeight: "0",
+                overflow: "hidden",
+                display: "flex"
+            }
+        });
+
         const messages = getDisplayMessages();
         const list = createEl("div", {
             style: {
-                flex: "1",
+                flex: "1 1 auto",
+                minWidth: "0",
+                minHeight: "0",
                 overflowY: "auto",
+                overflowX: "hidden",
                 padding: "8px"
             }
         });
@@ -404,12 +428,16 @@ window.Chad = window.Chad || {};
             messages.forEach(message => list.appendChild(renderMessage(message)));
         }
 
+        messageRow.appendChild(list);
+
         const input = createEl("textarea", {
             placeholder: "Message as Jay...",
             style: {
-                flex: "1",
+                flex: "1 1 auto",
+                width: "100%",
+                height: "44px",
                 minHeight: "44px",
-                maxHeight: "110px",
+                maxHeight: "88px",
                 resize: "vertical",
                 border: "1px solid #cbd5e1",
                 borderRadius: "8px",
@@ -440,26 +468,30 @@ window.Chad = window.Chad || {};
 
         const inputRow = createEl("div", {
             style: {
+                flex: "0 0 auto",
                 borderTop: "1px solid #e2e8f0",
                 padding: "8px",
                 display: "flex",
+                flexDirection: "row",
                 gap: "6px",
                 alignItems: "flex-end",
-                background: "#f8fafc"
+                background: "#f8fafc",
+                boxSizing: "border-box"
             }
         }, [
             input,
             button("SEND", send, { bg: "#2563eb", border: "#2563eb", color: "#ffffff", bold: true, padding: "9px 10px" })
         ]);
 
-        wrap.appendChild(list);
-        wrap.appendChild(inputRow);
+        fixedColumn.appendChild(messageRow);
+        fixedColumn.appendChild(inputRow);
+        parentColumn.appendChild(fixedColumn);
 
         setTimeout(() => {
             list.scrollTop = list.scrollHeight;
         }, 0);
 
-        return wrap;
+        return parentColumn;
     }
 
     function insertTabButton() {
