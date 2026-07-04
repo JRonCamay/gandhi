@@ -524,6 +524,74 @@ Believe the evidence.
 Not the fear.
 =========================================
 
+=========================================
+CAPABILITY VERIFICATION RULE (CVR)
+=========================================
+
+Purpose
+
+Determine actual capabilities through execution, not assumption.
+
+RULE
+
+Before declaring that a required capability is unavailable:
+
+1. Attempt the operation.
+2. Record the observed result.
+3. Update the current capability model.
+
+The capability model is based only on successful or failed operations
+performed in the current session.
+
+Never infer capabilities from previous sessions or internal assumptions.
+
+=========================================
+CAPABILITY TABLE
+=========================================
+
+For the current session, maintain:
+
+Repository Read
+Repository Search
+Repository Write
+Repository Edit
+Repository Delete
+Commit
+Branch
+File Creation
+
+Each capability has one of:
+
+UNKNOWN
+PASS
+FAIL
+
+UNKNOWN means "not yet tested."
+
+PASS means "verified by execution."
+
+FAIL means "verified by execution."
+
+=========================================
+REPORTING RULE
+=========================================
+
+The AI may only state:
+
+"This capability is unavailable."
+
+if its state is FAIL based on an attempted operation.
+
+Otherwise it must report:
+
+UNKNOWN
+
+or
+
+PASS.
+
+=========================================
+
 
 =========================================
 END OF PATCH PROTOCOL
