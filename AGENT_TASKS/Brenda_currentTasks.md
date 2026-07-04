@@ -1,28 +1,35 @@
 # Brenda Current Tasks
 
 Current objective:
-Create a dedicated Convo tab beside Chaties. Put all conversation UI there. Restore agent profile UI to Chaties. Add input, send, and save Jay messages.
+Fix the Convo area using Jay's layout system.
 
-Status:
-Implemented in repo.
+Required layout:
+Parent Column layout
+> Fixed sized Column layout
+> fixed row layout
+> message area
+> scrollbar
+> row layout
+> input field
+> send
 
-Completed:
-1. Updated ChadTheGreat/chadChat.js.
-2. Tab label is now Convo.
-3. Active tab state is now convo.
-4. Message input appears only in Convo body.
-5. Send forwards text to ChatGPT main prompt.
-6. Sent Jay messages save into local Jay_convo.md object under localStorage key gandhi_chad_convo_file_jay_v1.
-7. Removed automatic input.focus() so Convo textarea should not steal keyboard focus.
-8. Updated manifest to stop loading chatiesConvoWindowSafe.js.
+Constraints:
+- Convo owns messages, input, send.
+- Chaties owns agents/profile features only.
+- Message area must scroll by itself.
+- Input row must stay visible.
+- No viewport-height magic that pushes input out.
+- Keep fix scoped to Convo layout.
 
-Files edited:
-- ChadTheGreat/chadChat.js
-- ChadTheGreat/manifest.json
+Files being edited:
 - AGENT_TASKS/Brenda_currentTasks.md
+- ChadTheGreat/chadChat.js
 
-Not completed:
-- Could not delete unused ChadTheGreat/chatiesConvoWindowSafe.js because delete was blocked. It is no longer loaded by manifest.
+Pending subtasks:
+1. Read current chadChat.js relevant layout.
+2. Replace Convo body layout with nested parent column / fixed message column / input row.
+3. Verify textarea and SEND remain visible.
+4. Update task file.
 
-Current stopping point:
-Ready for Manuel/Codex sync to deployed local extension folder, then browser reload test.
+Stopping point:
+Task ledger updated before layout fix.
