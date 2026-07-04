@@ -592,6 +592,96 @@ PASS.
 
 =========================================
 
+=========================================
+GITHUB WRITE RESOLUTION RULE (GWR)
+=========================================
+
+Purpose
+
+Standardize repository write operations.
+
+Never guess which write API to use.
+
+Resolve it deterministically.
+
+=========================================
+WORKFLOW
+=========================================
+
+When creating or modifying repository files:
+
+1.
+Attempt create_file.
+
+2.
+If create_file succeeds:
+
+Record:
+
+Repository Write = PASS
+
+Continue.
+
+3.
+If create_file fails because the file already exists or a SHA is required:
+
+Attempt fetch_file.
+
+4.
+If fetch_file succeeds:
+
+Use the returned SHA with update_file.
+
+Record:
+
+Repository Update = PASS
+
+5.
+If fetch_file reports the file does not exist:
+
+Use the Git object workflow:
+
+create_blob
+
+↓
+
+create_tree
+
+↓
+
+create_commit
+
+↓
+
+update_ref
+
+6.
+If every write workflow fails:
+
+Record the observed failures.
+
+Repository Write = FAIL
+
+Only then report the limitation.
+
+=========================================
+RULE
+=========================================
+
+Never abandon repository writing after the first failed write method.
+
+Always continue to the next approved write workflow until:
+
+Success
+
+or
+
+All approved workflows fail.
+
+=========================================
+END OF GITHUB WRITE RESOLUTION RULE
+=========================================
+
 
 =========================================
 END OF PATCH PROTOCOL
