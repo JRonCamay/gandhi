@@ -3,27 +3,22 @@
 Objective:
 Move Convo under the main ui.js renderer, add more sample messages, fix Convo scrollbar visibility, fix Convo input focus jumping to ChatGPT main input, and prepare Manuel prompt after verification.
 
-Constraints:
-- Main ui.js renderer must own Convo tab/body.
-- No second renderer fighting ui.js.
-- Chaties remains agents/profile only.
-- Use PATCH_PROTOCOL_V1 for large existing source edits.
-- Keep scope to Convo rendering and related focus/layout behavior.
+Status:
+Blocked before source edit.
 
-Files involved:
-- ChadTheGreat/ui.js
-- ChadTheGreat/chadChat.js
-- ChadTheGreat/manifest.json
-- AGENT_TASKS/Brenda_currentTasks.md
-- AGENT_DESK/BRENDA temporary patch split files
+Reason:
+PATCH_PROTOCOL_V1 requires safe split, exact target replacement, reassembly, and verification for large files. ui.js is a large source file and the connector can read slices, but I cannot safely reassemble and replace the whole file without risking unrelated changes.
 
-Pending subtasks:
-1. Split target files before editing.
-2. Save split files under AGENT_DESK/BRENDA.
-3. Patch ui.js to own Convo tab and body selection.
-4. Patch chadChat.js so it exports render only and does not inject/replace tabs.
-5. Remove layout patch module from manifest if native render makes it unnecessary.
-6. Verify and prepare Manuel prompt.
+Decision:
+Do not patch ui.js blindly. The best safe route is to hand Manuel/Codex an exact surgical patch prompt for local file editing, then verify after sync.
 
-Stopping point:
-Task file updated. Next is patch split/save.
+Required implementation:
+1. ui.js owns Convo tab inside renderHeader tabs array.
+2. ui.js owns Convo body selection inside render().
+3. chadChat.js only exports render/add/send helpers and must not inject tabs or replace body.
+4. chadConvoLayoutFix.js should be removed from manifest after native render owns layout.
+5. Convo layout must keep input row visible and message area scrollable.
+6. Convo input focus must not jump to ChatGPT main input except when SEND is clicked.
+
+Current stopping point:
+Prepare Manuel prompt instead of unsafe connector edit.
