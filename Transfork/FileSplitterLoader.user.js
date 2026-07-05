@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gandhi File Splitter Loader
 // @namespace    http://tampermonkey.net/
-// @version      0.8
+// @version      0.9
 // @description  Loads Gandhi File Splitter from the Gandhi repository
 // @match        *://chatgpt.com/*
 // @match        *://github.com/*
