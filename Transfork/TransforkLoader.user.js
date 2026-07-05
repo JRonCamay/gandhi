@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gandhi Transfork Modular Loader
 // @namespace    http://tampermonkey.net/
-// @version      1.22
+// @version      1.23
 // @description  Loads modular Transfork files dynamically
 // @match        *://www.cocrea.world/*
 // @grant        none
@@ -11,7 +11,7 @@
     "use strict";
 
     const base = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/";
-    const cache = "26070541";
+    const cache = "26070601";
     const modules = [
         "namespace.js",
         "state.js",
@@ -50,7 +50,7 @@
         if (window.__gandhiTransforkDynamicLoader) return;
         window.__gandhiTransforkDynamicLoader = true;
         for (const name of modules) await loadModule(name);
-        console.log("Gandhi Transfork modular loader active 1.22 live-pixel-box-cache.");
+        console.log("Gandhi Transfork modular loader active 1.23 transform-release-fixes.");
     }
 
     loadAll().catch(error => console.error("Gandhi Transfork loader failed", error));
