@@ -117,11 +117,10 @@ window.Transfork = window.Transfork || {};
     }
 
     function screenTrimRect(full, bounds) {
-        const pad = 1;
-        const minX = Math.max(0, bounds.minX - pad);
-        const minY = Math.max(0, bounds.minY - pad);
-        const maxX = Math.min(bounds.width - 1, bounds.maxX + pad);
-        const maxY = Math.min(bounds.height - 1, bounds.maxY + pad);
+        const minX = bounds.minX;
+        const minY = bounds.minY;
+        const maxX = bounds.maxX;
+        const maxY = bounds.maxY;
 
         return {
             left: full.left + (minX / bounds.width) * full.width,
@@ -145,11 +144,10 @@ window.Transfork = window.Transfork || {};
         const radians = (direction - 90) * Math.PI / 180;
         const cos = Math.cos(radians);
         const sin = Math.sin(radians);
-        const pad = 1;
-        const minX = Math.max(0, bounds.minX - pad);
-        const minY = Math.max(0, bounds.minY - pad);
-        const maxX = Math.min(bounds.width - 1, bounds.maxX + pad);
-        const maxY = Math.min(bounds.height - 1, bounds.maxY + pad);
+        const minX = bounds.minX;
+        const minY = bounds.minY;
+        const maxX = bounds.maxX;
+        const maxY = bounds.maxY;
         const corners = [
             [minX, minY],
             [maxX + 1, minY],
