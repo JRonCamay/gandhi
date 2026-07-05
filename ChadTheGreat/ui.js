@@ -6,7 +6,7 @@ window.Chad = window.Chad || {};
     const ui = {};
     let panel = null;
     let body = null;
-    let gitGitDock = null;
+    let monkeyDock = null;
 
     const GLOBAL_AGENTS_KEY = "gandhi_chad_global_agents_v1";
     const ACTIVE_AGENT_KEY = "gandhi_chad_active_agent_id_v1";
@@ -230,38 +230,41 @@ window.Chad = window.Chad || {};
         return Array.from(map.values());
     }
 
-    function toggleGitGitDock() {
-        if (gitGitDock) {
-            gitGitDock.remove();
-            gitGitDock = null;
-            return;
-        }
-        gitGitDock = createEl("div", {
-            id: "gandhi-chad-gitgit-dock",
+    function showMonkeyDock() {
+        if (monkeyDock) return;
+        monkeyDock = createEl("button", {
+            text: "🐒",
+            title: "Open Chad",
+            onclick: event => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (panel) panel.style.display = "flex";
+                monkeyDock.remove();
+                monkeyDock = null;
+            },
             style: {
                 position: "fixed",
-                left: "14px",
-                right: "14px",
-                bottom: "14px",
-                height: "170px",
-                background: "#ffffff",
-                color: "#111827",
-                border: "1px solid #fcd34d",
-                borderRadius: "12px",
-                zIndex: "1000001",
-                fontFamily: "Arial, sans-serif",
-                fontSize: "12px",
-                boxShadow: "0 10px 35px rgba(15,23,42,.22)",
-                overflow: "hidden"
+                right: "18px",
+                bottom: "18px",
+                width: "58px",
+                height: "58px",
+                borderRadius: "999px",
+                border: "2px solid #f59e0b",
+                background: "linear-gradient(135deg,#fef3c7,#fed7aa)",
+                boxShadow: "0 12px 28px rgba(15,23,42,.28)",
+                zIndex: "1000002",
+                cursor: "pointer",
+                fontSize: "31px",
+                lineHeight: "1"
             }
-        }, [
-            createEl("div", { style: { padding: "9px", background: "#fef3c7", borderBottom: "1px solid #fcd34d", display: "flex", justifyContent: "space-between", alignItems: "center" } }, [
-                createEl("div", { html: "<b>🐒 GitGit Dock</b><br><span style='color:#64748b'>Bottom dock ready.</span>" }),
-                button("✕", () => toggleGitGitDock(), { bg: "#ffffff", border: "#fcd34d" })
-            ]),
-            createEl("div", { text: "GitGit controls can attach here. Monkey button toggles this bottom dock.", style: { padding: "12px", color: "#334155" } })
-        ]);
-        document.body.appendChild(gitGitDock);
+        });
+        document.body.appendChild(monkeyDock);
+    }
+
+    function toggleMonkeyDock() {
+        if (!panel) return;
+        panel.style.display = "none";
+        showMonkeyDock();
     }
 
     function renderHeader() {
@@ -276,7 +279,7 @@ window.Chad = window.Chad || {};
             button("GOD RULES", () => { const text = (window.Chad.data.companionRules || "") + "\n\n\n" + (window.Chad.data.chatRules || ""); window.Chad.actions.copyText(text); }, { bg: "#ede9fe", border: "#c4b5fd", bold: true }),
             button("🎨", () => window.Chad.paint && window.Chad.paint.open(), { bg: "#fef3c7", border: "#fcd34d", bold: true, title: "Quick Sketch" }),
             button("🔄 Update", () => window.Chad.updateChecker && window.Chad.updateChecker.checkForUpdates(true), { bg: "#e0f2fe", border: "#7dd3fc", bold: true, title: "Check Chad update" }),
-            button("🐒", () => toggleGitGitDock(), { bg: "#fef3c7", border: "#fcd34d", bold: true, title: "GitGit Dock" }),
+            button("🐒", () => toggleMonkeyDock(), { bg: "#fef3c7", border: "#fcd34d", bold: true, title: "Dock Chad" }),
             button("✕", () => { panel.style.display = "none"; if (window.Chad.agentFixes && window.Chad.agentFixes.showDock) window.Chad.agentFixes.showDock(); }, { bg: "#f8fafc", border: "#cbd5e1" })
         ]));
         const tabRow = createEl("div", { style: { display: "flex", gap: "5px", flexWrap: "wrap", alignItems: "center", position: "relative", zIndex: "3" } });
@@ -385,7 +388,7 @@ window.Chad = window.Chad || {};
     ui.scanVisibleChatFiles = scanVisibleChatFiles;
     ui.openTextModal = openTextModal;
     ui.openTaskModal = task => openTextModal(task.id + " — " + task.title, task.prompt);
-    ui.toggleGitGitDock = toggleGitGitDock;
+    ui.toggleMonkeyDock = toggleMonkeyDock;
     ui.render = render;
     ui.start = start;
 
