@@ -6,6 +6,7 @@ window.Chad = window.Chad || {};
     const ui = {};
     let panel = null;
     let body = null;
+    let gitGitDock = null;
 
     const GLOBAL_AGENTS_KEY = "gandhi_chad_global_agents_v1";
     const ACTIVE_AGENT_KEY = "gandhi_chad_active_agent_id_v1";
@@ -60,7 +61,7 @@ window.Chad = window.Chad || {};
     }
 
     function bodyStyle() {
-        return { padding: "8px", overflowY: "auto", height: "calc(100vh - 158px)", background: "#ffffff" };
+        return { padding: "8px", overflowY: "auto", flex: "1 1 auto", minHeight: "0", background: "#ffffff" };
     }
 
     function loadJSON(key, fallback) {
@@ -229,30 +230,64 @@ window.Chad = window.Chad || {};
         return Array.from(map.values());
     }
 
+    function toggleGitGitDock() {
+        if (gitGitDock) {
+            gitGitDock.remove();
+            gitGitDock = null;
+            return;
+        }
+        gitGitDock = createEl("div", {
+            id: "gandhi-chad-gitgit-dock",
+            style: {
+                position: "fixed",
+                left: "14px",
+                right: "14px",
+                bottom: "14px",
+                height: "170px",
+                background: "#ffffff",
+                color: "#111827",
+                border: "1px solid #fcd34d",
+                borderRadius: "12px",
+                zIndex: "1000001",
+                fontFamily: "Arial, sans-serif",
+                fontSize: "12px",
+                boxShadow: "0 10px 35px rgba(15,23,42,.22)",
+                overflow: "hidden"
+            }
+        }, [
+            createEl("div", { style: { padding: "9px", background: "#fef3c7", borderBottom: "1px solid #fcd34d", display: "flex", justifyContent: "space-between", alignItems: "center" } }, [
+                createEl("div", { html: "<b>🐒 GitGit Dock</b><br><span style='color:#64748b'>Bottom dock ready.</span>" }),
+                button("✕", () => toggleGitGitDock(), { bg: "#ffffff", border: "#fcd34d" })
+            ]),
+            createEl("div", { text: "GitGit controls can attach here. Monkey button toggles this bottom dock.", style: { padding: "12px", color: "#334155" } })
+        ]);
+        document.body.appendChild(gitGitDock);
+    }
+
     function renderHeader() {
         const state = window.Chad.storage.state;
         const agent = getActiveAgent();
         const tabs = [["Chaties", "chaties"], ["Convo", "convo"], ["Tasks", "tasks"], ["Roadmap", "roadmap"], ["Pins", "pins"], ["Repo", "repo"], ["Notes", "notes"]];
-        const header = createEl("div", { style: { padding: "9px", background: isDoneFlashing() ? "#dcfce7" : "#f1f5f9", borderBottom: "1px solid " + (isDoneFlashing() ? "#22c55e" : "#cbd5e1"), boxShadow: isDoneFlashing() ? "0 0 0 3px rgba(34,197,94,.25) inset" : "none" } });
-        const top = createEl("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", marginBottom: "7px" } });
-        top.appendChild(createEl("div", { html: `<div style="font-size:10px;color:#64748b;font-weight:800;line-height:1">Chad</div><div style="font-size:17px;color:#0f172a;font-weight:900;line-height:1.15">${escapeHTML(agent ? agent.icon : "🤖")} ${escapeHTML(agent ? agent.name : "Agent")}</div><div style="font-size:11px;color:#64748b;font-weight:600;max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHTML(agent ? agent.description : "")}</div>` }));
-        top.appendChild(createEl("div", { style: { display: "flex", gap: "4px", alignItems: "center" } }, [
+        const header = createEl("div", { style: { flex: "0 0 auto", position: "relative", zIndex: "2", padding: "9px", background: isDoneFlashing() ? "#dcfce7" : "#f1f5f9", borderBottom: "1px solid " + (isDoneFlashing() ? "#22c55e" : "#cbd5e1"), boxShadow: isDoneFlashing() ? "0 0 0 3px rgba(34,197,94,.25) inset" : "none" } });
+        const top = createEl("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px", marginBottom: "7px" } });
+        top.appendChild(createEl("div", { style: { flex: "1 1 auto", minWidth: "0" }, html: `<div style="font-size:10px;color:#64748b;font-weight:800;line-height:1">Chad</div><div style="font-size:17px;color:#0f172a;font-weight:900;line-height:1.15">${escapeHTML(agent ? agent.icon : "🤖")} ${escapeHTML(agent ? agent.name : "Agent")}</div><div style="font-size:11px;color:#64748b;font-weight:600;max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHTML(agent ? agent.description : "")}</div>` }));
+        top.appendChild(createEl("div", { style: { flex: "0 1 auto", display: "flex", gap: "4px", alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap" } }, [
             button("TASK RULES", () => window.Chad.actions.copyText(getTaskRulesText()), { bg: "#e0f2fe", border: "#7dd3fc", bold: true }),
             button("GOD RULES", () => { const text = (window.Chad.data.companionRules || "") + "\n\n\n" + (window.Chad.data.chatRules || ""); window.Chad.actions.copyText(text); }, { bg: "#ede9fe", border: "#c4b5fd", bold: true }),
             button("🎨", () => window.Chad.paint && window.Chad.paint.open(), { bg: "#fef3c7", border: "#fcd34d", bold: true, title: "Quick Sketch" }),
             button("🔄 Update", () => window.Chad.updateChecker && window.Chad.updateChecker.checkForUpdates(true), { bg: "#e0f2fe", border: "#7dd3fc", bold: true, title: "Check Chad update" }),
-            button("🐒", () => console.log("GitGit reserved."), { bg: "#fef3c7", border: "#fcd34d", bold: true, title: "GitGit" }),
+            button("🐒", () => toggleGitGitDock(), { bg: "#fef3c7", border: "#fcd34d", bold: true, title: "GitGit Dock" }),
             button("✕", () => { panel.style.display = "none"; if (window.Chad.agentFixes && window.Chad.agentFixes.showDock) window.Chad.agentFixes.showDock(); }, { bg: "#f8fafc", border: "#cbd5e1" })
         ]));
-        const tabRow = createEl("div", { style: { display: "flex", gap: "5px", flexWrap: "wrap" } });
+        const tabRow = createEl("div", { style: { display: "flex", gap: "5px", flexWrap: "wrap", alignItems: "center", position: "relative", zIndex: "3" } });
         for (const [label, tab] of tabs) {
             tabRow.appendChild(button(label, () => {
                 state.activeTab = tab;
                 render();
-                if (tab === "repo") window.Chad.actions.ensureRepoTreeLoaded();
+                if (tab === "repo" && window.Chad.actions && window.Chad.actions.ensureRepoTreeLoaded) window.Chad.actions.ensureRepoTreeLoaded();
             }, { bg: state.activeTab === tab ? "#2563eb" : "#ffffff", color: state.activeTab === tab ? "#ffffff" : "#0f172a", border: state.activeTab === tab ? "#2563eb" : "#cbd5e1", bold: state.activeTab === tab }));
         }
-        tabRow.appendChild(button("Scan", window.Chad.scanner.scanTasks, { bg: "#dcfce7", border: "#86efac", bold: true }));
+        tabRow.appendChild(button("Scan", () => window.Chad.scanner && window.Chad.scanner.scanTasks && window.Chad.scanner.scanTasks(), { bg: "#dcfce7", border: "#86efac", bold: true }));
         tabRow.appendChild(createEl("span", { id: "gandhi-chad-scan-status", text: "", style: { fontSize: "11px", color: "#64748b", alignSelf: "center" } }));
         header.appendChild(top);
         header.appendChild(tabRow);
@@ -280,9 +315,27 @@ window.Chad = window.Chad || {};
         panel.appendChild(renderHeader());
         if (body) body.remove();
         const renderers = { chaties: window.Chad.uiChaties, convo: window.Chad.uiConvo, tasks: window.Chad.uiTasks, roadmap: window.Chad.uiRoadmap, pins: window.Chad.uiPins, repo: window.Chad.uiRepo, notes: window.Chad.uiNotes };
-        const activeRenderer = renderers[state.activeTab] || renderers.tasks;
-        body = activeRenderer && activeRenderer.render ? activeRenderer.render() : createEl("div", { text: "Renderer not loaded.", style: bodyStyle() });
+        const activeRenderer = renderers[state.activeTab] || renderers.chaties || renderers.tasks;
+        try {
+            body = activeRenderer && activeRenderer.render ? activeRenderer.render() : createEl("div", { text: "Renderer not loaded.", style: bodyStyle() });
+        }
+        catch (error) {
+            body = createEl("div", { text: "Renderer error: " + (error && error.message ? error.message : error), style: bodyStyle() });
+        }
+        if (body && body.style) {
+            body.style.flex = "1 1 auto";
+            body.style.minHeight = "0";
+        }
         panel.appendChild(body);
+    }
+
+    function bindPanelEventShield() {
+        if (!panel || panel.dataset.chadShielded === "1") return;
+        panel.dataset.chadShielded = "1";
+        const stop = event => event.stopPropagation();
+        ["mousedown", "mouseup", "click", "dblclick", "pointerdown", "pointerup", "keydown", "keyup", "input", "beforeinput", "focusin", "focusout"].forEach(type => {
+            panel.addEventListener(type, stop, false);
+        });
     }
 
     function bindAnswerReset() {
@@ -302,8 +355,9 @@ window.Chad = window.Chad || {};
     function start() {
         if (document.querySelector("#gandhi-chad-panel")) return;
         window.Chad.storage.state.activeTab = window.Chad.storage.state.activeTab || "chaties";
-        panel = createEl("div", { id: "gandhi-chad-panel", style: { position: "fixed", right: "14px", top: "70px", bottom: "14px", width: "410px", background: "#ffffff", color: "#111827", border: "1px solid #cbd5e1", borderRadius: "12px", zIndex: "999999", fontFamily: "Arial, sans-serif", fontSize: "12px", boxShadow: "0 10px 35px rgba(15,23,42,.20)", overflow: "hidden" } });
+        panel = createEl("div", { id: "gandhi-chad-panel", style: { position: "fixed", right: "14px", top: "70px", bottom: "14px", width: "410px", background: "#ffffff", color: "#111827", border: "1px solid #cbd5e1", borderRadius: "12px", zIndex: "999999", fontFamily: "Arial, sans-serif", fontSize: "12px", boxShadow: "0 10px 35px rgba(15,23,42,.20)", overflow: "hidden", display: "flex", flexDirection: "column" } });
         document.body.appendChild(panel);
+        bindPanelEventShield();
         bindAnswerReset();
         render();
     }
@@ -331,6 +385,7 @@ window.Chad = window.Chad || {};
     ui.scanVisibleChatFiles = scanVisibleChatFiles;
     ui.openTextModal = openTextModal;
     ui.openTaskModal = task => openTextModal(task.id + " — " + task.title, task.prompt);
+    ui.toggleGitGitDock = toggleGitGitDock;
     ui.render = render;
     ui.start = start;
 
