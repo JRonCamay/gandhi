@@ -24,7 +24,8 @@ window.Transfork = window.Transfork || {};
         startScale: null,
         startVisible: true,
         startScreenRect: null,
-        frame: 0
+        frame: 0,
+        useRealSprite: false
     };
 
     function getModules260705_GM4P1R() {
@@ -33,44 +34,6 @@ window.Transfork = window.Transfork || {};
             coords: api.coords,
             selectionBox: api.selectionBox
         };
-    }
-
-    function getCostumeUrl260705_CU8P3L(target) {
-        if (!target || !target.sprite || !target.sprite.costumes) return "";
-
-        const costume = target.sprite.costumes[target.currentCostume];
-        if (!costume || !costume.asset) return "";
-
-        if (typeof costume.asset.encodeDataURI === "function") {
-            return costume.asset.encodeDataURI();
-        }
-
-        return "";
-    }
-
-    function createSnapshot260705_CS8A7N(target, screenRect) {
-        const snapshot = document.createElement("img");
-        const source = getCostumeUrl260705_CU8P3L(target);
-
-        Object.assign(snapshot.style, {
-            position: "fixed",
-            left: screenRect.left + "px",
-            top: screenRect.top + "px",
-            width: screenRect.width + "px",
-            height: screenRect.height + "px",
-            pointerEvents: "none",
-            zIndex: "9998",
-            boxSizing: "border-box",
-            userSelect: "none",
-            objectFit: "fill",
-            transformOrigin: "center center"
-        });
-
-        if (source) snapshot.src = source;
-        else snapshot.style.background = "transparent";
-
-        document.body.appendChild(snapshot);
-        return snapshot;
     }
 
     function setDrawableVisible260705_DV2M6F(vm, target, visible) {
@@ -114,6 +77,11 @@ window.Transfork = window.Transfork || {};
 
         state.finalX = state.startX + scratchDelta.x;
         state.finalY = state.startY + scratchDelta.y;
+
+        if (state.useRealSprite && state.target) {
+            state.target.setXY(state.finalX, state.finalY);
+            modules.vm.requestRedraw(state.target);
+        }
 
         if (state.snapshot) {
             state.snapshot.style.left = state.startScreenRect.left + dx + "px";
@@ -184,13 +152,12 @@ window.Transfork = window.Transfork || {};
 
         const bounds = drawable.getAABB();
         const screenRect = modules.coords.boundsToScreenRect(bounds, canvas, vm);
-        const snapshot = createSnapshot260705_CS8A7N(target, screenRect);
         const state = snapshotDragState260705_SDG9X2;
 
         state.active = true;
         state.target = target;
         state.drawable = drawable;
-        state.snapshot = snapshot;
+        state.snapshot = null;
         state.canvas = canvas;
         state.startMouseX = event.clientX;
         state.startMouseY = event.clientY;
@@ -205,9 +172,10 @@ window.Transfork = window.Transfork || {};
         state.startScale = drawable.scale ? drawable.scale.slice() : null;
         state.startVisible = drawable._visible !== false;
         state.startScreenRect = screenRect;
+        state.useRealSprite = true;
 
         modules.vm.setEditingTarget(target);
-        setDrawableVisible260705_DV2M6F(vm, target, false);
+        setDrawableVisible260705_DV2M6F(vm, target, state.startVisible);
         move260705_MV7C3D(event.clientX, event.clientY);
         holdBox260705_HB4W8S();
 
@@ -257,6 +225,7 @@ window.Transfork = window.Transfork || {};
             state.startScale = null;
             state.startScreenRect = null;
             state.frame = 0;
+            state.useRealSprite = false;
         }
     }
 
