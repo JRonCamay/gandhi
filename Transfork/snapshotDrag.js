@@ -36,24 +36,56 @@ window.Transfork = window.Transfork || {};
         };
     }
 
+    function getCurrentCostume260705_CC8N2J(target) {
+        if (!target || !target.sprite || !target.sprite.costumes) return null;
+        return target.sprite.costumes[target.currentCostume] || null;
+    }
+
+    function getCostumeSource260705_CS4Q7P(costume) {
+        if (!costume || !costume.asset) return "";
+
+        if (typeof costume.asset.encodeDataURI === "function") {
+            return costume.asset.encodeDataURI();
+        }
+
+        if (typeof costume.asset.decodeText === "function") {
+            return "data:image/svg+xml;base64," + btoa(costume.asset.decodeText());
+        }
+
+        return "";
+    }
+
     function imageDataLooksUsable260705_IU6Q4P(imageData) {
         if (!imageData || !imageData.data || !imageData.data.length) return false;
 
         const data = imageData.data;
         let visible = 0;
-        let nonBlack = 0;
+        let different = 0;
+        let firstR = null;
+        let firstG = null;
+        let firstB = null;
 
         for (let i = 0; i < data.length; i += 16) {
             const alpha = data[i + 3];
             if (!alpha) continue;
 
             visible++;
-            if (data[i] > 8 || data[i + 1] > 8 || data[i + 2] > 8) {
-                nonBlack++;
+
+            if (firstR === null) {
+                firstR = data[i];
+                firstG = data[i + 1];
+                firstB = data[i + 2];
+            }
+            else if (
+                Math.abs(data[i] - firstR) > 4 ||
+                Math.abs(data[i + 1] - firstG) > 4 ||
+                Math.abs(data[i + 2] - firstB) > 4
+            ) {
+                different++;
             }
         }
 
-        return visible > 0 && nonBlack > 0;
+        return visible > 4 && (different > 0 || visible < data.length / 32);
     }
 
     function canvasFromImageData260705_CI5W8N(imageData) {
@@ -75,7 +107,16 @@ window.Transfork = window.Transfork || {};
         }
 
         if (extracted instanceof HTMLCanvasElement) {
-            return extracted.width && extracted.height ? extracted : null;
+            if (!extracted.width || !extracted.height) return null;
+
+            try {
+                const ctx = extracted.getContext("2d");
+                const data = ctx.getImageData(0, 0, extracted.width, extracted.height);
+                return imageDataLooksUsable260705_IU6Q4P(data) ? extracted : null;
+            }
+            catch (_error) {
+                return extracted;
+            }
         }
 
         if (typeof ImageBitmap !== "undefined" && extracted instanceof ImageBitmap) {
@@ -83,7 +124,7 @@ window.Transfork = window.Transfork || {};
             canvas.width = extracted.width;
             canvas.height = extracted.height;
             canvas.getContext("2d").drawImage(extracted, 0, 0);
-            return canvas;
+            return normalizeExtractedDrawable260705_ND8Q7B(canvas);
         }
 
         if (extracted.imageData) {
@@ -133,9 +174,36 @@ window.Transfork = window.Transfork || {};
         return null;
     }
 
-    function createSnapshot260705_CS8A7N(renderer, target, screenRect) {
-        if (!target) return null;
+    function getNativeToScreenScale260705_NS6M8C(canvas, vm) {
+        const rect = canvas.getBoundingClientRect();
+        const nativeSize = vm.runtime.renderer.getNativeSize();
+        if (!nativeSize || !nativeSize[0]) return 1;
+        return rect.width / nativeSize[0];
+    }
 
+    function getCostumeSize260705_CZ7D4H(costume, sourceFallback) {
+        const size = costume && costume.size;
+        if (size && size[0] && size[1]) {
+            return {
+                width: size[0],
+                height: size[1]
+            };
+        }
+
+        if (sourceFallback && sourceFallback.width && sourceFallback.height) {
+            return {
+                width: sourceFallback.width,
+                height: sourceFallback.height
+            };
+        }
+
+        return {
+            width: 1,
+            height: 1
+        };
+    }
+
+    function createRendererSnapshot260705_RS3K8M(renderer, target, screenRect) {
         const source = extractDrawableCanvas260705_ED9M2R(
             renderer,
             target.drawableID
@@ -158,11 +226,88 @@ window.Transfork = window.Transfork || {};
             pointerEvents: "none",
             zIndex: "9998",
             boxSizing: "border-box",
-            userSelect: "none"
+            userSelect: "none",
+            background: "transparent"
         });
 
         document.body.appendChild(snapshot);
         return snapshot;
+    }
+
+    function createCostumeSnapshot260705_CS9Q2L(vm, target, drawable, canvas, screenRect) {
+        const costume = getCurrentCostume260705_CC8N2J(target);
+        const source = getCostumeSource260705_CS4Q7P(costume);
+        if (!source) return null;
+
+        const wrapper = document.createElement("div");
+        const image = document.createElement("img");
+        const stageScale = getNativeToScreenScale260705_NS6M8C(canvas, vm);
+        const costumeSize = getCostumeSize260705_CZ7D4H(costume, null);
+        const scale = drawable && drawable.scale ? drawable.scale : [target.size || 100, target.size || 100];
+        const width = Math.max(1, costumeSize.width * Math.abs(scale[0]) / 100 * stageScale);
+        const height = Math.max(1, costumeSize.height * Math.abs(scale[1]) / 100 * stageScale);
+        const direction = typeof target.direction === "number" ? target.direction : 90;
+        const rotate = direction - 90;
+        const flipX = scale[0] < 0 ? -1 : 1;
+        const flipY = scale[1] < 0 ? -1 : 1;
+        const ghost = target.effects && typeof target.effects.ghost === "number" ? target.effects.ghost : 0;
+
+        Object.assign(wrapper.style, {
+            position: "fixed",
+            left: screenRect.left + "px",
+            top: screenRect.top + "px",
+            width: screenRect.width + "px",
+            height: screenRect.height + "px",
+            pointerEvents: "none",
+            zIndex: "9998",
+            boxSizing: "border-box",
+            userSelect: "none",
+            overflow: "visible",
+            background: "transparent",
+            opacity: String(Math.max(0, Math.min(1, 1 - ghost / 100)))
+        });
+
+        Object.assign(image.style, {
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            width: width + "px",
+            height: height + "px",
+            maxWidth: "none",
+            maxHeight: "none",
+            objectFit: "fill",
+            pointerEvents: "none",
+            userSelect: "none",
+            transformOrigin: "50% 50%",
+            transform:
+                "translate(-50%, -50%) " +
+                "rotate(" + rotate + "deg) " +
+                "scale(" + flipX + ", " + flipY + ")"
+        });
+
+        image.draggable = false;
+        image.src = source;
+        wrapper.appendChild(image);
+        document.body.appendChild(wrapper);
+        return wrapper;
+    }
+
+    function createSnapshot260705_CS8A7N(vm, target, drawable, canvas, screenRect) {
+        const rendererSnapshot = createRendererSnapshot260705_RS3K8M(
+            vm.runtime.renderer,
+            target,
+            screenRect
+        );
+
+        if (rendererSnapshot) return rendererSnapshot;
+
+        return createCostumeSnapshot260705_CS9Q2L(
+            vm,
+            target,
+            drawable,
+            canvas,
+            screenRect
+        );
     }
 
     function setDrawableVisible260705_DV2M6F(vm, target, visible) {
@@ -281,7 +426,7 @@ window.Transfork = window.Transfork || {};
 
         const bounds = drawable.getAABB();
         const screenRect = modules.coords.boundsToScreenRect(bounds, canvas, vm);
-        const snapshot = createSnapshot260705_CS8A7N(vm.runtime.renderer, target, screenRect);
+        const snapshot = createSnapshot260705_CS8A7N(vm, target, drawable, canvas, screenRect);
         const state = snapshotDragState260705_SDG9X2;
 
         state.active = true;
