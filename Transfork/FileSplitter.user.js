@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gandhi File Splitter
 // @namespace    http://tampermonkey.net/
-// @version      0.8
+// @version      0.9
 // @description  Split large source files and generate loader-ready module sets
 // @match        *://chatgpt.com/*
 // @match        *://github.com/*
@@ -21,11 +21,11 @@
         output: null,
         fileDirInput: null,
         filenameInput: null,
-        outputFolderInput: null,
         maxLinesInput: null,
         markerInput: null,
         files: [],
-        status: null
+        status: null,
+        drag: null
     };
 
     function createEl260705_CE8N3W(tag, props, children) {
@@ -118,11 +118,6 @@
             .replace(/[^a-zA-Z0-9_\-/.]/g, "_");
     }
 
-    function safeFolder260705_SF5H8X(value, filename) {
-        const fallback = cleanBase260705_CB7K2N(filename);
-        return safePath260705_SP4J7L(value || fallback);
-    }
-
     function normalizeDir260705_ND9R2C(dir) {
         const clean = String(dir || "").trim();
         if (!clean) return DEFAULT_RAW_ROOT_260705;
@@ -130,12 +125,16 @@
         return DEFAULT_RAW_ROOT_260705 + safePath260705_SP4J7L(clean) + "/";
     }
 
+    function makeInferredFolder260705_IF5T1K(filename) {
+        return safePath260705_SP4J7L(cleanBase260705_CB7K2N(filename));
+    }
+
     function makeFileRawUrl260705_FR6Q1B(dir, filename) {
         return normalizeDir260705_ND9R2C(dir) + cleanFileName260705_FN2S8D(filename);
     }
 
-    function makeOutputBaseUrl260705_OB3M5R(dir, folder, filename) {
-        return normalizeDir260705_ND9R2C(dir) + safeFolder260705_SF5H8X(folder, filename) + "/";
+    function makeOutputBaseUrl260705_OB3M5R(dir, filename) {
+        return normalizeDir260705_ND9R2C(dir) + makeInferredFolder260705_IF5T1K(filename) + "/";
     }
 
     function makePartName260705_MN9D4V(filename, index) {
@@ -235,7 +234,7 @@
             "Fetched file URL:",
             fileUrl || "(not used; pasted source was prioritized)",
             "",
-            "Upload folder:",
+            "Generated upload folder:",
             folder,
             "",
             "Generated raw base URL:",
@@ -244,7 +243,7 @@
             "Upload these generated files into that folder:",
             ...files.map(file => "- " + file.name),
             "",
-            "Download All only downloads files locally. It does not upload to GitHub.",
+            "Download All Local only downloads files to your computer. It does not upload to GitHub.",
             "Install only the generated .loader.user.js in Tampermonkey after uploading the generated files."
         ].join("\n");
     }
@@ -367,9 +366,9 @@
         try {
             const filename = state.filenameInput.value.trim() || "source.js";
             const fileDir = state.fileDirInput.value.trim();
-            const folder = safeFolder260705_SF5H8X(state.outputFolderInput.value, filename);
+            const folder = makeInferredFolder260705_IF5T1K(filename);
             const bundle = cleanBase260705_CB7K2N(filename);
-            const baseUrl = makeOutputBaseUrl260705_OB3M5R(fileDir, folder, filename);
+            const baseUrl = makeOutputBaseUrl260705_OB3M5R(fileDir, filename);
             const sourceResult = await getSourceForSplit260705_GS3V8J();
             const parts = getSplitParts260705_GP8H3M(sourceResult.source);
             const partNames = parts.map((_, index) => makePartName260705_MN9D4V(filename, index + 1));
@@ -399,7 +398,7 @@
             });
 
             setFiles260705_SF7P2N(files);
-            setStatus260705_ST6P4D("Generated working module set. DOWNLOAD ALL LOCAL saves files to your computer only.");
+            setStatus260705_ST6P4D("Generated working module set. Output folder is inferred as: " + folder + "/");
         }
         catch (error) {
             setStatus260705_ST6P4D(error.message || String(error), true);
@@ -444,6 +443,61 @@
         });
     }
 
+    function isDragBlocked260705_DB8Q6M(target) {
+        return !!(target && target.closest && target.closest("button,input,textarea,select,a,[contenteditable='true']"));
+    }
+
+    function clampPanel260705_CP4D2W(left, top, panel) {
+        const rect = panel.getBoundingClientRect();
+        const maxLeft = Math.max(0, window.innerWidth - rect.width);
+        const maxTop = Math.max(0, window.innerHeight - 60);
+        return {
+            left: Math.max(0, Math.min(maxLeft, left)),
+            top: Math.max(0, Math.min(maxTop, top))
+        };
+    }
+
+    function bindPanelDrag260705_PD7R5S(panel) {
+        panel.addEventListener("mousedown", event => {
+            if (event.button !== 0) return;
+            if (isDragBlocked260705_DB8Q6M(event.target)) return;
+
+            const rect = panel.getBoundingClientRect();
+            splitterState260705_FS4M9Q.drag = {
+                startX: event.clientX,
+                startY: event.clientY,
+                left: rect.left,
+                top: rect.top
+            };
+
+            panel.style.left = rect.left + "px";
+            panel.style.top = rect.top + "px";
+            panel.style.right = "auto";
+            panel.style.cursor = "grabbing";
+            event.preventDefault();
+        }, true);
+
+        document.addEventListener("mousemove", event => {
+            const drag = splitterState260705_FS4M9Q.drag;
+            if (!drag) return;
+
+            const next = clampPanel260705_CP4D2W(
+                drag.left + event.clientX - drag.startX,
+                drag.top + event.clientY - drag.startY,
+                panel
+            );
+
+            panel.style.left = next.left + "px";
+            panel.style.top = next.top + "px";
+        }, true);
+
+        document.addEventListener("mouseup", () => {
+            if (!splitterState260705_FS4M9Q.drag) return;
+            splitterState260705_FS4M9Q.drag = null;
+            panel.style.cursor = "default";
+        }, true);
+    }
+
     function createPanel260705_CP9K2D() {
         const state = splitterState260705_FS4M9Q;
         if (state.panel) {
@@ -466,7 +520,8 @@
                 boxShadow: "0 12px 36px rgba(15,23,42,.25)",
                 padding: "10px",
                 fontFamily: "Arial, sans-serif",
-                color: "#0f172a"
+                color: "#0f172a",
+                cursor: "default"
             }
         });
 
@@ -487,7 +542,6 @@
 
         const fileDirInput = makeInput260705_MI5N8A("", "430px", "example: Composer/ or full raw GitHub dir URL");
         const filenameInput = makeInput260705_MI5N8A("source.js", "170px", "file to split");
-        const outputFolderInput = makeInput260705_MI5N8A("", "190px", "blank = filename subfolder");
         const maxLinesInput = makeInput260705_MI5N8A("300", "72px");
         maxLinesInput.type = "number";
         maxLinesInput.min = "1";
@@ -507,7 +561,7 @@
             }
         }, [
             createEl260705_CE8N3W("div", {
-                html: "<b>Gandhi File Splitter</b><br><span style='font-size:12px;color:#64748b'>Split pasted source or fetch by filename, then generate a loader-ready module set.</span>"
+                html: "<b>Gandhi File Splitter</b><br><span style='font-size:12px;color:#64748b'>Split pasted source or fetch by filename, then generate a loader-ready module set. Drag blank panel areas to move.</span>"
             }),
             button260705_BT2H6F("CLOSE", () => panel.style.display = "none")
         ]));
@@ -523,11 +577,10 @@
             label260705_LB7M2Q("Filename:"), filenameInput
         ]));
 
-        panel.appendChild(sectionTitle260705_ST9H3F("3. Output", "Folder blank creates a subfolder using the filename. Download is local only."));
+        panel.appendChild(sectionTitle260705_ST9H3F("3. Output", "Output folder is automatic: File GitHub Dir + filename without extension."));
         panel.appendChild(createEl260705_CE8N3W("div", {
             style: { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }
         }, [
-            label260705_LB7M2Q("Folder:"), outputFolderInput,
             label260705_LB7M2Q("Lines:"), maxLinesInput,
             label260705_LB7M2Q("Marker:"), markerInput,
             button260705_BT2H6F("SPLIT / BUILD LOCAL FILES", buildModuleSet260705_MS7K2P, true),
@@ -535,7 +588,7 @@
         ]));
 
         panel.appendChild(createEl260705_CE8N3W("div", {
-            text: "After download, upload all generated files to the GitHub folder shown in UPLOAD_PLAN.md. Install only the generated loader in Tampermonkey.",
+            text: "Example: File GitHub Dir = Composer and Filename = ui.js creates output folder Composer/ui/. Upload generated files there and install only the loader.",
             style: { fontSize: "12px", color: "#475569", marginTop: "6px" }
         }));
 
@@ -547,12 +600,12 @@
         state.sourceInput = sourceInput;
         state.fileDirInput = fileDirInput;
         state.filenameInput = filenameInput;
-        state.outputFolderInput = outputFolderInput;
         state.maxLinesInput = maxLinesInput;
         state.markerInput = markerInput;
         state.status = status;
         state.output = output;
 
+        bindPanelDrag260705_PD7R5S(panel);
         renderFiles260705_RP8S3N();
     }
 
