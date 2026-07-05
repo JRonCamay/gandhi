@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gandhi File Splitter
 // @namespace    http://tampermonkey.net/
-// @version      0.2
+// @version      0.3
 // @description  Split large source files into copyable/downloadable parts for modular refactoring
 // @match        *://chatgpt.com/*
 // @match        *://github.com/*
@@ -340,17 +340,10 @@
     }
 
     window.addEventListener("keydown", event => {
-        const isTyping = event.target && (
-            event.target.tagName === "INPUT" ||
-            event.target.tagName === "TEXTAREA" ||
-            event.target.isContentEditable
-        );
+        if (event.key !== "F8") return;
 
-        if (isTyping) return;
-
-        if (event.key === "F8") {
-            event.preventDefault();
-            createPanel260705_CP9K2D();
-        }
+        event.preventDefault();
+        event.stopPropagation();
+        createPanel260705_CP9K2D();
     }, true);
 })();
