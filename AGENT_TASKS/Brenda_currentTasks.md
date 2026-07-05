@@ -1,38 +1,30 @@
 # Brenda Current Tasks
 
 Objective:
-Split ChadTheGreat/ui.js into maintainable tab modules while keeping one native renderer/dispatcher in ui.js.
+Finish Transfork upright pixel-bounds behavior for selected sprites and transform snapshots.
 
 Status:
 Completed repository patch and verification.
 
-Files edited / created:
-- ChadTheGreat/ui.js
-- ChadTheGreat/uiConvo.js
-- ChadTheGreat/uiTasks.js
-- ChadTheGreat/uiChaties.js
-- ChadTheGreat/uiRoadmap.js
-- ChadTheGreat/uiPins.js
-- ChadTheGreat/uiRepo.js
-- ChadTheGreat/uiNotes.js
-- ChadTheGreat/manifest.json
+Files edited:
+- Transfork/pixelBoxSync.js
+- Transfork/snapshotToolsPixel.js
+- Transfork/TransforkLoader.user.js
 
 Implementation:
-- ui.js now owns the single native tab list and body dispatcher.
-- Convo is now a native tab in ui.js, not injected after render.
-- Tab bodies were split into dedicated modules.
-- manifest.json updated to v0.2.6.
-- chadChat.js and uiSingleRenderer.js are no longer loaded.
-- Existing unused legacy files remain in repo but are removed from active load flow.
+- `pixelBoxSync.js` now installs a screen-first pixel bounds override that scans rendered screen-space pixels before falling back to older bounds.
+- The screen-space rect path is cached by target/drawable/canvas transform state to avoid repeated expensive pixel scans when nothing changed.
+- `snapshotToolsPixel.js` uses the live transformed snapshot DOM bounds during active resize/rotate/scale so the upright box encloses the current transformed pixels.
+- Static occluder/target snapshots continue to compute through the pixel rect path when the operation starts.
+- Loader cache refreshed for `pixelBoxSync.js`.
 
 Verification:
-- Fetched manifest.json after update.
-- Fetched ui.js after update.
-- Fetched uiConvo.js after create.
-- Fetched uiTasks.js after create.
+- Fetched `pixelBoxSync.js` after update.
+- Fetched `snapshotToolsPixel.js` after update.
+- Fetched `TransforkLoader.user.js` after cache refresh.
 
 Current stopping point:
-Ready for Manuel to sync local files and for Jay to browser-test.
+Ready for Jay to hard-refresh and browser-test upright pixel bounds during drag, rotate, resize, scale, and flip.
 
 Questions:
 None.
