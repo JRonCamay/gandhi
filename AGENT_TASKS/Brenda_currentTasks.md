@@ -1,36 +1,41 @@
 # Brenda Current Tasks
 
 Objective:
-Put all Chad tabs under one function only. Convo must be defined inside the same renderer/tab function as the other tabs, not injected after render.
+Split ChadTheGreat/ui.js into maintainable tab modules while keeping one native renderer/dispatcher in ui.js.
 
-Constraints:
-- Do not add another render patch layer.
-- Use JRonCamay/gandhi as source of truth.
-- Follow PATCH_PROTOCOL_V1, ARTP, and CSP.
-- Preserve existing working behavior unless directly required.
-- Verify repository state after writes.
+Status:
+Completed repository patch and verification.
 
-Files involved:
+Files edited / created:
 - ChadTheGreat/ui.js
-- ChadTheGreat/chadChat.js
+- ChadTheGreat/uiConvo.js
+- ChadTheGreat/uiTasks.js
+- ChadTheGreat/uiChaties.js
+- ChadTheGreat/uiRoadmap.js
+- ChadTheGreat/uiPins.js
+- ChadTheGreat/uiRepo.js
+- ChadTheGreat/uiNotes.js
 - ChadTheGreat/manifest.json
-- ChadTheGreat/uiSingleRenderer.js
 
-Pending subtasks:
-1. Move Convo tab into ui.js renderHeader tabs array.
-2. Move Convo body selection into ui.js render function.
-3. Keep chadChat.js as helper renderer only.
-4. Stop loading uiSingleRenderer.js.
-5. Verify by fetching modified files.
+Implementation:
+- ui.js now owns the single native tab list and body dispatcher.
+- Convo is now a native tab in ui.js, not injected after render.
+- Tab bodies were split into dedicated modules.
+- manifest.json updated to v0.2.6.
+- chadChat.js and uiSingleRenderer.js are no longer loaded.
+- Existing unused legacy files remain in repo but are removed from active load flow.
 
-Decision:
-The previous uiSingleRenderer wrapper is not acceptable because Convo still disappears after native ui.render rebuilds the tab row. The correct fix is native ownership inside ui.js.
+Verification:
+- Fetched manifest.json after update.
+- Fetched ui.js after update.
+- Fetched uiConvo.js after create.
+- Fetched uiTasks.js after create.
 
 Current stopping point:
-Fetching source and preparing native ui.js patch.
+Ready for Manuel to sync local files and for Jay to browser-test.
 
 Questions:
 None.
 
 Timestamp:
-2026-07-04 Asia/Manila
+2026-07-05 Asia/Manila
