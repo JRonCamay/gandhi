@@ -1,32 +1,33 @@
 # Brenda Current Tasks
 
 Objective:
-Put all Chad/Chaties tabs under one renderer only so tab panels display properly.
+Put all Chad tabs under one function only. Convo must be defined inside the same renderer/tab function as the other tabs, not injected after render.
 
-Status:
-Completed repository patch and verification.
+Constraints:
+- Do not add another render patch layer.
+- Use JRonCamay/gandhi as source of truth.
+- Follow PATCH_PROTOCOL_V1, ARTP, and CSP.
+- Preserve existing working behavior unless directly required.
+- Verify repository state after writes.
 
-Files edited:
-- ChadTheGreat/uiSingleRenderer.js
+Files involved:
+- ChadTheGreat/ui.js
+- ChadTheGreat/chadChat.js
 - ChadTheGreat/manifest.json
+- ChadTheGreat/uiSingleRenderer.js
 
-Implementation:
-- Added uiSingleRenderer.js as the single active coordinator for extra tab integration.
-- uiSingleRenderer injects/owns the Convo tab integration through one patched ui.render coordinator.
-- uiSingleRenderer disables competing chadChat and chadConvoLayoutFix panel render activity through runtimeSwitchboard.
-- chadChat remains loaded only as a render/helper provider for Convo body.
-- Removed chadConvoLayoutFix.js from manifest load list.
-- Added additional Convo sample messages for scrollbar testing.
-- Added panel focus guard to prevent panel inputs from bubbling into ChatGPT main input behavior.
+Pending subtasks:
+1. Move Convo tab into ui.js renderHeader tabs array.
+2. Move Convo body selection into ui.js render function.
+3. Keep chadChat.js as helper renderer only.
+4. Stop loading uiSingleRenderer.js.
+5. Verify by fetching modified files.
 
-Verification:
-- Fetched uiSingleRenderer.js after create.
-- Fetched manifest.json after update.
-- manifest version is now 0.2.5.
-- manifest loads uiSingleRenderer.js and no longer loads chadConvoLayoutFix.js.
+Decision:
+The previous uiSingleRenderer wrapper is not acceptable because Convo still disappears after native ui.render rebuilds the tab row. The correct fix is native ownership inside ui.js.
 
 Current stopping point:
-Ready for Jay to sync/reload extension and browser-test.
+Fetching source and preparing native ui.js patch.
 
 Questions:
 None.
