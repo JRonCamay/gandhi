@@ -2816,20 +2816,30 @@
                     window.Transfork.snapshotToolsPixel &&
                     typeof window.Transfork.snapshotToolsPixel.idlePixelRect === "function"
                 ) {
-                    const pixelRect =
-                    window.Transfork.snapshotToolsPixel.idlePixelRect(
-                        vm,
-                        target,
-                        drawable,
-                        canvas
-                    );
+                    const dragState =
+                    window.Transfork?.snapshotDrag?.state;
 
-                    if (pixelRect) {
-                        overlay.style.left = pixelRect.left + "px";
-                        overlay.style.top = pixelRect.top + "px";
-                        overlay.style.width = pixelRect.width + "px";
-                        overlay.style.height = pixelRect.height + "px";
+                    if (
+                        dragState &&
+                        dragState.active &&
+                        dragState.rect &&
+                        dragState.screenDelta
+                    ) {
+                        overlay.style.left =
+                        (dragState.rect.left + dragState.screenDelta.x) + "px";
+
+                        overlay.style.top =
+                        (dragState.rect.top + dragState.screenDelta.y) + "px";
+
+                        overlay.style.width =
+                        dragState.rect.width + "px";
+
+                        overlay.style.height =
+                        dragState.rect.height + "px";
+
+                        return;
                     }
+
                 }
                 if (document.activeElement !== alphaInput) {
                     const alpha =
