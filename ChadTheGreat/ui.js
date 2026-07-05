@@ -6,6 +6,7 @@ window.Chad = window.Chad || {};
     const ui = {};
     let panel = null;
     let body = null;
+    let bodyHost = null;
     let monkeyDock = null;
 
     const GLOBAL_AGENTS_KEY = "gandhi_chad_global_agents_v1";
@@ -79,7 +80,11 @@ window.Chad = window.Chad || {};
     }
 
     function normalizeUrl(url) {
-        try { const parsed = new URL(url); parsed.hash = ""; return parsed.href; }
+        try {
+            const parsed = new URL(url);
+            parsed.hash = "";
+            return parsed.href;
+        }
         catch { return String(url || "").split("#")[0]; }
     }
 
@@ -130,7 +135,10 @@ window.Chad = window.Chad || {};
         const agents = getAgents();
         const here = normalizeUrl(currentChatUrl());
         const match = agents.find(agent => agent.chatUrl && normalizeUrl(agent.chatUrl) === here);
-        if (match) { localStorage.setItem(ACTIVE_AGENT_KEY, match.id); return match.id; }
+        if (match) {
+            localStorage.setItem(ACTIVE_AGENT_KEY, match.id);
+            return match.id;
+        }
         const saved = localStorage.getItem(ACTIVE_AGENT_KEY);
         if (agents.some(agent => agent.id === saved)) return saved;
         return agents[0] ? agents[0].id : "";
@@ -143,7 +151,12 @@ window.Chad = window.Chad || {};
         const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-size="48">${icon || "🤖"}</text></svg>`;
         const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
         let link = document.querySelector("link[data-chad-favicon]");
-        if (!link) { link = document.createElement("link"); link.rel = "icon"; link.dataset.chadFavicon = "1"; document.head.appendChild(link); }
+        if (!link) {
+            link = document.createElement("link");
+            link.rel = "icon";
+            link.dataset.chadFavicon = "1";
+            document.head.appendChild(link);
+        }
         link.href = url;
     }
 
@@ -171,7 +184,10 @@ window.Chad = window.Chad || {};
             gain.gain.setValueAtTime(0.0001, audio.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.16, audio.currentTime + 0.03);
             gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + 0.22);
-            osc.connect(gain); gain.connect(audio.destination); osc.start(); osc.stop(audio.currentTime + 0.24);
+            osc.connect(gain);
+            gain.connect(audio.destination);
+            osc.start();
+            osc.stop(audio.currentTime + 0.24);
         }
         catch {}
     }
@@ -196,7 +212,9 @@ window.Chad = window.Chad || {};
     function scrollToLatest() {
         setTimeout(() => {
             try {
-                [document.querySelector("main"), document.querySelector("[role='main']"), document.scrollingElement, document.documentElement, document.body].filter(Boolean).forEach(target => target.scrollTop = target.scrollHeight);
+                [document.querySelector("main"), document.querySelector("[role='main']"), document.scrollingElement, document.documentElement, document.body]
+                    .filter(Boolean)
+                    .forEach(target => target.scrollTop = target.scrollHeight);
                 window.scrollTo(0, document.body.scrollHeight);
             }
             catch {}
@@ -310,13 +328,31 @@ window.Chad = window.Chad || {};
         document.body.appendChild(bg);
     }
 
+    function createBodyHost() {
+        return createEl("div", {
+            id: "gandhi-chad-body-host",
+            style: {
+                flex: "1 1 0",
+                minHeight: "0",
+                height: "0",
+                overflow: "hidden",
+                display: "flex",
+                flexDirection: "column",
+                background: "#ffffff"
+            }
+        });
+    }
+
     function render() {
         if (!panel) return;
         const state = window.Chad.storage.state;
         applyTabIdentity();
         panel.innerHTML = "";
         panel.appendChild(renderHeader());
-        if (body) body.remove();
+
+        bodyHost = createBodyHost();
+        panel.appendChild(bodyHost);
+
         const renderers = { chaties: window.Chad.uiChaties, convo: window.Chad.uiConvo, tasks: window.Chad.uiTasks, roadmap: window.Chad.uiRoadmap, pins: window.Chad.uiPins, repo: window.Chad.uiRepo, notes: window.Chad.uiNotes };
         const activeRenderer = renderers[state.activeTab] || renderers.chaties || renderers.tasks;
         try {
@@ -328,8 +364,9 @@ window.Chad = window.Chad || {};
         if (body && body.style) {
             body.style.flex = "1 1 auto";
             body.style.minHeight = "0";
+            body.style.height = "100%";
         }
-        panel.appendChild(body);
+        bodyHost.appendChild(body);
     }
 
     function bindPanelEventShield() {
