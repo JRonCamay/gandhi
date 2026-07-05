@@ -5,7 +5,7 @@ window.Transfork = window.Transfork || {};
 
     const api = window.Transfork;
 
-    function normalize260705_PB8N2Q(source) {
+    function normalize(source) {
         if (!source) return null;
 
         if (source instanceof HTMLCanvasElement) {
@@ -28,38 +28,40 @@ window.Transfork = window.Transfork || {};
             return canvas;
         }
 
-        if (source.imageData) return normalize260705_PB8N2Q(source.imageData);
+        if (source.imageData) return normalize(source.imageData);
+
         if (source.data && source.width && source.height) {
-            return normalize260705_PB8N2Q(new ImageData(new Uint8ClampedArray(source.data), source.width, source.height));
+            return normalize(new ImageData(new Uint8ClampedArray(source.data), source.width, source.height));
         }
 
         return null;
     }
 
-    function extract260705_PB2C7M(vm, target) {
+    function extractDrawable(vm, target) {
         const renderer = vm?.runtime?.renderer;
-        if (!renderer || !target) return null;
+        if (!renderer || !target || typeof renderer.extractDrawable !== "function") return null;
 
         try {
-            if (typeof renderer.extractDrawableScreenSpace === "function") {
-                const canvas = normalize260705_PB8N2Q(renderer.extractDrawableScreenSpace(target.drawableID));
-                if (canvas) return canvas;
-            }
+            return normalize(renderer.extractDrawable(target.drawableID));
         }
-        catch (_error) {}
-
-        try {
-            if (typeof renderer.extractDrawable === "function") {
-                const canvas = normalize260705_PB8N2Q(renderer.extractDrawable(target.drawableID));
-                if (canvas) return canvas;
-            }
+        catch (_error) {
+            return null;
         }
-        catch (_error) {}
-
-        return null;
     }
 
-    function scan260705_PB7K4D(canvas) {
+    function extractScreen(vm, target) {
+        const renderer = vm?.runtime?.renderer;
+        if (!renderer || !target || typeof renderer.extractDrawableScreenSpace !== "function") return null;
+
+        try {
+            return normalize(renderer.extractDrawableScreenSpace(target.drawableID));
+        }
+        catch (_error) {
+            return null;
+        }
+    }
+
+    function scan(canvas) {
         if (!canvas?.width || !canvas?.height) return null;
 
         let data;
@@ -90,37 +92,100 @@ window.Transfork = window.Transfork || {};
         return { minX, minY, maxX, maxY, width: canvas.width, height: canvas.height };
     }
 
-    function fullRect260705_PB5R9H(vm, target, drawable, stageCanvas) {
+    function fullRect(vm, target, drawable, stageCanvas) {
         if (!drawable?.getAABB || !api.snapshotLayer?.screenRect) return null;
         return api.snapshotLayer.screenRect(drawable.getAABB(), stageCanvas, vm);
     }
 
-    function rect260705_PB9T3V(vm, target, drawable, stageCanvas) {
-        const full = fullRect260705_PB5R9H(vm, target, drawable, stageCanvas);
-        if (!full) return null;
-
-        const canvas = extract260705_PB2C7M(vm, target);
-        const scan = scan260705_PB7K4D(canvas);
-        if (!scan) return full;
-
-        const pad = 1;
-        const minX = Math.max(0, scan.minX - pad);
-        const minY = Math.max(0, scan.minY - pad);
-        const maxX = Math.min(scan.width - 1, scan.maxX + pad);
-        const maxY = Math.min(scan.height - 1, scan.maxY + pad);
-
+    function screenPoint(vm, stageCanvas, x, y) {
+        const native = vm.runtime.renderer.getNativeSize();
+        const rect = stageCanvas.getBoundingClientRect();
         return {
-            left: full.left + (minX / scan.width) * full.width,
-            top: full.top + (minY / scan.height) * full.height,
-            width: ((maxX - minX + 1) / scan.width) * full.width,
-            height: ((maxY - minY + 1) / scan.height) * full.height
+            x: rect.left + ((x + native[0] / 2) / native[0]) * rect.width,
+            y: rect.top + ((native[1] / 2 - y) / native[1]) * rect.height
         };
     }
 
+    function rectFromPoints(points) {
+        const xs = points.map(point => point.x);
+        const ys = points.map(point => point.y);
+        const left = Math.min(...xs);
+        const top = Math.min(...ys);
+        const right = Math.max(...xs);
+        const bottom = Math.max(...ys);
+        return { left, top, width: right - left, height: bottom - top };
+    }
+
+    function screenTrimRect(full, bounds) {
+        const pad = 1;
+        const minX = Math.max(0, bounds.minX - pad);
+        const minY = Math.max(0, bounds.minY - pad);
+        const maxX = Math.min(bounds.width - 1, bounds.maxX + pad);
+        const maxY = Math.min(bounds.height - 1, bounds.maxY + pad);
+
+        return {
+            left: full.left + (minX / bounds.width) * full.width,
+            top: full.top + (minY / bounds.height) * full.height,
+            width: ((maxX - minX + 1) / bounds.width) * full.width,
+            height: ((maxY - minY + 1) / bounds.height) * full.height
+        };
+    }
+
+    function transformedRect(vm, target, drawable, stageCanvas) {
+        const source = extractDrawable(vm, target);
+        const bounds = scan(source);
+        if (!bounds) return null;
+
+        const costume = target?.sprite?.costumes?.[target.currentCostume];
+        const size = costume?.size || [bounds.width, bounds.height];
+        const centerX = typeof costume?.rotationCenterX === "number" ? costume.rotationCenterX : size[0] / 2;
+        const centerY = typeof costume?.rotationCenterY === "number" ? costume.rotationCenterY : size[1] / 2;
+        const scale = drawable?.scale || [target.size || 100, target.size || 100];
+        const direction = typeof target.direction === "number" ? target.direction : 90;
+        const radians = (direction - 90) * Math.PI / 180;
+        const cos = Math.cos(radians);
+        const sin = Math.sin(radians);
+        const pad = 1;
+        const minX = Math.max(0, bounds.minX - pad);
+        const minY = Math.max(0, bounds.minY - pad);
+        const maxX = Math.min(bounds.width - 1, bounds.maxX + pad);
+        const maxY = Math.min(bounds.height - 1, bounds.maxY + pad);
+        const corners = [
+            [minX, minY],
+            [maxX + 1, minY],
+            [maxX + 1, maxY + 1],
+            [minX, maxY + 1]
+        ];
+
+        return rectFromPoints(corners.map(point => {
+            const costumeX = point[0] / bounds.width * size[0];
+            const costumeY = point[1] / bounds.height * size[1];
+            const localX = (costumeX - centerX) * scale[0] / 100;
+            const localY = (centerY - costumeY) * scale[1] / 100;
+            const scratchX = target.x + localX * cos - localY * sin;
+            const scratchY = target.y + localX * sin + localY * cos;
+            return screenPoint(vm, stageCanvas, scratchX, scratchY);
+        }));
+    }
+
+    function rect(vm, target, drawable, stageCanvas) {
+        const transformed = transformedRect(vm, target, drawable, stageCanvas);
+        if (transformed) return transformed;
+
+        const full = fullRect(vm, target, drawable, stageCanvas);
+        if (!full) return null;
+
+        const screenSource = extractScreen(vm, target);
+        const screenBounds = scan(screenSource);
+        return screenBounds ? screenTrimRect(full, screenBounds) : full;
+    }
+
     api.registerModule260705_NS8Q2M("pixelBounds", {
-        rect: rect260705_PB9T3V,
-        fullRect: fullRect260705_PB5R9H,
-        extract: extract260705_PB2C7M,
-        scan: scan260705_PB7K4D
+        rect,
+        fullRect,
+        extract: extractDrawable,
+        extractScreen,
+        scan,
+        transformedRect
     });
 })();
