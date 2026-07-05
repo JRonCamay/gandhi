@@ -18,9 +18,9 @@
 // @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/transformSnapshotGuard.js?v=26070526
 // @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/overlayTop.js?v=26070526
 // @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/snapGuideOverlay.js?v=26070526
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/pixelBoxSync.js?v=26070526
+// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/pixelBoxSync.js?v=26070528
 // @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/snapshotDragPixel.js?v=26070526
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/snapshotToolsPixel.js?v=26070526
+// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/snapshotToolsPixel.js?v=26070528
 // @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/resize.js?v=26070526
 // @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/rotate.js?v=26070526
 // @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/alpha.js?v=26070526
@@ -33,5 +33,5 @@
 (function () {
     "use strict";
 
-    console.log("Gandhi Transfork modular loader active 1.15.");
+    console.log("Gandhi Transfork modular loader active 1.15 pixel-refresh.");
 })();
