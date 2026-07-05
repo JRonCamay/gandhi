@@ -33,6 +33,51 @@ window.Chad = window.Chad || {};
         });
     }
 
+    function removeCloseButton() {
+        const panel = getPanel();
+        if (!panel) return;
+
+        Array.from(panel.querySelectorAll("button")).forEach(button => {
+            const text = (button.textContent || "").trim();
+            if (text === "✕" && button.closest("#gandhi-chad-panel") === panel) {
+                button.remove();
+            }
+        });
+    }
+
+    function getHeaderTabRow(panel) {
+        const header = panel && panel.firstElementChild;
+        if (!header) return null;
+
+        const rows = Array.from(header.children);
+        return rows.find(row => {
+            const labels = Array.from(row.querySelectorAll("button")).map(button => (button.textContent || "").trim());
+            return labels.includes("Chaties") && labels.includes("Notes");
+        }) || null;
+    }
+
+    function stabilizeHeaderTabs() {
+        const panel = getPanel();
+        const tabRow = getHeaderTabRow(panel);
+        if (!tabRow) return;
+
+        Object.assign(tabRow.style, {
+            display: "flex",
+            flexWrap: "nowrap",
+            overflowX: "auto",
+            overflowY: "hidden",
+            alignItems: "center",
+            gap: "5px",
+            paddingBottom: "3px",
+            scrollbarWidth: "thin",
+            maxWidth: "100%"
+        });
+
+        Array.from(tabRow.querySelectorAll("button")).forEach(button => {
+            button.style.flex = "0 0 auto";
+        });
+    }
+
     function addProjectTooltips() {
         const panel = getPanel();
         if (!panel) return;
@@ -48,6 +93,8 @@ window.Chad = window.Chad || {};
 
     function applyTweaks() {
         removeUpdateButton();
+        removeCloseButton();
+        stabilizeHeaderTabs();
         addProjectTooltips();
     }
 
@@ -66,6 +113,8 @@ window.Chad = window.Chad || {};
     window.Chad.uiTweaks = {
         applyTweaks,
         removeUpdateButton,
+        removeCloseButton,
+        stabilizeHeaderTabs,
         addProjectTooltips
     };
 
