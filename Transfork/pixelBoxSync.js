@@ -65,9 +65,53 @@ window.Transfork = window.Transfork || {};
         api.selectionBox.__pixelPlaceOverride = true;
     }
 
+    function installSnapshotLayerPatch() {
+        if (!api.snapshotLayer || api.snapshotLayer.__pixelOccluderPatch) return;
+        if (typeof api.snapshotLayer.createOccluders !== "function") return;
+
+        const oldCreate = api.snapshotLayer.createOccluders;
+
+        api.snapshotLayer.pixelRect = function (vm, target, drawable, canvas) {
+            if (target && drawable && canvas && api.pixelBounds?.rect) {
+                return api.pixelBounds.rect(vm, target, drawable, canvas);
+            }
+            if (drawable?.getAABB && api.snapshotLayer.screenRect) {
+                return api.snapshotLayer.screenRect(drawable.getAABB(), canvas, vm);
+            }
+            return null;
+        };
+
+        api.snapshotLayer.createOccluders = function (vm, target, canvas) {
+            const renderer = vm?.runtime?.renderer;
+            if (!renderer || !target || !canvas || typeof api.snapshotLayer.makeSnapshot !== "function") {
+                return oldCreate.call(this, vm, target, canvas);
+            }
+
+            const drawList = Array.isArray(renderer._drawList) ? renderer._drawList : [];
+            const index = drawList.indexOf(target.drawableID);
+            if (index < 0) return oldCreate.call(this, vm, target, canvas);
+
+            const occluders = [];
+            drawList.slice(index + 1).forEach((drawableID, layerIndex) => {
+                const other = vm.runtime.targets.find(item => item && !item.isStage && item.drawableID === drawableID);
+                const drawable = renderer._allDrawables[drawableID];
+                if (!other || !drawable || drawable._visible === false || typeof drawable.getAABB !== "function") return;
+
+                const rect = api.snapshotLayer.pixelRect(vm, other, drawable, canvas);
+                const snap = rect && api.snapshotLayer.makeSnapshot(vm, other, drawable, canvas, rect, 9999 + layerIndex);
+                if (snap) occluders.push(snap);
+            });
+
+            return occluders;
+        };
+
+        api.snapshotLayer.__pixelOccluderPatch = true;
+    }
+
     function sync() {
         requestAnimationFrame(sync);
         installPlaceOverride();
+        installSnapshotLayerPatch();
         if (busy || window.__transforkTransformActive) return;
 
         const box = transformBox();
@@ -87,11 +131,13 @@ window.Transfork = window.Transfork || {};
     }
 
     installPlaceOverride();
+    installSnapshotLayerPatch();
     sync();
 
     api.registerModule260705_NS8Q2M("pixelBoxSync", {
         currentRect,
         sync,
-        installPlaceOverride
+        installPlaceOverride,
+        installSnapshotLayerPatch
     });
 })();
