@@ -10,15 +10,24 @@ window.Transfork = window.Transfork || {};
     ];
 
     function runBlob(sha) {
-        return fetch(repo + sha)
-            .then(response => response.json())
-            .then(data => atob(String(data.content || "").replace(/\n/g, "")))
-            .then(code => Function(code)());
+        const request = new XMLHttpRequest();
+        request.open("GET", repo + sha, false);
+        request.send(null);
+
+        if (request.status < 200 || request.status >= 300) {
+            throw new Error("Blob load failed " + sha);
+        }
+
+        const data = JSON.parse(request.responseText);
+        const code = atob(String(data.content || "").replace(/\n/g, ""));
+        Function(code)();
     }
 
-    Promise.resolve()
-        .then(() => runBlob(blobs[0]))
-        .then(() => runBlob(blobs[1]))
-        .then(() => { window.__transforkPixelOwnersLoaded = true; })
-        .catch(error => console.warn("Transfork pixel owners failed", error));
+    try {
+        blobs.forEach(runBlob);
+        window.__transforkPixelOwnersLoaded = true;
+    }
+    catch (error) {
+        console.warn("Transfork pixel owners failed", error);
+    }
 })();
