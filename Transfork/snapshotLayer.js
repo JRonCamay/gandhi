@@ -34,7 +34,146 @@ window.Transfork = window.Transfork || {};
         return native?.[0] ? rect.width / native[0] : 1;
     }
 
-    function makeSnapshot260705_LY9P3K(vm, target, drawable, canvas, rect, zIndex) {
+    function imageDataUsable260705_LY6U9F(imageData) {
+        if (!imageData?.data?.length) return false;
+
+        const data = imageData.data;
+        let visible = 0;
+        let different = 0;
+        let firstR = null;
+        let firstG = null;
+        let firstB = null;
+
+        for (let i = 0; i < data.length; i += 16) {
+            if (!data[i + 3]) continue;
+            visible++;
+
+            if (firstR === null) {
+                firstR = data[i];
+                firstG = data[i + 1];
+                firstB = data[i + 2];
+            }
+            else if (
+                Math.abs(data[i] - firstR) > 4 ||
+                Math.abs(data[i + 1] - firstG) > 4 ||
+                Math.abs(data[i + 2] - firstB) > 4
+            ) {
+                different++;
+            }
+        }
+
+        return visible > 4 && (different > 0 || visible < data.length / 32);
+    }
+
+    function canvasFromImageData260705_LY3I8Q(imageData) {
+        if (!imageDataUsable260705_LY6U9F(imageData)) return null;
+        const canvas = document.createElement("canvas");
+        canvas.width = imageData.width;
+        canvas.height = imageData.height;
+        canvas.getContext("2d").putImageData(imageData, 0, 0);
+        return canvas;
+    }
+
+    function normalizeExtracted260705_LY2N7V(extracted) {
+        if (!extracted) return null;
+
+        if (typeof ImageData !== "undefined" && extracted instanceof ImageData) {
+            return canvasFromImageData260705_LY3I8Q(extracted);
+        }
+
+        if (extracted instanceof HTMLCanvasElement) {
+            if (!extracted.width || !extracted.height) return null;
+            try {
+                const data = extracted.getContext("2d").getImageData(0, 0, extracted.width, extracted.height);
+                return imageDataUsable260705_LY6U9F(data) ? extracted : null;
+            }
+            catch (_error) {
+                return extracted;
+            }
+        }
+
+        if (typeof ImageBitmap !== "undefined" && extracted instanceof ImageBitmap) {
+            const canvas = document.createElement("canvas");
+            canvas.width = extracted.width;
+            canvas.height = extracted.height;
+            canvas.getContext("2d").drawImage(extracted, 0, 0);
+            return normalizeExtracted260705_LY2N7V(canvas);
+        }
+
+        if (extracted.imageData) return normalizeExtracted260705_LY2N7V(extracted.imageData);
+
+        if (extracted.data && extracted.width && extracted.height) {
+            return canvasFromImageData260705_LY3I8Q(
+                new ImageData(
+                    new Uint8ClampedArray(extracted.data),
+                    extracted.width,
+                    extracted.height
+                )
+            );
+        }
+
+        return null;
+    }
+
+    function extractDrawableCanvas260705_LY5E3D(renderer, drawableID) {
+        if (!renderer) return null;
+
+        try {
+            if (typeof renderer.extractDrawableScreenSpace === "function") {
+                const canvas = normalizeExtracted260705_LY2N7V(
+                    renderer.extractDrawableScreenSpace(drawableID)
+                );
+                if (canvas) return canvas;
+            }
+        }
+        catch (error) {
+            console.warn("Transfork layer screen snapshot failed", error);
+        }
+
+        try {
+            if (typeof renderer.extractDrawable === "function") {
+                const canvas = normalizeExtracted260705_LY2N7V(
+                    renderer.extractDrawable(drawableID)
+                );
+                if (canvas) return canvas;
+            }
+        }
+        catch (error) {
+            console.warn("Transfork layer drawable snapshot failed", error);
+        }
+
+        return null;
+    }
+
+    function makeRendererSnapshot260705_LY4E9X(vm, target, rect, zIndex) {
+        const source = extractDrawableCanvas260705_LY5E3D(vm.runtime.renderer, target.drawableID);
+        if (!source) return null;
+
+        const snap = document.createElement("canvas");
+        snap.width = source.width;
+        snap.height = source.height;
+        snap.getContext("2d").drawImage(source, 0, 0);
+
+        Object.assign(snap.style, {
+            position: "fixed",
+            left: rect.left + "px",
+            top: rect.top + "px",
+            width: rect.width + "px",
+            height: rect.height + "px",
+            pointerEvents: "none",
+            zIndex: String(zIndex || 9998),
+            boxSizing: "border-box",
+            userSelect: "none",
+            background: "transparent",
+            visibility: "hidden",
+            transformOrigin: "50% 50%"
+        });
+
+        document.body.appendChild(snap);
+        return snap;
+    }
+
+    function makeCostumeSnapshot260705_LY9P3K(vm, target, drawable, canvas, rect, zIndex) {
         const costume = getCostume260705_LY7D2Q(target);
         const src = getSource260705_LY8M4W(costume);
         if (!src) return null;
@@ -91,6 +230,11 @@ window.Transfork = window.Transfork || {};
         return wrap;
     }
 
+    function makeSnapshot260705_LY8A4B(vm, target, drawable, canvas, rect, zIndex) {
+        return makeRendererSnapshot260705_LY4E9X(vm, target, rect, zIndex) ||
+            makeCostumeSnapshot260705_LY9P3K(vm, target, drawable, canvas, rect, zIndex);
+    }
+
     function getDrawList260705_LY6V2B(renderer) {
         if (Array.isArray(renderer._drawList)) return renderer._drawList;
         if (Array.isArray(renderer._allDrawables)) {
@@ -118,7 +262,7 @@ window.Transfork = window.Transfork || {};
             if (!drawable || drawable._visible === false || typeof drawable.getAABB !== "function") return;
 
             const rect = screenRect260705_LY4C8N(drawable.getAABB(), canvas, vm);
-            const snap = makeSnapshot260705_LY9P3K(vm, other, drawable, canvas, rect, 9999 + index);
+            const snap = makeSnapshot260705_LY8A4B(vm, other, drawable, canvas, rect, 9999 + index);
             if (snap) occluders.push(snap);
         });
 
@@ -139,7 +283,7 @@ window.Transfork = window.Transfork || {};
 
     api.registerModule260705_NS8Q2M("snapshotLayer", {
         screenRect: screenRect260705_LY4C8N,
-        makeSnapshot: makeSnapshot260705_LY9P3K,
+        makeSnapshot: makeSnapshot260705_LY8A4B,
         createOccluders: createOccluders260705_LY3K7R,
         setVisible: setVisible260705_LY8Q1D,
         remove: remove260705_LY4R5C
