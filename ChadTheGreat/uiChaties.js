@@ -3,290 +3,91 @@ window.Chad = window.Chad || {};
 (function () {
     "use strict";
 
-    const MODULE_KEY = "uiChaties";
-    const api = {};
-    const DONE_KEY = "gandhi_chad_task_done_flash_v1";
-    const EXPANDED_KEY = "gandhi_chad_expanded_agent_v3";
-    const runtimeSwitchboard = window.Chad.runtimeSwitchboard;
+    function ui() { return window.Chad.ui; }
+    function el(tag, props, children) { return ui().createEl(tag, props || {}, children || []); }
+    function btn(label, fn, extra) { return ui().button(label, fn, extra || {}); }
+    function esc(text) { return ui().escapeHTML(text); }
+    function bodyStyle() { return ui().bodyStyle(); }
+    function render() { return ui().render(); }
+    function nowStamp() { return ui().nowStamp(); }
+    function currentChatUrl() { return ui().currentChatUrl(); }
+    function defaultAgents() { return ui().defaultAgents(); }
+    function getAgents() { return ui().getAgents(); }
+    function saveAgents(agents) { return ui().saveAgents(agents); }
+    function getActiveAgentId() { const agent = ui().getActiveAgent(); return agent ? agent.id : ""; }
+    function setActiveAgentId(id) { return ui().setActiveAgentId(id); }
+    function isDoneFlashing() { return ui().isDoneFlashing(); }
+    function scanVisibleChatFiles() { return ui().scanVisibleChatFiles(); }
+    function applyTabIdentity() { return ui().applyTabIdentity(); }
+    function scrollToLatest() { return ui().scrollToLatest(); }
 
-    runtimeSwitchboard.register({
-        key: MODULE_KEY,
-        file: "uiChaties.js",
-        creator: "Manuel",
-        purpose: "Current Chaties renderer and panel runtime",
-        timestamp: 260703,
-        parent: "ChadTheGreat",
-        on: true
-    });
-
-    function isModuleOn() {
-        return runtimeSwitchboard.isOn(MODULE_KEY);
+    function renderAgentFile(agent, file) {
+        return el("div", { style: { border: "1px solid #e2e8f0", borderRadius: "7px", padding: "6px", marginTop: "5px", background: "#ffffff" } }, [
+            el("div", {
+                html: `<b>📄 ${esc(file.name)}</b><br><span style="color:#64748b">${esc(file.source || "chat")} · ${esc(file.addedAt || "")}</span>`,
+                style: { fontSize: "11px", lineHeight: "1.35", marginBottom: "5px" }
+            }),
+            el("div", { style: { display: "flex", gap: "4px", flexWrap: "wrap" } }, [
+                file.url ? btn("OPEN", () => window.open(file.url, "_blank")) : null,
+                btn("COPY", () => window.Chad.actions.copyText(file.url || file.name)),
+                btn("DELETE", () => {
+                    agent.files = (agent.files || []).filter(item => item.id !== file.id);
+                    saveAgents(getAgents().map(a => a.id === agent.id ? agent : a));
+                    render();
+                }, { bg: "#fee2e2", border: "#fecaca" })
+            ])
+        ]);
     }
 
-    let visibleFilesByAgent = {};
+    function scanFiles(agentId) {
+        const list = getAgents();
+        const agent = list.find(item => item.id === agentId);
+        if (!agent) return;
 
-    function nowStamp() {
-        return new Date().toLocaleString();
-    }
-
-    function escapeHTML(text) {
-        return String(text || "")
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;");
-    }
-
-    function createEl(tag, props, children) {
-        if (window.Chad.ui && window.Chad.ui.createEl) {
-            return window.Chad.ui.createEl(tag, props || {}, children || []);
+        const found = scanVisibleChatFiles();
+        const map = new Map();
+        for (const file of agent.files || []) map.set(String(file.url || file.name || file.id).toLowerCase(), file);
+        for (const file of found) {
+            const key = String(file.url || file.name || file.id).toLowerCase();
+            if (!map.has(key)) map.set(key, file);
         }
+        agent.files = Array.from(map.values());
+        agent.updatedAt = nowStamp();
+        saveAgents(list);
+    }
 
-        const node = document.createElement(tag);
-        for (const key in props || {}) {
-            if (key === "style") Object.assign(node.style, props[key]);
-            else if (key === "text") node.textContent = props[key];
-            else if (key === "html") node.innerHTML = props[key];
-            else node.setAttribute(key, props[key]);
+    function openAgent(agent) {
+        setActiveAgentId(agent.id);
+        applyTabIdentity();
+        render();
+        if (window.Chad.bridge && window.Chad.bridge.isExtension && window.Chad.bridge.isExtension()) {
+            window.Chad.bridge.openAgentTab(agent).catch(() => window.open(agent.chatUrl || "https://chatgpt.com/", "chad_agent_" + agent.id));
         }
-        (children || []).forEach(child => child && node.appendChild(child));
-        return node;
-    }
-
-    function button(label, fn, extra) {
-        const btn = createEl("button", {
-            text: label,
-            title: extra && extra.title ? extra.title : "",
-            style: {
-                background: extra && extra.bg ? extra.bg : "#f8fafc",
-                color: extra && extra.color ? extra.color : "#0f172a",
-                border: "1px solid " + (extra && extra.border ? extra.border : "#cbd5e1"),
-                borderRadius: "6px",
-                padding: extra && extra.padding ? extra.padding : "4px 7px",
-                fontSize: extra && extra.fontSize ? extra.fontSize : "11px",
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-                fontWeight: extra && extra.bold ? "700" : "500",
-                lineHeight: "1.1"
-            }
-        });
-
-        btn.addEventListener("click", event => {
-            if (!isModuleOn()) return;
-            event.preventDefault();
-            event.stopPropagation();
-            fn(event);
-        });
-
-        return btn;
-    }
-
-    function bodyStyle() {
-        return {
-            padding: "8px",
-            overflowY: "auto",
-            height: "calc(100vh - 158px)",
-            background: "#ffffff"
-        };
-    }
-
-    function deps() {
-        return {
-            identity: window.Chad.agentIdentity,
-            tabs: window.Chad.agentTabs,
-            files: window.Chad.agentFiles
-        };
-    }
-
-    function isDoneFlashing() {
-        return Date.now() < Number(localStorage.getItem(DONE_KEY) || 0);
-    }
-
-    function closeAllAgents() {
-        if (!isModuleOn()) return;
-
-        visibleFilesByAgent = {};
-        localStorage.setItem(EXPANDED_KEY, "{}");
-        if (window.Chad.agentIdentity && window.Chad.agentIdentity.setExpandedMap) {
-            window.Chad.agentIdentity.setExpandedMap({});
+        else {
+            window.open(agent.chatUrl || "https://chatgpt.com/", "chad_agent_" + agent.id);
         }
-    }
-
-    function isPanelInput(target) {
-        if (!target || !target.closest) return false;
-        return !!target.closest("input, textarea, select, [contenteditable='true'], [role='textbox'], .ProseMirror");
-    }
-
-    function refocusPanelInput(target) {
-        if (!target || typeof target.focus !== "function") return;
-        setTimeout(() => {
-            try {
-                target.focus({ preventScroll: true });
-            }
-            catch {
-                try { target.focus(); }
-                catch {}
-            }
-        }, 0);
-    }
-
-    function installPanelFocusGuard() {
-        const panel = document.querySelector("#gandhi-chad-panel");
-        if (!panel || panel.__chadPanelFocusGuard) return;
-
-        const protect = event => {
-            if (!isModuleOn()) return;
-            const target = event.target;
-            if (!target || !panel.contains(target) || !isPanelInput(target)) return;
-            event.stopPropagation();
-            refocusPanelInput(target.closest("input, textarea, select, [contenteditable='true'], [role='textbox'], .ProseMirror") || target);
-        };
-
-        ["mousedown", "mouseup", "click", "focusin", "keydown", "keyup", "input"].forEach(type => {
-            panel.addEventListener(type, protect, false);
-        });
-
-        panel.__chadPanelFocusGuard = true;
-    }
-
-    function renderFile(agent, file) {
-        const card = createEl("div", {
-            style: {
-                border: "1px solid #e2e8f0",
-                borderRadius: "7px",
-                padding: "6px",
-                marginTop: "5px",
-                background: "#ffffff"
-            }
-        });
-
-        card.appendChild(createEl("div", {
-            html: `<b>📄 ${escapeHTML(file.name)}</b><br><span style="color:#64748b">${escapeHTML(file.source || "chat")} · ${escapeHTML(file.addedAt || "")}</span>`,
-            style: { fontSize: "11px", lineHeight: "1.35", marginBottom: "5px" }
-        }));
-
-        card.appendChild(createEl("div", { style: { display: "flex", gap: "4px", flexWrap: "wrap" } }, [
-            file.url ? button("OPEN", () => window.open(file.url, "_blank")) : null,
-            button("COPY", () => window.Chad.actions.copyText(file.url || file.name)),
-            button("CLEAR", () => {
-                visibleFilesByAgent[agent.id] = (visibleFilesByAgent[agent.id] || []).filter(item => item.id !== file.id);
-                renderIntoPanel();
-            }, { bg: "#fee2e2", border: "#fecaca" })
-        ]));
-
-        return card;
+        scrollToLatest();
     }
 
     function editAgent(agentId) {
-        const identity = deps().identity;
-        const agents = identity.getAgents();
-        const agent = agents.find(item => item.id === agentId);
+        const list = getAgents();
+        const agent = list.find(item => item.id === agentId);
         if (!agent) return;
-
-        const icon = prompt("Icon", agent.icon || "🤖");
-        if (icon === null) return;
-        const name = prompt("Name", agent.name || "Agent");
-        if (name === null) return;
-        const description = prompt("Description", agent.description || "");
-        if (description === null) return;
-        const chatUrl = prompt("Chat URL", agent.chatUrl || "https://chatgpt.com/");
-        if (chatUrl === null) return;
-        const tabTitle = prompt("Tab title", agent.tabTitle || `${icon} ${name}`);
-        if (tabTitle === null) return;
-
-        Object.assign(agent, {
-            icon: icon.trim() || "🤖",
-            name: name.trim() || "Agent",
-            description: description.trim(),
-            chatUrl: chatUrl.trim() || "https://chatgpt.com/",
-            tabTitle: tabTitle.trim() || `${icon} ${name}`,
-            updatedAt: nowStamp()
-        });
-        identity.saveAgents(agents);
-        renderIntoPanel();
+        const icon = prompt("Icon", agent.icon || "🤖"); if (icon === null) return;
+        const name = prompt("Name", agent.name || "Agent"); if (name === null) return;
+        const description = prompt("Description", agent.description || ""); if (description === null) return;
+        const chatUrl = prompt("Chat URL", agent.chatUrl || "https://chatgpt.com/"); if (chatUrl === null) return;
+        const tabTitle = prompt("Tab title", agent.tabTitle || `${icon} ${name}`); if (tabTitle === null) return;
+        Object.assign(agent, { icon: icon.trim() || "🤖", name: name.trim() || "Agent", description: description.trim(), chatUrl: chatUrl.trim() || "https://chatgpt.com/", tabTitle: tabTitle.trim() || `${icon} ${name}`, updatedAt: nowStamp() });
+        saveAgents(list);
+        setActiveAgentId(agent.id);
+        applyTabIdentity();
+        render();
     }
 
-    function addAgent() {
-        const identity = deps().identity;
-        const agents = identity.getAgents();
-        const agent = {
-            id: "agent-" + Date.now(),
-            icon: "🤖",
-            name: "New Agent",
-            description: "",
-            chatUrl: "https://chatgpt.com/",
-            tabTitle: "🤖 New Agent",
-            files: [],
-            createdAt: nowStamp(),
-            updatedAt: nowStamp()
-        };
-
-        agents.push(agent);
-        identity.saveAgents(agents);
-        identity.setActiveId(agent.id);
-        identity.setExpanded(agent.id, false);
-        renderIntoPanel();
-    }
-
-    function deleteAgent(agentId) {
-        const identity = deps().identity;
-        const agents = identity.getAgents().filter(agent => agent.id !== agentId);
-        identity.saveAgents(agents);
-        delete visibleFilesByAgent[agentId];
-        if (identity.getActiveId() === agentId) identity.setActiveId(agents[0] ? agents[0].id : "");
-        renderIntoPanel();
-    }
-
-    function scanFilesForAgent(agent) {
-        const files = deps().files;
-        visibleFilesByAgent[agent.id] = files.scanVisibleChatFiles(agent);
-        renderIntoPanel();
-    }
-
-    function useThisChat(agent) {
-        const identity = deps().identity;
-        const agents = identity.getAgents();
-        const current = agents.find(item => item.id === agent.id);
-        if (!current) return;
-        current.chatUrl = identity.currentChatUrl();
-        current.updatedAt = nowStamp();
-        identity.saveAgents(agents);
-        identity.setActiveId(agent.id);
-        visibleFilesByAgent = {};
-        renderIntoPanel();
-    }
-
-    function renderAgentDetails(agent) {
-        const files = visibleFilesByAgent[agent.id] || [];
-        const detail = createEl("div", { style: { marginTop: "6px" } });
-
-        detail.appendChild(createEl("div", { style: { display: "flex", gap: "4px", flexWrap: "wrap" } }, [
-            button("SCAN FILES", () => scanFilesForAgent(agent), { bg: "#dcfce7", border: "#86efac", bold: true }),
-            button("USE THIS CHAT", () => useThisChat(agent), { bg: "#e0f2fe", border: "#7dd3fc" }),
-            button("COPY LINK", () => window.Chad.actions.copyText(agent.chatUrl || "")),
-            button("DELETE AGENT", () => deleteAgent(agent.id), { bg: "#fee2e2", border: "#fecaca" })
-        ]));
-
-        if (!files.length) {
-            detail.appendChild(createEl("div", {
-                text: "No file data loaded. Click SCAN FILES.",
-                style: { color: "#64748b", fontSize: "11px", padding: "7px 2px 0" }
-            }));
-        }
-        else {
-            files.forEach(file => detail.appendChild(renderFile(agent, file)));
-        }
-
-        return detail;
-    }
-
-    function renderAgent(agent) {
-        const { identity, tabs } = deps();
-        const active = agent.id === identity.getActiveId();
-        const expanded = identity.isExpanded(agent.id) === true;
+    function renderAgentCard(agent, active) {
         const activeDone = active && isDoneFlashing();
-
-        const box = createEl("div", {
+        const box = el("div", {
             style: {
                 border: "1px solid " + (activeDone ? "#22c55e" : active ? "#2563eb" : "#cbd5e1"),
                 borderRadius: "9px",
@@ -296,111 +97,58 @@ window.Chad = window.Chad || {};
             }
         });
 
-        const arrow = button(expanded ? "▾" : "▸", () => {
-            const next = !identity.isExpanded(agent.id);
-            identity.setExpanded(agent.id, next);
-            if (!next) delete visibleFilesByAgent[agent.id];
-            renderIntoPanel();
-        }, { bg: "#ffffff", border: "#cbd5e1", bold: true, padding: "4px 6px", title: expanded ? "Collapse" : "Expand" });
-
-        const icon = createEl("span", {
-            text: agent.icon || "🤖",
-            style: { fontSize: "17px", lineHeight: "1", flex: "0 0 auto" }
-        });
-
-        const name = button(agent.name || "Agent", () => tabs.openAgent(agent), {
-            bg: "transparent",
-            border: "transparent",
-            bold: true,
-            padding: "3px",
-            fontSize: "12px",
-            title: "Open agent chat"
-        });
-        name.style.flex = "1";
-        name.style.textAlign = "left";
-
-        box.appendChild(createEl("div", { style: { display: "flex", gap: "6px", alignItems: "center" } }, [
-            arrow,
-            icon,
-            name,
-            button("INFO", () => editAgent(agent.id), { bg: "#fef3c7", border: "#fcd34d" })
+        box.appendChild(el("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "6px" } }, [
+            btn(`${agent.icon || "🤖"} ${agent.name || "Agent"}`, () => openAgent(agent), { bg: "transparent", border: "transparent", bold: true, padding: "3px", fontSize: "12px" }),
+            btn("INFO", () => editAgent(agent.id), { bg: "#fef3c7", border: "#fcd34d" })
         ]));
 
-        box.appendChild(createEl("div", {
+        box.appendChild(el("div", {
             text: agent.description || "Click INFO to add description.",
-            style: { color: agent.description ? "#64748b" : "#94a3b8", fontSize: "11px", marginTop: "3px", paddingLeft: "34px" }
+            style: { color: agent.description ? "#64748b" : "#94a3b8", fontSize: "11px", marginTop: "3px" }
         }));
 
-        if (expanded) box.appendChild(renderAgentDetails(agent));
+        if (active) {
+            box.appendChild(el("div", { style: { display: "flex", gap: "4px", flexWrap: "wrap", marginTop: "6px" } }, [
+                btn("SCAN FILES", () => { scanFiles(agent.id); render(); }, { bg: "#dcfce7", border: "#86efac", bold: true }),
+                btn("USE THIS CHAT", () => { agent.chatUrl = currentChatUrl(); agent.updatedAt = nowStamp(); saveAgents(getAgents().map(a => a.id === agent.id ? agent : a)); render(); }, { bg: "#e0f2fe", border: "#7dd3fc" }),
+                btn("COPY LINK", () => window.Chad.actions.copyText(agent.chatUrl || "")),
+                btn("DELETE AGENT", () => { const next = getAgents().filter(a => a.id !== agent.id); saveAgents(next.length ? next : defaultAgents()); setActiveAgentId((next[0] || defaultAgents()[0]).id); render(); }, { bg: "#fee2e2", border: "#fecaca" })
+            ]));
+
+            if (!agent.files || !agent.files.length) {
+                box.appendChild(el("div", { text: "No files yet. Click SCAN FILES.", style: { color: "#64748b", fontSize: "11px", padding: "7px 2px 0" } }));
+            }
+            else {
+                for (const file of agent.files) box.appendChild(renderAgentFile(agent, file));
+            }
+        }
+
         return box;
     }
 
-    function render() {
-        if (!isModuleOn()) return null;
+    function renderChaties() {
+        const wrap = el("div", { style: bodyStyle() });
+        const agents = getAgents();
+        const activeId = getActiveAgentId();
 
-        const { identity, files } = deps();
-        const wrap = createEl("div", { style: bodyStyle() });
-
-        if (!identity || !files) {
-            wrap.appendChild(createEl("div", { text: "Chaties modules are still loading...", style: { color: "#64748b", padding: "10px" } }));
-            return wrap;
-        }
-
-        wrap.appendChild(createEl("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "7px" } }, [
-            createEl("div", { html: `<b>Chaties</b><br><span style="color:#64748b">Agents are closed by default. Click ▸ to open profile.</span>` }),
-            button("+", addAgent, { bg: "#dcfce7", border: "#86efac", bold: true })
+        wrap.appendChild(el("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "7px" } }, [
+            el("div", { html: `<b>Chaties</b><br><span style="color:#64748b">Global agents. Opens tabs in the Chaties group.</span>` }),
+            btn("+", () => {
+                const agent = {
+                    id: "agent-" + Date.now(), icon: "🤖", name: "New Agent", description: "",
+                    chatUrl: "https://chatgpt.com/", tabTitle: "🤖 New Agent", files: [], createdAt: nowStamp(), updatedAt: nowStamp()
+                };
+                const list = getAgents();
+                list.push(agent);
+                saveAgents(list);
+                setActiveAgentId(agent.id);
+                render();
+            }, { bg: "#dcfce7", border: "#86efac", bold: true })
         ]));
 
-        identity.getAgents().forEach(agent => wrap.appendChild(renderAgent(agent)));
+        for (const agent of agents) wrap.appendChild(renderAgentCard(agent, agent.id === activeId));
         return wrap;
     }
 
-    function renderIntoPanel() {
-        if (!isModuleOn()) return;
-        installPanelFocusGuard();
-        if (window.Chad.ui && window.Chad.ui.render && !window.Chad.__uiChatiesMainRenderActive) {
-            window.Chad.__uiChatiesMainRenderActive = true;
-            try {
-                window.Chad.ui.render();
-            }
-            finally {
-                window.Chad.__uiChatiesMainRenderActive = false;
-            }
-        }
-    }
-
-    function patchUiRender() {
-        if (!isModuleOn()) return;
-        installPanelFocusGuard();
-    }
-
-    function patchAgentFixes() {
-        if (!isModuleOn()) return;
-
-        const fixes = window.Chad.agentFixes;
-        if (!fixes || fixes.__uiChatiesSingleRendererPatched) return;
-        fixes.renderChatiesStable = function () {
-            renderIntoPanel();
-        };
-        fixes.__uiChatiesSingleRendererPatched = true;
-    }
-
-    function start() {
-        closeAllAgents();
-        patchUiRender();
-        patchAgentFixes();
-        setInterval(() => {
-            if (!isModuleOn()) return;
-            patchUiRender();
-            patchAgentFixes();
-        }, 500);
-    }
-
-    api.render = render;
-    api.renderIntoPanel = renderIntoPanel;
-    api.closeAllAgents = closeAllAgents;
-    api.clearVisibleFileData = function () { visibleFilesByAgent = {}; };
-
-    window.Chad.uiChaties = api;
-    start();
+    window.Chad.uiChaties = { render: renderChaties, scanFiles, openAgent };
 })();
