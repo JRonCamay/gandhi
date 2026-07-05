@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gandhi Transfork Modular Loader
 // @namespace    http://tampermonkey.net/
-// @version      1.16
+// @version      1.17
 // @description  Loads modular Transfork files dynamically
 // @match        *://www.cocrea.world/*
 // @grant        none
@@ -11,7 +11,7 @@
     "use strict";
 
     const base = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/";
-    const cache = "26070534";
+    const cache = "26070535";
     const modules = [
         "namespace.js",
         "state.js",
@@ -38,15 +38,12 @@
         "main.js"
     ];
 
-    function loadModule(name) {
-        return new Promise((resolve, reject) => {
-            const script = document.createElement("script");
-            script.src = base + name + "?v=" + cache;
-            script.async = false;
-            script.onload = resolve;
-            script.onerror = () => reject(new Error("Failed to load " + name));
-            document.documentElement.appendChild(script);
-        });
+    async function loadModule(name) {
+        const url = base + name + "?v=" + cache;
+        const response = await fetch(url, { cache: "no-store" });
+        if (!response.ok) throw new Error("Failed to fetch " + name + ": " + response.status);
+        const source = await response.text();
+        Function(source + "\n//# sourceURL=" + url)();
     }
 
     async function loadAll() {
@@ -57,7 +54,7 @@
             await loadModule(name);
         }
 
-        console.log("Gandhi Transfork modular loader active 1.16 live-alpha-scan.");
+        console.log("Gandhi Transfork modular loader active 1.17 live-alpha-scan.");
     }
 
     loadAll().catch(error => console.error("Gandhi Transfork loader failed", error));
