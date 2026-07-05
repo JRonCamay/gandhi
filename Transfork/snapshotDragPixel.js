@@ -32,5 +32,10 @@ window.Transfork = window.Transfork || {};
 
     if (!runBlob("18de641e36da56254e3c5bb47f2986c4a0def59b")) {
         console.warn("Transfork pixel drag owner failed to load");
+        return;
+    }
+
+    if (window.Transfork.snapshotDrag && typeof window.Transfork.snapshotDrag.bind !== "function") {
+        window.Transfork.snapshotDrag.bind = function () {};
     }
 })();
