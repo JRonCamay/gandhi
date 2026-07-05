@@ -187,16 +187,19 @@ window.Transfork = window.Transfork || {};
         if (vm && target) {
             target.setXY(commit ? state.finalX : state.startX, commit ? state.finalY : state.startY);
             setVisible(vm, target, state.visible);
+            vm.runtime.requestRedraw?.();
         }
-
-        nodes.forEach(node => {
-            if (node?.parentNode) node.remove();
-        });
 
         state.active = false;
         state.snapshot = null;
         state.occluders = [];
         state.screenDelta = { x: 0, y: 0 };
+
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            nodes.forEach(node => {
+                if (node?.parentNode) node.remove();
+            });
+        }));
     }
 
     function isMoveHandle(element) {
