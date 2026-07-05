@@ -171,17 +171,16 @@ window.Chad = window.Chad || {};
     }
 
     function renderConvo() {
-        const parentColumn = el("div", { style: { height: "100%", minHeight: "0", overflow: "hidden", background: "#ffffff", display: "flex", flexDirection: "column" } });
-        const fixedColumn = el("div", { style: { flex: "1 1 auto", minHeight: "0", overflow: "hidden", display: "flex", flexDirection: "column" } });
-        const messageRow = el("div", { style: { flex: "1 1 auto", minHeight: "0", overflow: "hidden", display: "flex", paddingRight: "2px" } });
-        const list = el("div", { style: { flex: "1 1 auto", minWidth: "0", minHeight: "0", height: "100%", overflowY: "scroll", overflowX: "hidden", scrollbarGutter: "stable", padding: "8px", paddingRight: "12px", boxSizing: "border-box" } });
+        const parentColumn = el("div", { style: { height: "100%", maxHeight: "100%", minHeight: "0", overflow: "hidden", background: "#ffffff", display: "flex", flexDirection: "column", position: "relative" } });
+        const messageRow = el("div", { style: { flex: "1 1 0", minHeight: "0", overflow: "hidden", display: "flex", paddingRight: "2px" } });
+        const list = el("div", { style: { flex: "1 1 auto", minWidth: "0", minHeight: "0", height: "100%", overflowY: "auto", overflowX: "hidden", scrollbarGutter: "stable", padding: "8px", paddingRight: "12px", boxSizing: "border-box" } });
         const messages = getDisplayMessages();
         list.appendChild(el("div", { html: "<b>Convo Chat History</b><br><span style='color:#64748b'>SEND saves here and into the CONVO folder store.</span>", style: { marginBottom: "8px", lineHeight: "1.35" } }));
         if (!messages.length) list.appendChild(el("div", { text: "No local messages yet.", style: { color: "#64748b", padding: "10px", border: "1px dashed #cbd5e1", borderRadius: "8px" } }));
         else messages.forEach(message => list.appendChild(renderMessage(message)));
         messageRow.appendChild(list);
 
-        const input = el("textarea", { placeholder: "Message as Jay...", style: { flex: "1 1 auto", width: "100%", height: "44px", minHeight: "44px", maxHeight: "88px", resize: "vertical", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "8px", fontSize: "12px", lineHeight: "1.35", outline: "none", boxSizing: "border-box" } });
+        const input = el("textarea", { placeholder: "Message as Jay...", style: { flex: "1 1 auto", width: "100%", height: "44px", minHeight: "44px", maxHeight: "88px", resize: "none", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "8px", fontSize: "12px", lineHeight: "1.35", outline: "none", boxSizing: "border-box" } });
         protectConvoInput(input);
         function send() {
             const text = input.value.trim();
@@ -191,10 +190,9 @@ window.Chad = window.Chad || {};
             ui().render();
         }
         input.addEventListener("keydown", event => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); send(); } });
-        const inputRow = el("div", { style: { flex: "0 0 auto", borderTop: "1px solid #e2e8f0", padding: "8px", display: "flex", flexDirection: "row", gap: "6px", alignItems: "flex-end", background: "#f8fafc", boxSizing: "border-box" } }, [input, btn("SEND", send, { bg: "#2563eb", border: "#2563eb", color: "#ffffff", bold: true, padding: "9px 10px" })]);
-        fixedColumn.appendChild(messageRow);
-        fixedColumn.appendChild(inputRow);
-        parentColumn.appendChild(fixedColumn);
+        const inputRow = el("div", { style: { flex: "0 0 auto", position: "sticky", bottom: "0", zIndex: "5", borderTop: "1px solid #e2e8f0", padding: "8px", display: "flex", flexDirection: "row", gap: "6px", alignItems: "flex-end", background: "#f8fafc", boxSizing: "border-box" } }, [input, btn("SEND", send, { bg: "#2563eb", border: "#2563eb", color: "#ffffff", bold: true, padding: "9px 10px" })]);
+        parentColumn.appendChild(messageRow);
+        parentColumn.appendChild(inputRow);
         setTimeout(() => { list.scrollTop = list.scrollHeight; }, 0);
         return parentColumn;
     }
