@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gandhi File Splitter
 // @namespace    http://tampermonkey.net/
-// @version      0.6
+// @version      0.7
 // @description  Split large source files and generate loader-ready module sets
 // @match        *://chatgpt.com/*
 // @match        *://github.com/*
@@ -12,7 +12,7 @@
 (function () {
     "use strict";
 
-    const GANDHI_RAW_ROOT_260705 =
+    const DEFAULT_RAW_ROOT_260705 =
     "https://raw.githubusercontent.com/JRonCamay/gandhi/main/";
 
     const splitterState260705_FS4M9Q = {
@@ -23,6 +23,7 @@
         maxLinesInput: null,
         markerInput: null,
         bundleInput: null,
+        repoRootInput: null,
         outputFolderInput: null,
         files: []
     };
@@ -103,8 +104,13 @@
             .replace(/[^a-zA-Z0-9_\-/]/g, "_");
     }
 
-    function makeBaseUrl260705(folder, filename) {
-        return GANDHI_RAW_ROOT_260705 + safeFolder260705(folder, filename) + "/";
+    function normalizeRawRoot260705(value) {
+        const raw = String(value || "").trim() || DEFAULT_RAW_ROOT_260705;
+        return raw.endsWith("/") ? raw : raw + "/";
+    }
+
+    function makeBaseUrl260705(root, folder, filename) {
+        return normalizeRawRoot260705(root) + safeFolder260705(folder, filename) + "/";
     }
 
     function makePartName260705_MN9D4V(filename, index) {
@@ -192,9 +198,12 @@
             "})();\n";
     }
 
-    function makeUploadPlan260705(folder, baseUrl, files) {
+    function makeUploadPlan260705(root, folder, baseUrl, files) {
         return [
             "# Gandhi File Splitter Upload Plan",
+            "",
+            "Raw repo root:",
+            normalizeRawRoot260705(root),
             "",
             "Upload folder:",
             folder,
@@ -306,9 +315,10 @@
     function buildModuleSet260705_MS7K2P() {
         const state = splitterState260705_FS4M9Q;
         const filename = state.filenameInput.value;
+        const root = state.repoRootInput.value;
         const folder = safeFolder260705(state.outputFolderInput.value, filename);
         const bundle = state.bundleInput.value || cleanBase260705(filename);
-        const baseUrl = makeBaseUrl260705(folder, filename);
+        const baseUrl = makeBaseUrl260705(root, folder, filename);
         const parts = getSplitParts260705();
         const partNames = parts.map((_, index) => makePartName260705_MN9D4V(filename, index + 1));
 
@@ -326,7 +336,7 @@
 
         files.push({
             name: "UPLOAD_PLAN.md",
-            content: makeUploadPlan260705(folder, baseUrl, files)
+            content: makeUploadPlan260705(root, folder, baseUrl, files)
         });
 
         setFiles260705(files);
@@ -363,7 +373,7 @@
                 position: "fixed",
                 right: "16px",
                 top: "72px",
-                width: "620px",
+                width: "680px",
                 maxHeight: "calc(100vh - 90px)",
                 overflow: "auto",
                 zIndex: "999999",
@@ -397,6 +407,7 @@
         maxLinesInput.min = "1";
         const markerInput = makeInput260705("", "130px", "optional marker");
         const bundleInput = makeInput260705("GandhiModuleSet", "150px", "module set name");
+        const repoRootInput = makeInput260705(DEFAULT_RAW_ROOT_260705, "430px", "raw repo root URL");
         const outputFolderInput = makeInput260705("", "190px", "blank = filename folder");
         const output = createEl260705_CE8N3W("div", { style: { marginTop: "8px" } });
 
@@ -429,12 +440,18 @@
             style: { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginTop: "8px" }
         }, [
             createEl260705_CE8N3W("span", { text: "Set:" }), bundleInput,
+            createEl260705_CE8N3W("span", { text: "Root:" }), repoRootInput
+        ]));
+
+        panel.appendChild(createEl260705_CE8N3W("div", {
+            style: { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginTop: "8px" }
+        }, [
             createEl260705_CE8N3W("span", { text: "Folder:" }), outputFolderInput,
             button260705_BT2H6F("BUILD MODULE SET", buildModuleSet260705_MS7K2P, true)
         ]));
 
         panel.appendChild(createEl260705_CE8N3W("div", {
-            text: "Folder is optional. Blank creates a folder from Filename. Upload generated files there and install only the generated loader.",
+            text: "Root can target any raw GitHub repo branch. Folder is optional; blank creates a folder from Filename. Upload generated files there and install only the generated loader.",
             style: { fontSize: "12px", color: "#475569", marginTop: "6px" }
         }));
 
@@ -447,6 +464,7 @@
         state.maxLinesInput = maxLinesInput;
         state.markerInput = markerInput;
         state.bundleInput = bundleInput;
+        state.repoRootInput = repoRootInput;
         state.outputFolderInput = outputFolderInput;
         state.output = output;
 
