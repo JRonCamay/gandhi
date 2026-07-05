@@ -108,6 +108,7 @@ window.Transfork = window.Transfork || {};
         requestAnimationFrame(() => requestAnimationFrame(() => api.snapshotLayer.setVisible([snapshot].concat(state.occluders), true)));
         event.preventDefault();
         event.stopPropagation();
+        event.stopImmediatePropagation();
         return true;
     }
 
@@ -124,9 +125,11 @@ window.Transfork = window.Transfork || {};
             vm.runtime.requestRedraw?.();
         }
         if (vm && target) setVisible(vm, target, state.visible);
+        nodes.forEach(node => { if (node?.parentNode) node.remove(); });
+        state.snapshot = null;
+        state.occluders = [];
         state.active = false;
         window.__transforkTransformActive = false;
-        requestAnimationFrame(() => requestAnimationFrame(() => api.snapshotLayer?.remove(nodes)));
     }
 
     window.addEventListener("mousedown", event => {
@@ -137,9 +140,9 @@ window.Transfork = window.Transfork || {};
         if (mode) start(event, mode);
     }, true);
 
-    window.addEventListener("mousemove", event => { if (state.active) { apply(event); event.preventDefault(); event.stopPropagation(); } }, true);
-    window.addEventListener("mouseup", event => { if (state.active) { apply(event); finish(true); event.preventDefault(); event.stopPropagation(); } }, true);
-    window.addEventListener("keydown", event => { if (event.key === "Escape" && state.active) finish(false); }, true);
+    window.addEventListener("mousemove", event => { if (state.active) { apply(event); event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation(); } }, true);
+    window.addEventListener("mouseup", event => { if (state.active) { apply(event); finish(true); event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation(); } }, true);
+    window.addEventListener("keydown", event => { if (event.key === "Escape" && state.active) { finish(false); event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation(); } }, true);
     window.addEventListener("blur", () => finish(false), true);
 
     api.registerModule260705_NS8Q2M("snapshotToolsPixel", { state, start, finish });
