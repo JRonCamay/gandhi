@@ -28,10 +28,6 @@ window.Transfork = window.Transfork || {};
         vm.runtime.requestRedraw?.();
     }
 
-    function centered(width, height) {
-        return { left: state.rect.left + state.rect.width / 2 - width / 2, top: state.rect.top + state.rect.height / 2 - height / 2, width, height };
-    }
-
     function signedScale(value, delta) {
         return Math.sign(value || 1) * Math.max(0.01, Math.abs(value) + delta);
     }
@@ -49,26 +45,22 @@ window.Transfork = window.Transfork || {};
         let sx = 1;
         let sy = 1;
         let rotate = 0;
-        let box = state.rect;
 
         if (state.mode === "width") {
             const next = signedScale(state.scale[0], dx);
             sx = Math.abs(next) / Math.max(0.01, Math.abs(state.scale[0]));
             state.finalScale = [next, state.scale[1]];
-            box = centered(state.rect.width * sx, state.rect.height);
         }
         else if (state.mode === "height") {
             const next = signedScale(state.scale[1], dy);
             sy = Math.abs(next) / Math.max(0.01, Math.abs(state.scale[1]));
             state.finalScale = [state.scale[0], next];
-            box = centered(state.rect.width, state.rect.height * sy);
         }
         else if (state.mode === "uniform") {
             const ratio = Math.max(0.01, Math.abs(state.scale[0]) + dx) / Math.max(0.01, Math.abs(state.scale[0]));
             sx = ratio;
             sy = ratio;
             state.finalScale = [state.scale[0] * ratio, state.scale[1] * ratio];
-            box = centered(state.rect.width * ratio, state.rect.height * ratio);
         }
         else if (state.mode === "rotate") {
             const rect = getBox()?.getBoundingClientRect() || state.rect;
@@ -79,14 +71,10 @@ window.Transfork = window.Transfork || {};
             rotate = (a1 - a0) * 180 / Math.PI;
             state.finalDirection = state.dir + rotate;
             state.finalScale = state.scale.slice();
-            const rad = Math.abs(rotate) * Math.PI / 180;
-            const c = Math.abs(Math.cos(rad));
-            const s = Math.abs(Math.sin(rad));
-            box = centered(state.rect.width * c + state.rect.height * s, state.rect.width * s + state.rect.height * c);
         }
 
         state.snapshot.style.transform = "scale(" + sx + "," + sy + ") rotate(" + rotate + "deg)";
-        place(box);
+        place(state.snapshot.getBoundingClientRect());
     }
 
     function start(event, mode) {
