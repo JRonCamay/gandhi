@@ -36,6 +36,135 @@ window.Transfork = window.Transfork || {};
         };
     }
 
+    function imageDataLooksUsable260705_IU6Q4P(imageData) {
+        if (!imageData || !imageData.data || !imageData.data.length) return false;
+
+        const data = imageData.data;
+        let visible = 0;
+        let nonBlack = 0;
+
+        for (let i = 0; i < data.length; i += 16) {
+            const alpha = data[i + 3];
+            if (!alpha) continue;
+
+            visible++;
+            if (data[i] > 8 || data[i + 1] > 8 || data[i + 2] > 8) {
+                nonBlack++;
+            }
+        }
+
+        return visible > 0 && nonBlack > 0;
+    }
+
+    function canvasFromImageData260705_CI5W8N(imageData) {
+        if (!imageDataLooksUsable260705_IU6Q4P(imageData)) return null;
+
+        const canvas = document.createElement("canvas");
+        canvas.width = imageData.width;
+        canvas.height = imageData.height;
+        const ctx = canvas.getContext("2d");
+        ctx.putImageData(imageData, 0, 0);
+        return canvas;
+    }
+
+    function normalizeExtractedDrawable260705_ND8Q7B(extracted) {
+        if (!extracted) return null;
+
+        if (typeof ImageData !== "undefined" && extracted instanceof ImageData) {
+            return canvasFromImageData260705_CI5W8N(extracted);
+        }
+
+        if (extracted instanceof HTMLCanvasElement) {
+            return extracted.width && extracted.height ? extracted : null;
+        }
+
+        if (typeof ImageBitmap !== "undefined" && extracted instanceof ImageBitmap) {
+            const canvas = document.createElement("canvas");
+            canvas.width = extracted.width;
+            canvas.height = extracted.height;
+            canvas.getContext("2d").drawImage(extracted, 0, 0);
+            return canvas;
+        }
+
+        if (extracted.imageData) {
+            return normalizeExtractedDrawable260705_ND8Q7B(extracted.imageData);
+        }
+
+        if (extracted.data && extracted.width && extracted.height) {
+            return canvasFromImageData260705_CI5W8N(
+                new ImageData(
+                    new Uint8ClampedArray(extracted.data),
+                    extracted.width,
+                    extracted.height
+                )
+            );
+        }
+
+        return null;
+    }
+
+    function extractDrawableCanvas260705_ED9M2R(renderer, drawableID) {
+        if (!renderer) return null;
+
+        try {
+            if (typeof renderer.extractDrawableScreenSpace === "function") {
+                const canvas = normalizeExtractedDrawable260705_ND8Q7B(
+                    renderer.extractDrawableScreenSpace(drawableID)
+                );
+                if (canvas) return canvas;
+            }
+        }
+        catch (error) {
+            console.warn("Transfork drawable screen snapshot failed", error);
+        }
+
+        try {
+            if (typeof renderer.extractDrawable === "function") {
+                const canvas = normalizeExtractedDrawable260705_ND8Q7B(
+                    renderer.extractDrawable(drawableID)
+                );
+                if (canvas) return canvas;
+            }
+        }
+        catch (error) {
+            console.warn("Transfork drawable snapshot failed", error);
+        }
+
+        return null;
+    }
+
+    function createSnapshot260705_CS8A7N(renderer, target, screenRect) {
+        if (!target) return null;
+
+        const source = extractDrawableCanvas260705_ED9M2R(
+            renderer,
+            target.drawableID
+        );
+
+        if (!source) return null;
+
+        const snapshot = document.createElement("canvas");
+        snapshot.width = source.width;
+        snapshot.height = source.height;
+        const ctx = snapshot.getContext("2d");
+        ctx.drawImage(source, 0, 0);
+
+        Object.assign(snapshot.style, {
+            position: "fixed",
+            left: screenRect.left + "px",
+            top: screenRect.top + "px",
+            width: screenRect.width + "px",
+            height: screenRect.height + "px",
+            pointerEvents: "none",
+            zIndex: "9998",
+            boxSizing: "border-box",
+            userSelect: "none"
+        });
+
+        document.body.appendChild(snapshot);
+        return snapshot;
+    }
+
     function setDrawableVisible260705_DV2M6F(vm, target, visible) {
         if (!target) return;
 
@@ -152,12 +281,13 @@ window.Transfork = window.Transfork || {};
 
         const bounds = drawable.getAABB();
         const screenRect = modules.coords.boundsToScreenRect(bounds, canvas, vm);
+        const snapshot = createSnapshot260705_CS8A7N(vm.runtime.renderer, target, screenRect);
         const state = snapshotDragState260705_SDG9X2;
 
         state.active = true;
         state.target = target;
         state.drawable = drawable;
-        state.snapshot = null;
+        state.snapshot = snapshot;
         state.canvas = canvas;
         state.startMouseX = event.clientX;
         state.startMouseY = event.clientY;
@@ -172,10 +302,18 @@ window.Transfork = window.Transfork || {};
         state.startScale = drawable.scale ? drawable.scale.slice() : null;
         state.startVisible = drawable._visible !== false;
         state.startScreenRect = screenRect;
-        state.useRealSprite = true;
+        state.useRealSprite = !snapshot;
 
         modules.vm.setEditingTarget(target);
-        setDrawableVisible260705_DV2M6F(vm, target, state.startVisible);
+
+        if (snapshot) {
+            setDrawableVisible260705_DV2M6F(vm, target, false);
+        }
+        else {
+            setDrawableVisible260705_DV2M6F(vm, target, state.startVisible);
+            console.warn("Transfork snapshot unavailable; using real sprite drag fallback.");
+        }
+
         move260705_MV7C3D(event.clientX, event.clientY);
         holdBox260705_HB4W8S();
 
