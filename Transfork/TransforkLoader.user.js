@@ -18,7 +18,7 @@
 // @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/transformSnapshotGuard.js?v=26070526
 // @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/overlayTop.js?v=26070526
 // @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/snapGuideOverlay.js?v=26070526
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/pixelBoxSync.js?v=26070528
+// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/pixelBoxSync.js?v=26070529
 // @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/snapshotDragPixel.js?v=26070526
 // @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/snapshotToolsPixel.js?v=26070528
 // @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/resize.js?v=26070526
