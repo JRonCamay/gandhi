@@ -88,35 +88,11 @@ window.Chad = window.Chad || {};
         return { id: raw.id || `${fallback.source}-${fallback.index}`, source: fallback.source || "local", role, icon: raw.icon || (isUser ? "👤" : fallback.icon || "🤖"), name: raw.name || raw.sender || raw.author || raw.from || (isUser ? "Jay" : fallback.name || "Buddy"), text: String(text), status: raw.status || "", createdAt: raw.createdAt || raw.time || raw.date || (ms ? new Date(ms).toLocaleString() : ""), timestamp: ms };
     }
 
-    function collectMessageObjects(value, bucket, source, depth) {
-        if (!value || depth > 4) return;
-        if (Array.isArray(value)) { value.forEach(item => collectMessageObjects(item, bucket, source, depth + 1)); return; }
-        if (typeof value !== "object") return;
-        const maybe = normalizeMessage(value, { source, index: bucket.length + 1, name: source.includes("buddy") ? "Buddy" : "Chad", icon: source.includes("buddy") ? "🤝" : "🤖" });
-        if (maybe) bucket.push(maybe);
-        ["messages", "chats", "history", "items", "threads", "records"].forEach(key => { if (value[key]) collectMessageObjects(value[key], bucket, source, depth + 1); });
-    }
-
-    function loadLocalBuddyMessages() {
-        const messages = [];
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i) || "";
-            const lower = key.toLowerCase();
-            const looksRelevant = lower.includes("buddy") || lower.includes("buddies") || lower.includes("local") || lower.includes("agent_chat");
-            if (!looksRelevant || key === CHAT_KEY || key === JAY_FILE_KEY || key === CONVO_FOLDER_KEY) continue;
-            try { collectMessageObjects(JSON.parse(localStorage.getItem(key)), messages, key, 0); } catch {}
-        }
-        return messages;
-    }
-
     function getDisplayMessages() {
-        const own = loadMessages().map((message, index) => normalizeMessage(message, { source: CHAT_KEY, index, name: message.role === "user" ? "Jay" : "Chad", icon: message.role === "user" ? "👤" : "🤖", timestamp: message.timestamp || message.createdAt })).filter(Boolean);
-        const map = new Map();
-        own.concat(loadLocalBuddyMessages()).forEach((message, index) => {
-            const key = `${message.source}|${message.id}|${message.text}|${message.timestamp || index}`;
-            if (!map.has(key)) map.set(key, message);
-        });
-        return Array.from(map.values()).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0) || String(a.createdAt || "").localeCompare(String(b.createdAt || "")));
+        return loadMessages()
+            .map((message, index) => normalizeMessage(message, { source: CHAT_KEY, index, name: message.role === "user" ? "Jay" : "Chad", icon: message.role === "user" ? "👤" : "🤖", timestamp: message.timestamp || message.createdAt }))
+            .filter(Boolean)
+            .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0) || String(a.createdAt || "").localeCompare(String(b.createdAt || "")));
     }
 
     function renderMessage(message) {
@@ -129,16 +105,14 @@ window.Chad = window.Chad || {};
     }
 
     function renderConvo() {
-        const parentColumn = el("div", { style: { flex: "1 1 0", height: "0", minHeight: "0", maxHeight: "100%", overflow: "hidden", background: "#ffffff", display: "flex", flexDirection: "column", position: "relative" } });
-        const messageRow = el("div", { style: { flex: "1 1 0", height: "0", minHeight: "0", overflow: "hidden", display: "flex", paddingRight: "2px" } });
-        const list = el("div", { style: { flex: "1 1 auto", minWidth: "0", minHeight: "0", height: "100%", overflowY: "auto", overflowX: "hidden", scrollbarGutter: "stable", padding: "8px", paddingRight: "12px", boxSizing: "border-box" } });
+        const parentColumn = el("div", { style: { position: "relative", height: "100%", minHeight: "360px", overflow: "hidden", background: "#ffffff" } });
+        const list = el("div", { style: { position: "absolute", left: "0", right: "0", top: "0", bottom: "64px", overflowY: "auto", overflowX: "hidden", padding: "8px", paddingRight: "12px", boxSizing: "border-box" } });
         const messages = getDisplayMessages();
         list.appendChild(el("div", { html: "<b>Convo Chat History</b><br><span style='color:#64748b'>SEND saves here and into the CONVO folder store.</span>", style: { marginBottom: "8px", lineHeight: "1.35" } }));
         if (!messages.length) list.appendChild(el("div", { text: "No local messages yet.", style: { color: "#64748b", padding: "10px", border: "1px dashed #cbd5e1", borderRadius: "8px" } }));
         else messages.forEach(message => list.appendChild(renderMessage(message)));
-        messageRow.appendChild(list);
 
-        const input = el("textarea", { placeholder: "Message as Jay...", style: { flex: "1 1 auto", width: "100%", height: "44px", minHeight: "44px", maxHeight: "88px", resize: "none", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "8px", fontSize: "12px", lineHeight: "1.35", outline: "none", boxSizing: "border-box" } });
+        const input = el("textarea", { placeholder: "Message as Jay...", style: { flex: "1 1 auto", width: "100%", height: "44px", minHeight: "44px", maxHeight: "44px", resize: "none", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "8px", fontSize: "12px", lineHeight: "1.35", outline: "none", boxSizing: "border-box" } });
         function send() {
             const text = input.value.trim();
             if (!text) return;
@@ -148,8 +122,8 @@ window.Chad = window.Chad || {};
         }
         input.addEventListener("keydown", event => { event.stopPropagation(); if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); send(); } });
         ["pointerdown", "mousedown", "click", "focusin", "input"].forEach(type => input.addEventListener(type, event => event.stopPropagation()));
-        const inputRow = el("div", { style: { flex: "0 0 auto", minHeight: "61px", zIndex: "5", borderTop: "1px solid #e2e8f0", padding: "8px", display: "flex", flexDirection: "row", gap: "6px", alignItems: "flex-end", background: "#f8fafc", boxSizing: "border-box" } }, [input, btn("SEND", send, { bg: "#2563eb", border: "#2563eb", color: "#ffffff", bold: true, padding: "9px 10px" })]);
-        parentColumn.appendChild(messageRow);
+        const inputRow = el("div", { style: { position: "absolute", left: "0", right: "0", bottom: "0", height: "64px", zIndex: "5", borderTop: "1px solid #e2e8f0", padding: "8px", display: "flex", flexDirection: "row", gap: "6px", alignItems: "flex-end", background: "#f8fafc", boxSizing: "border-box" } }, [input, btn("SEND", send, { bg: "#2563eb", border: "#2563eb", color: "#ffffff", bold: true, padding: "9px 10px" })]);
+        parentColumn.appendChild(list);
         parentColumn.appendChild(inputRow);
         requestAnimationFrame(() => { list.scrollTop = list.scrollHeight; });
         return parentColumn;
@@ -160,7 +134,7 @@ window.Chad = window.Chad || {};
         render: renderConvo,
         addMessage,
         getDisplayMessages,
-        loadLocalBuddyMessages,
+        loadLocalBuddyMessages: () => [],
         seedSampleMessages,
         getConvoFolder: () => loadJSON(CONVO_FOLDER_KEY, { folder: "CONVO", files: {}, updatedAt: "" }),
         getJayConvoFile: () => loadJSON(JAY_FILE_KEY, { name: "Jay_convo.md", path: "CONVO/Jay_convo.md", content: "", updatedAt: "" })
