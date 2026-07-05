@@ -8,14 +8,13 @@ window.Chad = window.Chad || {};
     let body = null;
     let bodyHost = null;
     let monkeyDock = null;
-    let didInitialAutoOpen = false;
-    let startupDockStartedAt = 0;
+    let suppressMonkeyClick = false;
 
-    const STARTUP_DOCK_MS = 3000;
     const GLOBAL_AGENTS_KEY = "gandhi_chad_global_agents_v1";
     const ACTIVE_AGENT_KEY = "gandhi_chad_active_agent_id_v1";
     const DONE_FLASH_KEY = "gandhi_chad_task_done_flash_v1";
     const NORMAL_TITLE_KEY = "gandhi_chad_normal_title_v1";
+    const MONKEY_DOCK_POS_KEY = "gandhi_chad_monkey_dock_pos_v1";
 
     function createEl(tag, props = {}, children = []) {
         const node = document.createElement(tag);
@@ -332,6 +331,69 @@ window.Chad = window.Chad || {};
         return Array.from(map.values());
     }
 
+    function dockIconPositionStyle() {
+        const saved = loadJSON(MONKEY_DOCK_POS_KEY, null);
+        if (saved && Number.isFinite(saved.left) && Number.isFinite(saved.top)) {
+            return { left: saved.left + "px", top: saved.top + "px" };
+        }
+        return { right: "18px", bottom: "18px" };
+    }
+
+    function clampDockPosition(left, top) {
+        const size = 58;
+        const margin = 8;
+        return {
+            left: Math.max(margin, Math.min(window.innerWidth - size - margin, left)),
+            top: Math.max(margin, Math.min(window.innerHeight - size - margin, top))
+        };
+    }
+
+    function makeMonkeyDockDraggable(node) {
+        let drag = null;
+
+        function onMove(event) {
+            if (!drag) return;
+            const dx = event.clientX - drag.startX;
+            const dy = event.clientY - drag.startY;
+            if (Math.abs(dx) > 3 || Math.abs(dy) > 3) drag.moved = true;
+            const pos = clampDockPosition(drag.left + dx, drag.top + dy);
+            node.style.left = pos.left + "px";
+            node.style.top = pos.top + "px";
+            node.style.right = "auto";
+            node.style.bottom = "auto";
+        }
+
+        function onUp() {
+            if (!drag) return;
+            if (drag.moved) {
+                const rect = node.getBoundingClientRect();
+                const pos = clampDockPosition(rect.left, rect.top);
+                saveJSON(MONKEY_DOCK_POS_KEY, pos);
+                suppressMonkeyClick = true;
+                setTimeout(() => { suppressMonkeyClick = false; }, 160);
+            }
+            drag = null;
+            window.removeEventListener("pointermove", onMove, true);
+            window.removeEventListener("pointerup", onUp, true);
+        }
+
+        node.addEventListener("pointerdown", event => {
+            if (event.button !== 0) return;
+            event.preventDefault();
+            event.stopPropagation();
+            const rect = node.getBoundingClientRect();
+            drag = {
+                startX: event.clientX,
+                startY: event.clientY,
+                left: rect.left,
+                top: rect.top,
+                moved: false
+            };
+            window.addEventListener("pointermove", onMove, true);
+            window.addEventListener("pointerup", onUp, true);
+        }, true);
+    }
+
     function showMonkeyDock() {
         if (monkeyDock) return;
         monkeyDock = createEl("button", {
@@ -340,12 +402,11 @@ window.Chad = window.Chad || {};
             onclick: event => {
                 event.preventDefault();
                 event.stopPropagation();
+                if (suppressMonkeyClick) return;
                 openPanelFromDock();
             },
             style: {
                 position: "fixed",
-                right: "18px",
-                bottom: "18px",
                 width: "58px",
                 height: "58px",
                 borderRadius: "999px",
@@ -353,11 +414,15 @@ window.Chad = window.Chad || {};
                 background: "linear-gradient(135deg,#fef3c7,#fed7aa)",
                 boxShadow: "0 12px 28px rgba(15,23,42,.28)",
                 zIndex: "1000002",
-                cursor: "pointer",
+                cursor: "grab",
                 fontSize: "31px",
-                lineHeight: "1"
+                lineHeight: "1",
+                touchAction: "none",
+                userSelect: "none",
+                ...dockIconPositionStyle()
             }
         });
+        makeMonkeyDockDraggable(monkeyDock);
         document.body.appendChild(monkeyDock);
     }
 
@@ -370,9 +435,6 @@ window.Chad = window.Chad || {};
     function openPanelFromDock() {
         if (!panel) return;
         panel.style.display = "flex";
-        panel.style.visibility = "visible";
-        panel.style.opacity = "1";
-        panel.style.pointerEvents = "auto";
         removeMonkeyDock();
     }
 
@@ -505,54 +567,9 @@ window.Chad = window.Chad || {};
         }, true);
     }
 
-    function areStartupModulesReady() {
-        return !!(
-            window.Chad.storage &&
-            window.Chad.uiChaties &&
-            window.Chad.uiConvo &&
-            window.Chad.uiTasks &&
-            window.Chad.uiRoadmap &&
-            window.Chad.uiPins &&
-            window.Chad.uiRepo &&
-            window.Chad.uiNotes
-        );
-    }
-
-    function autoOpenAfterInitialLayout() {
-        if (!panel || didInitialAutoOpen) return;
-        didInitialAutoOpen = true;
-
-        function tryOpen() {
-            const elapsed = Date.now() - startupDockStartedAt;
-            const waitedLongEnough = elapsed >= STARTUP_DOCK_MS;
-
-            if (!waitedLongEnough || !areStartupModulesReady()) {
-                setTimeout(tryOpen, 100);
-                return;
-            }
-
-            render();
-            panel.style.display = "flex";
-            panel.style.visibility = "hidden";
-            panel.style.opacity = "0";
-            panel.style.pointerEvents = "none";
-            void panel.offsetHeight;
-
-            requestAnimationFrame(() => {
-                void panel.offsetHeight;
-                openPanelFromDock();
-            });
-        }
-
-        tryOpen();
-    }
-
     function start() {
         if (document.querySelector("#gandhi-chad-panel")) return;
         window.Chad.storage.state.activeTab = window.Chad.storage.state.activeTab || "chaties";
-        startupDockStartedAt = Date.now();
-
-        showMonkeyDock();
 
         panel = createEl("div", {
             id: "gandhi-chad-panel",
@@ -579,7 +596,7 @@ window.Chad = window.Chad || {};
         bindPanelEventShield();
         bindAnswerReset();
         render();
-        autoOpenAfterInitialLayout();
+        showMonkeyDock();
     }
 
     ui.createEl = createEl;
