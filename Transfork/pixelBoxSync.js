@@ -18,6 +18,39 @@ window.Transfork = window.Transfork || {};
         return api.selectionBox?.getBox?.() || document.querySelector("#gandi-transform-box");
     }
 
+    function trim(full, bounds) {
+        const pad = 1;
+        const minX = Math.max(0, bounds.minX - pad);
+        const minY = Math.max(0, bounds.minY - pad);
+        const maxX = Math.min(bounds.width - 1, bounds.maxX + pad);
+        const maxY = Math.min(bounds.height - 1, bounds.maxY + pad);
+        return {
+            left: full.left + (minX / bounds.width) * full.width,
+            top: full.top + (minY / bounds.height) * full.height,
+            width: ((maxX - minX + 1) / bounds.width) * full.width,
+            height: ((maxY - minY + 1) / bounds.height) * full.height
+        };
+    }
+
+    function screenRect(vm, target, drawable, canvas) {
+        if (!api.pixelBounds?.scan || !api.pixelBounds?.extractScreen || !api.pixelBounds?.fullRect) return null;
+        const full = api.pixelBounds.fullRect(vm, target, drawable, canvas);
+        if (!full) return null;
+        const bounds = api.pixelBounds.scan(api.pixelBounds.extractScreen(vm, target));
+        return bounds ? trim(full, bounds) : null;
+    }
+
+    function installPixelBoundsOverride() {
+        if (!api.pixelBounds || api.pixelBounds.__screenFirstOverride) return;
+        if (typeof api.pixelBounds.rect !== "function") return;
+
+        const oldRect = api.pixelBounds.rect;
+        api.pixelBounds.rect = function (vm, target, drawable, canvas) {
+            return screenRect(vm, target, drawable, canvas) || oldRect.call(this, vm, target, drawable, canvas);
+        };
+        api.pixelBounds.__screenFirstOverride = true;
+    }
+
     function currentRect() {
         const vm = activeVM();
         const target = vm?.editingTarget;
@@ -110,6 +143,7 @@ window.Transfork = window.Transfork || {};
 
     function sync() {
         requestAnimationFrame(sync);
+        installPixelBoundsOverride();
         installPlaceOverride();
         installSnapshotLayerPatch();
         if (busy || window.__transforkTransformActive) return;
@@ -130,6 +164,7 @@ window.Transfork = window.Transfork || {};
         }
     }
 
+    installPixelBoundsOverride();
     installPlaceOverride();
     installSnapshotLayerPatch();
     sync();
@@ -137,6 +172,7 @@ window.Transfork = window.Transfork || {};
     api.registerModule260705_NS8Q2M("pixelBoxSync", {
         currentRect,
         sync,
+        installPixelBoundsOverride,
         installPlaceOverride,
         installSnapshotLayerPatch
     });
