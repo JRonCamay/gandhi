@@ -159,6 +159,7 @@ window.Transfork = window.Transfork || {};
 
         event.preventDefault();
         event.stopPropagation();
+        event.stopImmediatePropagation();
         return true;
     }
 
@@ -174,8 +175,19 @@ window.Transfork = window.Transfork || {};
             setVisible(vm, target, state.visible);
         }
 
+        nodes.forEach(node => {
+            if (node?.parentNode) node.remove();
+        });
+
         state.active = false;
-        requestAnimationFrame(() => requestAnimationFrame(() => api.snapshotLayer?.remove(nodes)));
+        state.snapshot = null;
+        state.occluders = [];
+    }
+
+    function isMoveHandle(element) {
+        const text = String(element?.textContent || "").trim();
+        const cursor = getComputedStyle(element).cursor;
+        return text === "✥" || cursor === "move";
     }
 
     function onMouseDown(event) {
@@ -183,6 +195,7 @@ window.Transfork = window.Transfork || {};
 
         const box = api.selectionBox?.getBox?.();
         if (box && box.contains(event.target)) {
+            if (!isMoveHandle(event.target)) return;
             start(event, getVM()?.editingTarget);
             return;
         }
@@ -200,6 +213,7 @@ window.Transfork = window.Transfork || {};
             move(event);
             event.preventDefault();
             event.stopPropagation();
+            event.stopImmediatePropagation();
         }, true);
         window.addEventListener("mouseup", event => {
             if (!state.active) return;
@@ -207,6 +221,7 @@ window.Transfork = window.Transfork || {};
             finish(true);
             event.preventDefault();
             event.stopPropagation();
+            event.stopImmediatePropagation();
         }, true);
         window.addEventListener("keydown", event => {
             if (event.key === "Escape" && state.active) finish(false);
