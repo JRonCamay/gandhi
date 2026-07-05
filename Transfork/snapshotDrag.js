@@ -15,6 +15,7 @@ window.Transfork = window.Transfork || {};
         startMouseY: 0,
         lastMouseX: 0,
         lastMouseY: 0,
+        lastShiftKey: false,
         startX: 0,
         startY: 0,
         finalX: 0,
@@ -332,7 +333,118 @@ window.Transfork = window.Transfork || {};
         }
     }
 
-    function move260705_MV7C3D(clientX, clientY) {
+    function offsetBounds260705_OB8M2N(bounds, dx, dy) {
+        return {
+            left: bounds.left + dx,
+            right: bounds.right + dx,
+            top: bounds.top + dy,
+            bottom: bounds.bottom + dy
+        };
+    }
+
+    function getSnapDistance260705_SD3H9K(vm, canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const nativeSize = vm.runtime.renderer.getNativeSize();
+        if (!rect.width) return 12;
+        return 12 * (nativeSize[0] / rect.width);
+    }
+
+    function findEdgeSnapPosition260705_ES7Q2V(vm, state, desiredX, desiredY) {
+        if (!state.target || !state.drawable) {
+            return { x: desiredX, y: desiredY };
+        }
+
+        const renderer = vm.runtime.renderer;
+        const currentBounds = state.drawable.getAABB();
+        const bounds = offsetBounds260705_OB8M2N(
+            currentBounds,
+            desiredX - state.target.x,
+            desiredY - state.target.y
+        );
+        const snapDistance = getSnapDistance260705_SD3H9K(vm, state.canvas);
+        let snapX = null;
+        let snapY = null;
+        let snapXTarget = null;
+        let snapYTarget = null;
+
+        vm.runtime.targets.forEach(otherTarget => {
+            if (
+                !otherTarget ||
+                otherTarget === state.target ||
+                otherTarget.isStage
+            ) {
+                return;
+            }
+
+            const otherDrawable = renderer._allDrawables[otherTarget.drawableID];
+            if (!otherDrawable || otherDrawable._visible === false) return;
+
+            const otherBounds = otherDrawable.getAABB();
+
+            [
+                otherBounds.left - bounds.left,
+                otherBounds.right - bounds.left,
+                otherBounds.left - bounds.right,
+                otherBounds.right - bounds.right
+            ].forEach(delta => {
+                if (
+                    Math.abs(delta) <= snapDistance &&
+                    (snapX === null || Math.abs(delta) < Math.abs(snapX))
+                ) {
+                    snapX = delta;
+                    snapXTarget = otherBounds;
+                }
+            });
+
+            [
+                otherBounds.top - bounds.top,
+                otherBounds.bottom - bounds.top,
+                otherBounds.top - bounds.bottom,
+                otherBounds.bottom - bounds.bottom
+            ].forEach(delta => {
+                if (
+                    Math.abs(delta) <= snapDistance &&
+                    (snapY === null || Math.abs(delta) < Math.abs(snapY))
+                ) {
+                    snapY = delta;
+                    snapYTarget = otherBounds;
+                }
+            });
+        });
+
+        if (snapX !== null && snapY === null && snapXTarget) {
+            const topDelta = snapXTarget.top - bounds.top;
+            const bottomDelta = snapXTarget.bottom - bounds.bottom;
+
+            if (Math.abs(topDelta) <= snapDistance) snapY = topDelta;
+            else if (Math.abs(bottomDelta) <= snapDistance) snapY = bottomDelta;
+        }
+
+        if (snapY !== null && snapX === null && snapYTarget) {
+            const leftDelta = snapYTarget.left - bounds.left;
+            const rightDelta = snapYTarget.right - bounds.right;
+
+            if (Math.abs(leftDelta) <= snapDistance) snapX = leftDelta;
+            else if (Math.abs(rightDelta) <= snapDistance) snapX = rightDelta;
+        }
+
+        return {
+            x: desiredX + (snapX === null ? 0 : snapX),
+            y: desiredY + (snapY === null ? 0 : snapY)
+        };
+    }
+
+    function scratchDeltaToScreen260705_DS7K5N(dx, dy, canvas, vm) {
+        const rect = canvas.getBoundingClientRect();
+        const nativeSize = vm.runtime.renderer.getNativeSize();
+
+        return {
+            x: dx / nativeSize[0] * rect.width,
+            y: -dy / nativeSize[1] * rect.height
+        };
+    }
+
+    function move260705_MV7C3D(clientX, clientY, shiftKey) {
         const state = snapshotDragState260705_SDG9X2;
         if (!state.active) return;
 
@@ -340,17 +452,43 @@ window.Transfork = window.Transfork || {};
         const vm = modules.vm.getVM();
         if (!vm) return;
 
-        const dx = clientX - state.startMouseX;
-        const dy = clientY - state.startMouseY;
+        state.lastMouseX = clientX;
+        state.lastMouseY = clientY;
+        state.lastShiftKey = !!shiftKey;
+
+        const rawDX = clientX - state.startMouseX;
+        const rawDY = clientY - state.startMouseY;
         const scratchDelta = modules.coords.screenDeltaToScratch(
-            dx,
-            dy,
+            rawDX,
+            rawDY,
             state.canvas,
             vm
         );
 
-        state.finalX = state.startX + scratchDelta.x;
-        state.finalY = state.startY + scratchDelta.y;
+        let desiredX = state.startX + scratchDelta.x;
+        let desiredY = state.startY + scratchDelta.y;
+
+        if (shiftKey) {
+            const snapped = findEdgeSnapPosition260705_ES7Q2V(
+                vm,
+                state,
+                desiredX,
+                desiredY
+            );
+
+            desiredX = snapped.x;
+            desiredY = snapped.y;
+        }
+
+        state.finalX = desiredX;
+        state.finalY = desiredY;
+
+        const screenDelta = scratchDeltaToScreen260705_DS7K5N(
+            state.finalX - state.startX,
+            state.finalY - state.startY,
+            state.canvas,
+            vm
+        );
 
         if (state.useRealSprite && state.target) {
             state.target.setXY(state.finalX, state.finalY);
@@ -358,18 +496,26 @@ window.Transfork = window.Transfork || {};
         }
 
         if (state.snapshot) {
-            state.snapshot.style.left = state.startScreenRect.left + dx + "px";
-            state.snapshot.style.top = state.startScreenRect.top + dy + "px";
+            state.snapshot.style.left = state.startScreenRect.left + screenDelta.x + "px";
+            state.snapshot.style.top = state.startScreenRect.top + screenDelta.y + "px";
         }
 
-        modules.selectionBox.moveFromStart(state.startScreenRect, dx, dy);
+        modules.selectionBox.moveFromStart(
+            state.startScreenRect,
+            screenDelta.x,
+            screenDelta.y
+        );
     }
 
     function holdBox260705_HB4W8S() {
         const state = snapshotDragState260705_SDG9X2;
         if (!state.active) return;
 
-        move260705_MV7C3D(state.lastMouseX, state.lastMouseY);
+        move260705_MV7C3D(
+            state.lastMouseX,
+            state.lastMouseY,
+            state.lastShiftKey
+        );
         state.frame = requestAnimationFrame(holdBox260705_HB4W8S);
     }
 
@@ -438,6 +584,7 @@ window.Transfork = window.Transfork || {};
         state.startMouseY = event.clientY;
         state.lastMouseX = event.clientX;
         state.lastMouseY = event.clientY;
+        state.lastShiftKey = !!event.shiftKey;
         state.startX = target.x;
         state.startY = target.y;
         state.finalX = target.x;
@@ -459,13 +606,40 @@ window.Transfork = window.Transfork || {};
             console.warn("Transfork snapshot unavailable; using real sprite drag fallback.");
         }
 
-        move260705_MV7C3D(event.clientX, event.clientY);
+        move260705_MV7C3D(event.clientX, event.clientY, event.shiftKey);
         holdBox260705_HB4W8S();
 
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
         return true;
+    }
+
+    function removeSnapshotAfterRedraw260705_RR9D4X(snapshot) {
+        if (!snapshot) return;
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                if (snapshot && snapshot.parentNode) {
+                    snapshot.remove();
+                }
+            });
+        });
+    }
+
+    function clearState260705_CL5N8M() {
+        const state = snapshotDragState260705_SDG9X2;
+
+        state.active = false;
+        state.target = null;
+        state.drawable = null;
+        state.snapshot = null;
+        state.canvas = null;
+        state.startScale = null;
+        state.startScreenRect = null;
+        state.frame = 0;
+        state.useRealSprite = false;
+        state.lastShiftKey = false;
     }
 
     function finish260705_FN5B8Y(commit) {
@@ -475,6 +649,7 @@ window.Transfork = window.Transfork || {};
         const modules = getModules260705_GM4P1R();
         const vm = modules.vm.getVM();
         const target = state.target;
+        const snapshot = state.snapshot;
 
         cancelAnimationFrame(state.frame);
 
@@ -498,17 +673,8 @@ window.Transfork = window.Transfork || {};
             }
         }
         finally {
-            if (state.snapshot) state.snapshot.remove();
-
-            state.active = false;
-            state.target = null;
-            state.drawable = null;
-            state.snapshot = null;
-            state.canvas = null;
-            state.startScale = null;
-            state.startScreenRect = null;
-            state.frame = 0;
-            state.useRealSprite = false;
+            clearState260705_CL5N8M();
+            removeSnapshotAfterRedraw260705_RR9D4X(snapshot);
         }
     }
 
@@ -539,9 +705,7 @@ window.Transfork = window.Transfork || {};
                 const state = snapshotDragState260705_SDG9X2;
                 if (!state.active) return;
 
-                state.lastMouseX = event.clientX;
-                state.lastMouseY = event.clientY;
-                move260705_MV7C3D(event.clientX, event.clientY);
+                move260705_MV7C3D(event.clientX, event.clientY, event.shiftKey);
 
                 event.preventDefault();
                 event.stopPropagation();
@@ -555,7 +719,7 @@ window.Transfork = window.Transfork || {};
             event => {
                 if (!snapshotDragState260705_SDG9X2.active) return;
 
-                move260705_MV7C3D(event.clientX, event.clientY);
+                move260705_MV7C3D(event.clientX, event.clientY, event.shiftKey);
                 finish260705_FN5B8Y(true);
 
                 event.preventDefault();
