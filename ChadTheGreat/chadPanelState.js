@@ -3,16 +3,22 @@ window.Chad = window.Chad || {};
 (function () {
     "use strict";
 
-    const STATE_KEY = "gandhi_chad_panel_state_v1";
-
-    function forceStartupDocked() {
-        localStorage.setItem(STATE_KEY, "closed");
+    function applyStateSoon() {
+        const dock = window.Chad.chadDock;
+        if (dock && dock.applySavedState) {
+            dock.applySavedState();
+        }
     }
 
-    function applyStateSoon() {
-        if (window.Chad.chadDock && window.Chad.chadDock.applySavedState) {
-            window.Chad.chadDock.applySavedState();
+    function handleUiStarted() {
+        const dock = window.Chad.chadDock;
+        if (dock && dock.onUiStarted) {
+            dock.onUiStarted();
+            return;
         }
+        applyStateSoon();
+        requestAnimationFrame(applyStateSoon);
+        setTimeout(applyStateSoon, 150);
     }
 
     function patchUiStart() {
@@ -22,18 +28,8 @@ window.Chad = window.Chad || {};
         const originalStart = ui.start;
 
         ui.start = function () {
-            forceStartupDocked();
             originalStart.apply(ui, arguments);
-            forceStartupDocked();
-            applyStateSoon();
-            requestAnimationFrame(() => {
-                forceStartupDocked();
-                applyStateSoon();
-            });
-            setTimeout(() => {
-                forceStartupDocked();
-                applyStateSoon();
-            }, 150);
+            handleUiStarted();
         };
 
         ui.__panelStatePatched = true;
@@ -47,8 +43,8 @@ window.Chad = window.Chad || {};
 
     window.Chad.chadPanelState = {
         applyStateSoon,
-        patchUiStart,
-        forceStartupDocked
+        handleUiStarted,
+        patchUiStart
     };
 
     start();
