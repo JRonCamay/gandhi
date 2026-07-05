@@ -4,6 +4,7 @@ window.Transfork = window.Transfork || {};
     "use strict";
 
     const api = window.Transfork;
+    const rectCache = new Map();
     let busy = false;
 
     function activeVM() {
@@ -32,12 +33,46 @@ window.Transfork = window.Transfork || {};
         };
     }
 
+    function cacheKey(vm, target, drawable, canvas) {
+        const scale = drawable?.scale || [];
+        const box = canvas?.getBoundingClientRect?.();
+        return [
+            target?.id,
+            target?.drawableID,
+            target?.currentCostume,
+            target?.x,
+            target?.y,
+            target?.direction,
+            target?.size,
+            scale[0],
+            scale[1],
+            drawable?._visible,
+            box?.left,
+            box?.top,
+            box?.width,
+            box?.height
+        ].join("|");
+    }
+
     function screenRect(vm, target, drawable, canvas) {
         if (!api.pixelBounds?.scan || !api.pixelBounds?.extractScreen || !api.pixelBounds?.fullRect) return null;
+
+        const key = cacheKey(vm, target, drawable, canvas);
+        const cached = rectCache.get(key);
+        if (cached) return cached;
+
         const full = api.pixelBounds.fullRect(vm, target, drawable, canvas);
         if (!full) return null;
+
         const bounds = api.pixelBounds.scan(api.pixelBounds.extractScreen(vm, target));
-        return bounds ? trim(full, bounds) : null;
+        const rect = bounds ? trim(full, bounds) : null;
+        if (rect) rectCache.set(key, rect);
+        if (rectCache.size > 80) rectCache.clear();
+        return rect;
+    }
+
+    function clearCache() {
+        rectCache.clear();
     }
 
     function installPixelBoundsOverride() {
@@ -48,6 +83,7 @@ window.Transfork = window.Transfork || {};
         api.pixelBounds.rect = function (vm, target, drawable, canvas) {
             return screenRect(vm, target, drawable, canvas) || oldRect.call(this, vm, target, drawable, canvas);
         };
+        api.pixelBounds.clearScreenCache = clearCache;
         api.pixelBounds.__screenFirstOverride = true;
     }
 
@@ -172,6 +208,8 @@ window.Transfork = window.Transfork || {};
     api.registerModule260705_NS8Q2M("pixelBoxSync", {
         currentRect,
         sync,
+        screenRect,
+        clearCache,
         installPixelBoundsOverride,
         installPlaceOverride,
         installSnapshotLayerPatch
