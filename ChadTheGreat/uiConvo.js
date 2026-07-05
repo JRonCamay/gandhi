@@ -6,6 +6,9 @@ window.Chad = window.Chad || {};
     const CHAT_KEY = "gandhi_chad_chat_messages_v1";
     const JAY_FILE_KEY = "gandhi_chad_convo_file_jay_v1";
     const CONVO_FOLDER_KEY = "gandhi_chad_convo_folder_v1";
+    const PRUNE_LOG_KEY = "gandhi_chad_last_prune_v1";
+    const RETENTION_DAYS = 10;
+    const RETENTION_MS = RETENTION_DAYS * 24 * 60 * 60 * 1000;
 
     let cachedMessages = null;
 
@@ -14,6 +17,7 @@ window.Chad = window.Chad || {};
     function btn(label, fn, extra) { return ui().button(label, fn, extra || {}); }
     function esc(text) { return ui().escapeHTML(text); }
     function stamp() { return new Date().toLocaleString(); }
+    function todayKey() { return new Date().toISOString().slice(0, 10); }
 
     function loadJSON(key, fallback) {
         try {
@@ -27,6 +31,14 @@ window.Chad = window.Chad || {};
 
     function saveJSON(key, value) {
         localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    function messageTime(message, index) {
+        const timestamp = Number(message && message.timestamp);
+        if (Number.isFinite(timestamp) && timestamp > 0) return timestamp;
+        const parsed = Date.parse((message && message.createdAt) || "");
+        if (Number.isFinite(parsed) && parsed > 0) return parsed;
+        return Date.now() + index;
     }
 
     function sampleMessages(now) {
@@ -68,26 +80,8 @@ window.Chad = window.Chad || {};
             text,
             status: message.status || "",
             createdAt: message.createdAt || stamp(),
-            timestamp: Number(message.timestamp || Date.parse(message.createdAt || "") || index)
+            timestamp: messageTime(message, index)
         };
-    }
-
-    function loadMessages() {
-        if (cachedMessages) return cachedMessages;
-        const loaded = loadJSON(CHAT_KEY, []);
-        const messages = Array.isArray(loaded)
-            ? loaded.map(normalizeMessage).filter(Boolean)
-            : [];
-        cachedMessages = messages.length ? messages : sampleMessages(Date.now());
-        saveMessages(cachedMessages);
-        return cachedMessages;
-    }
-
-    function saveMessages(messages) {
-        cachedMessages = messages.slice(-160);
-        saveJSON(CHAT_KEY, cachedMessages);
-        saveConvoFolder(cachedMessages);
-        saveJayConvoFile(cachedMessages);
     }
 
     function messageToMarkdown(message) {
@@ -114,6 +108,47 @@ window.Chad = window.Chad || {};
             },
             updatedAt: stamp()
         });
+    }
+
+    function saveMessages(messages) {
+        cachedMessages = messages.slice(-160);
+        saveJSON(CHAT_KEY, cachedMessages);
+        saveConvoFolder(cachedMessages);
+        saveJayConvoFile(cachedMessages);
+    }
+
+    function pruneDaily(messages) {
+        const today = todayKey();
+        const lastPrune = loadJSON(PRUNE_LOG_KEY, null);
+        if (lastPrune && lastPrune.date === today) return messages;
+
+        const cutoff = Date.now() - RETENTION_MS;
+        const kept = messages.filter((message, index) => messageTime(message, index) >= cutoff);
+        const removed = messages.length - kept.length;
+
+        saveMessages(kept);
+        saveJSON(PRUNE_LOG_KEY, {
+            date: today,
+            retentionDays: RETENTION_DAYS,
+            removed,
+            version: 1,
+            updatedAt: stamp()
+        });
+        return kept;
+    }
+
+    function loadMessages() {
+        if (cachedMessages) return cachedMessages;
+
+        const loaded = loadJSON(CHAT_KEY, null);
+        const hadStoredMessages = Array.isArray(loaded) && loaded.length > 0;
+        const messages = Array.isArray(loaded)
+            ? loaded.map(normalizeMessage).filter(Boolean)
+            : [];
+
+        cachedMessages = hadStoredMessages ? pruneDaily(messages) : sampleMessages(Date.now());
+        saveMessages(cachedMessages);
+        return cachedMessages;
     }
 
     function addMessage(role, text, status) {
@@ -276,6 +311,8 @@ window.Chad = window.Chad || {};
         getDisplayMessages,
         loadLocalBuddyMessages: () => [],
         seedSampleMessages: () => saveMessages(sampleMessages(Date.now())),
+        pruneDaily: () => pruneDaily(loadMessages()),
+        getPruneLog: () => loadJSON(PRUNE_LOG_KEY, null),
         getConvoFolder: () => loadJSON(CONVO_FOLDER_KEY, { folder: "CONVO", files: {}, updatedAt: "" }),
         getJayConvoFile: () => loadJSON(JAY_FILE_KEY, { name: "Jay_convo.md", path: "CONVO/Jay_convo.md", content: "", updatedAt: "" })
     };
