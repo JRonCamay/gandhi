@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gandhi File Splitter
 // @namespace    http://tampermonkey.net/
-// @version      0.7
+// @version      0.8
 // @description  Split large source files and generate loader-ready module sets
 // @match        *://chatgpt.com/*
 // @match        *://github.com/*
@@ -19,13 +19,13 @@
         panel: null,
         sourceInput: null,
         output: null,
+        fileDirInput: null,
         filenameInput: null,
+        outputFolderInput: null,
         maxLinesInput: null,
         markerInput: null,
-        bundleInput: null,
-        repoRootInput: null,
-        outputFolderInput: null,
-        files: []
+        files: [],
+        status: null
     };
 
     function createEl260705_CE8N3W(tag, props, children) {
@@ -72,6 +72,13 @@
         });
     }
 
+    function setStatus260705_ST6P4D(text, danger) {
+        const state = splitterState260705_FS4M9Q;
+        if (!state.status) return;
+        state.status.textContent = text || "";
+        state.status.style.color = danger ? "#b91c1c" : "#475569";
+    }
+
     function getPageSource260705_GS7B2K() {
         const pre = document.querySelector("pre");
         if (pre && pre.textContent.trim()) return pre.textContent;
@@ -82,39 +89,57 @@
         return "";
     }
 
-    function cleanBase260705(filename) {
+    function cleanBase260705_CB7K2N(filename) {
         const clean = String(filename || "source.js").trim() || "source.js";
-        const dot = clean.lastIndexOf(".");
-        return dot > 0 ? clean.slice(0, dot) : clean;
+        const slash = Math.max(clean.lastIndexOf("/"), clean.lastIndexOf("\\"));
+        const onlyName = slash >= 0 ? clean.slice(slash + 1) : clean;
+        const dot = onlyName.lastIndexOf(".");
+        return dot > 0 ? onlyName.slice(0, dot) : onlyName;
     }
 
-    function cleanExt260705(filename) {
+    function cleanExt260705_CX8M1Q(filename) {
         const clean = String(filename || "source.js").trim() || "source.js";
         const dot = clean.lastIndexOf(".");
         return dot > 0 ? clean.slice(dot) : ".js";
     }
 
-    function safeFolder260705(value, filename) {
-        const fallback = cleanBase260705(filename);
-        const raw = String(value || "").trim() || fallback;
-        return raw
+    function cleanFileName260705_FN2S8D(filename) {
+        const clean = String(filename || "source.js").trim() || "source.js";
+        const slash = Math.max(clean.lastIndexOf("/"), clean.lastIndexOf("\\"));
+        return slash >= 0 ? clean.slice(slash + 1) : clean;
+    }
+
+    function safePath260705_SP4J7L(value) {
+        return String(value || "")
+            .trim()
             .replace(/^\/+/, "")
             .replace(/\/+$/, "")
             .replace(/\\/g, "/")
-            .replace(/[^a-zA-Z0-9_\-/]/g, "_");
+            .replace(/[^a-zA-Z0-9_\-/.]/g, "_");
     }
 
-    function normalizeRawRoot260705(value) {
-        const raw = String(value || "").trim() || DEFAULT_RAW_ROOT_260705;
-        return raw.endsWith("/") ? raw : raw + "/";
+    function safeFolder260705_SF5H8X(value, filename) {
+        const fallback = cleanBase260705_CB7K2N(filename);
+        return safePath260705_SP4J7L(value || fallback);
     }
 
-    function makeBaseUrl260705(root, folder, filename) {
-        return normalizeRawRoot260705(root) + safeFolder260705(folder, filename) + "/";
+    function normalizeDir260705_ND9R2C(dir) {
+        const clean = String(dir || "").trim();
+        if (!clean) return DEFAULT_RAW_ROOT_260705;
+        if (/^https?:\/\//i.test(clean)) return clean.endsWith("/") ? clean : clean + "/";
+        return DEFAULT_RAW_ROOT_260705 + safePath260705_SP4J7L(clean) + "/";
+    }
+
+    function makeFileRawUrl260705_FR6Q1B(dir, filename) {
+        return normalizeDir260705_ND9R2C(dir) + cleanFileName260705_FN2S8D(filename);
+    }
+
+    function makeOutputBaseUrl260705_OB3M5R(dir, folder, filename) {
+        return normalizeDir260705_ND9R2C(dir) + safeFolder260705_SF5H8X(folder, filename) + "/";
     }
 
     function makePartName260705_MN9D4V(filename, index) {
-        return cleanBase260705(filename) + ".part" + String(index).padStart(2, "0") + cleanExt260705(filename);
+        return cleanBase260705_CB7K2N(filename) + ".part" + String(index).padStart(2, "0") + cleanExt260705_CX8M1Q(filename);
     }
 
     function splitByLines260705_SL5Q8A(text, maxLines) {
@@ -147,25 +172,24 @@
         return parts;
     }
 
-    function getSplitParts260705() {
+    function getSplitParts260705_GP8H3M(source) {
         const state = splitterState260705_FS4M9Q;
-        const text = state.sourceInput.value;
         const marker = state.markerInput.value.trim();
         const maxLines = Math.max(1, parseInt(state.maxLinesInput.value, 10) || 300);
 
         return marker
-            ? splitByMarkers260705_SM3C7P(text, marker)
-            : splitByLines260705_SL5Q8A(text, maxLines);
+            ? splitByMarkers260705_SM3C7P(source, marker)
+            : splitByLines260705_SL5Q8A(source, maxLines);
     }
 
-    function sanitize260705(name) {
+    function sanitize260705_SN2K9V(name) {
         return String(name || "GandhiModuleSet")
             .replace(/[^a-zA-Z0-9_$]/g, "_")
             .replace(/^[^a-zA-Z_$]/, "_$&");
     }
 
-    function makeModulePart260705(bundle, partName, source) {
-        const key = sanitize260705(bundle);
+    function makeModulePart260705_MP6F4A(bundle, partName, source) {
+        const key = sanitize260705_SN2K9V(bundle);
         return [
             "window.GandhiModuleSets = window.GandhiModuleSets || {};",
             "window.GandhiModuleSets." + key + " = window.GandhiModuleSets." + key + " || {};",
@@ -177,8 +201,8 @@
         ].join("\n");
     }
 
-    function makeModuleLoader260705(bundle, partNames, baseUrl) {
-        const key = sanitize260705(bundle);
+    function makeModuleLoader260705_ML7C3S(bundle, partNames, baseUrl) {
+        const key = sanitize260705_SN2K9V(bundle);
         const requires = partNames.map(name => "// @require      " + baseUrl + name).join("\n");
 
         return "// ==UserScript==\n" +
@@ -198,23 +222,30 @@
             "})();\n";
     }
 
-    function makeUploadPlan260705(root, folder, baseUrl, files) {
+    function makeUploadPlan260705_UP4L8D(fileDir, folder, fileUrl, baseUrl, files, sourceMode) {
         return [
             "# Gandhi File Splitter Upload Plan",
             "",
-            "Raw repo root:",
-            normalizeRawRoot260705(root),
+            "Source mode:",
+            sourceMode,
+            "",
+            "File GitHub Dir:",
+            fileDir || "(default Gandhi raw root)",
+            "",
+            "Fetched file URL:",
+            fileUrl || "(not used; pasted source was prioritized)",
             "",
             "Upload folder:",
             folder,
             "",
-            "Raw base URL:",
+            "Generated raw base URL:",
             baseUrl,
             "",
-            "Upload these files into that folder:",
+            "Upload these generated files into that folder:",
             ...files.map(file => "- " + file.name),
             "",
-            "Install only the generated .loader.user.js in Tampermonkey."
+            "Download All only downloads files locally. It does not upload to GitHub.",
+            "Install only the generated .loader.user.js in Tampermonkey after uploading the generated files."
         ].join("\n");
     }
 
@@ -248,7 +279,7 @@
 
         if (!state.files.length) {
             output.appendChild(createEl260705_CE8N3W("div", {
-                text: "No files yet.",
+                text: "No generated files yet. Click SPLIT / BUILD LOCAL FILES.",
                 style: { color: "#64748b", padding: "8px" }
             }));
             return;
@@ -274,7 +305,7 @@
                 style: { display: "flex", gap: "6px", marginBottom: "6px" }
             }, [
                 button260705_BT2H6F("COPY", () => copyText260705_CP2X7L(file.content)),
-                button260705_BT2H6F("DOWNLOAD", () => downloadText260705_DL6F8R(file.name, file.content))
+                button260705_BT2H6F("DOWNLOAD LOCAL", () => downloadText260705_DL6F8R(file.name, file.content))
             ]));
 
             card.appendChild(createEl260705_CE8N3W("textarea", {
@@ -297,58 +328,96 @@
         });
     }
 
-    function setFiles260705(files) {
+    function setFiles260705_SF7P2N(files) {
         splitterState260705_FS4M9Q.files = files;
         renderFiles260705_RP8S3N();
     }
 
-    function runPlainSplit260705_RS5J1M() {
-        const filename = splitterState260705_FS4M9Q.filenameInput.value;
-        const files = getSplitParts260705().map((part, index) => ({
-            name: makePartName260705_MN9D4V(filename, index + 1),
-            content: part
-        }));
+    async function getSourceForSplit260705_GS3V8J() {
+        const state = splitterState260705_FS4M9Q;
+        const pasted = state.sourceInput.value.trim();
+        const filename = state.filenameInput.value.trim();
+        const fileDir = state.fileDirInput.value.trim();
 
-        setFiles260705(files);
+        if (pasted) {
+            return {
+                source: state.sourceInput.value,
+                sourceMode: "Pasted source prioritized",
+                fileUrl: ""
+            };
+        }
+
+        if (!filename) throw new Error("Filename is required when pasted source is empty.");
+
+        const fileUrl = makeFileRawUrl260705_FR6Q1B(fileDir, filename);
+        setStatus260705_ST6P4D("Fetching source file from GitHub...");
+        const response = await fetch(fileUrl);
+        if (!response.ok) throw new Error("Could not fetch file: " + response.status + " " + fileUrl);
+
+        return {
+            source: await response.text(),
+            sourceMode: "Fetched from filename because pasted source was empty",
+            fileUrl
+        };
     }
 
-    function buildModuleSet260705_MS7K2P() {
+    async function buildModuleSet260705_MS7K2P() {
         const state = splitterState260705_FS4M9Q;
-        const filename = state.filenameInput.value;
-        const root = state.repoRootInput.value;
-        const folder = safeFolder260705(state.outputFolderInput.value, filename);
-        const bundle = state.bundleInput.value || cleanBase260705(filename);
-        const baseUrl = makeBaseUrl260705(root, folder, filename);
-        const parts = getSplitParts260705();
-        const partNames = parts.map((_, index) => makePartName260705_MN9D4V(filename, index + 1));
 
-        const files = [{
-            name: cleanBase260705(filename) + ".loader.user.js",
-            content: makeModuleLoader260705(bundle, partNames, baseUrl)
-        }];
+        try {
+            const filename = state.filenameInput.value.trim() || "source.js";
+            const fileDir = state.fileDirInput.value.trim();
+            const folder = safeFolder260705_SF5H8X(state.outputFolderInput.value, filename);
+            const bundle = cleanBase260705_CB7K2N(filename);
+            const baseUrl = makeOutputBaseUrl260705_OB3M5R(fileDir, folder, filename);
+            const sourceResult = await getSourceForSplit260705_GS3V8J();
+            const parts = getSplitParts260705_GP8H3M(sourceResult.source);
+            const partNames = parts.map((_, index) => makePartName260705_MN9D4V(filename, index + 1));
 
-        parts.forEach((part, index) => {
-            files.push({
-                name: partNames[index],
-                content: makeModulePart260705(bundle, partNames[index], part)
+            const files = [{
+                name: cleanBase260705_CB7K2N(filename) + ".loader.user.js",
+                content: makeModuleLoader260705_ML7C3S(bundle, partNames, baseUrl)
+            }];
+
+            parts.forEach((part, index) => {
+                files.push({
+                    name: partNames[index],
+                    content: makeModulePart260705_MP6F4A(bundle, partNames[index], part)
+                });
             });
-        });
 
-        files.push({
-            name: "UPLOAD_PLAN.md",
-            content: makeUploadPlan260705(root, folder, baseUrl, files)
-        });
+            files.push({
+                name: "UPLOAD_PLAN.md",
+                content: makeUploadPlan260705_UP4L8D(
+                    fileDir,
+                    folder,
+                    sourceResult.fileUrl,
+                    baseUrl,
+                    files,
+                    sourceResult.sourceMode
+                )
+            });
 
-        setFiles260705(files);
+            setFiles260705_SF7P2N(files);
+            setStatus260705_ST6P4D("Generated working module set. DOWNLOAD ALL LOCAL saves files to your computer only.");
+        }
+        catch (error) {
+            setStatus260705_ST6P4D(error.message || String(error), true);
+        }
     }
 
     function downloadAll260705_DA6Q8X() {
-        splitterState260705_FS4M9Q.files.forEach(file => {
-            downloadText260705_DL6F8R(file.name, file.content);
-        });
+        const files = splitterState260705_FS4M9Q.files;
+        if (!files.length) {
+            setStatus260705_ST6P4D("Nothing to download yet. Split/build first.", true);
+            return;
+        }
+
+        files.forEach(file => downloadText260705_DL6F8R(file.name, file.content));
+        setStatus260705_ST6P4D("Downloaded generated files locally. Upload them to GitHub manually using UPLOAD_PLAN.md.");
     }
 
-    function makeInput260705(value, width, placeholder) {
+    function makeInput260705_MI5N8A(value, width, placeholder) {
         return createEl260705_CE8N3W("input", {
             value,
             placeholder: placeholder || "",
@@ -358,6 +427,20 @@
                 borderRadius: "6px",
                 padding: "5px"
             }
+        });
+    }
+
+    function label260705_LB7M2Q(text) {
+        return createEl260705_CE8N3W("span", {
+            text,
+            style: { fontWeight: "700", color: "#334155" }
+        });
+    }
+
+    function sectionTitle260705_ST9H3F(title, note) {
+        return createEl260705_CE8N3W("div", {
+            html: "<b>" + title + "</b><br><span style='font-size:12px;color:#64748b'>" + note + "</span>",
+            style: { marginTop: "10px", marginBottom: "5px" }
         });
     }
 
@@ -373,7 +456,7 @@
                 position: "fixed",
                 right: "16px",
                 top: "72px",
-                width: "680px",
+                width: "700px",
                 maxHeight: "calc(100vh - 90px)",
                 overflow: "auto",
                 zIndex: "999999",
@@ -388,9 +471,10 @@
         });
 
         const sourceInput = createEl260705_CE8N3W("textarea", {
+            placeholder: "Optional. Paste source here. If this has content, it is used first.",
             style: {
                 width: "100%",
-                height: "220px",
+                height: "190px",
                 boxSizing: "border-box",
                 fontFamily: "Consolas, monospace",
                 fontSize: "12px",
@@ -401,14 +485,17 @@
         });
         sourceInput.value = getPageSource260705_GS7B2K();
 
-        const filenameInput = makeInput260705("source.js", "130px");
-        const maxLinesInput = makeInput260705("300", "72px");
+        const fileDirInput = makeInput260705_MI5N8A("", "430px", "example: Composer/ or full raw GitHub dir URL");
+        const filenameInput = makeInput260705_MI5N8A("source.js", "170px", "file to split");
+        const outputFolderInput = makeInput260705_MI5N8A("", "190px", "blank = filename subfolder");
+        const maxLinesInput = makeInput260705_MI5N8A("300", "72px");
         maxLinesInput.type = "number";
         maxLinesInput.min = "1";
-        const markerInput = makeInput260705("", "130px", "optional marker");
-        const bundleInput = makeInput260705("GandhiModuleSet", "150px", "module set name");
-        const repoRootInput = makeInput260705(DEFAULT_RAW_ROOT_260705, "430px", "raw repo root URL");
-        const outputFolderInput = makeInput260705("", "190px", "blank = filename folder");
+        const markerInput = makeInput260705_MI5N8A("", "150px", "optional marker");
+        const status = createEl260705_CE8N3W("div", {
+            text: "Download All Local saves generated files to your computer. It does not upload to GitHub.",
+            style: { fontSize: "12px", color: "#475569", marginTop: "7px" }
+        });
         const output = createEl260705_CE8N3W("div", { style: { marginTop: "8px" } });
 
         panel.appendChild(createEl260705_CE8N3W("div", {
@@ -420,52 +507,50 @@
             }
         }, [
             createEl260705_CE8N3W("div", {
-                html: "<b>Gandhi File Splitter</b><br><span style='font-size:12px;color:#64748b'>Plain split or generate loader-ready module set.</span>"
+                html: "<b>Gandhi File Splitter</b><br><span style='font-size:12px;color:#64748b'>Split pasted source or fetch by filename, then generate a loader-ready module set.</span>"
             }),
             button260705_BT2H6F("CLOSE", () => panel.style.display = "none")
         ]));
 
+        panel.appendChild(sectionTitle260705_ST9H3F("1. Optional pasted source", "Pasted source is always prioritized over fetching by filename."));
         panel.appendChild(sourceInput);
+
+        panel.appendChild(sectionTitle260705_ST9H3F("2. Source file location", "Used only when pasted source is empty."));
         panel.appendChild(createEl260705_CE8N3W("div", {
-            style: { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginTop: "8px" }
+            style: { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }
         }, [
-            createEl260705_CE8N3W("span", { text: "Filename:" }), filenameInput,
-            createEl260705_CE8N3W("span", { text: "Lines:" }), maxLinesInput,
-            createEl260705_CE8N3W("span", { text: "Marker:" }), markerInput,
-            button260705_BT2H6F("SPLIT", runPlainSplit260705_RS5J1M),
-            button260705_BT2H6F("DOWNLOAD ALL", downloadAll260705_DA6Q8X)
+            label260705_LB7M2Q("File GitHub Dir:"), fileDirInput,
+            label260705_LB7M2Q("Filename:"), filenameInput
+        ]));
+
+        panel.appendChild(sectionTitle260705_ST9H3F("3. Output", "Folder blank creates a subfolder using the filename. Download is local only."));
+        panel.appendChild(createEl260705_CE8N3W("div", {
+            style: { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }
+        }, [
+            label260705_LB7M2Q("Folder:"), outputFolderInput,
+            label260705_LB7M2Q("Lines:"), maxLinesInput,
+            label260705_LB7M2Q("Marker:"), markerInput,
+            button260705_BT2H6F("SPLIT / BUILD LOCAL FILES", buildModuleSet260705_MS7K2P, true),
+            button260705_BT2H6F("DOWNLOAD ALL LOCAL", downloadAll260705_DA6Q8X)
         ]));
 
         panel.appendChild(createEl260705_CE8N3W("div", {
-            style: { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginTop: "8px" }
-        }, [
-            createEl260705_CE8N3W("span", { text: "Set:" }), bundleInput,
-            createEl260705_CE8N3W("span", { text: "Root:" }), repoRootInput
-        ]));
-
-        panel.appendChild(createEl260705_CE8N3W("div", {
-            style: { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginTop: "8px" }
-        }, [
-            createEl260705_CE8N3W("span", { text: "Folder:" }), outputFolderInput,
-            button260705_BT2H6F("BUILD MODULE SET", buildModuleSet260705_MS7K2P, true)
-        ]));
-
-        panel.appendChild(createEl260705_CE8N3W("div", {
-            text: "Root can target any raw GitHub repo branch. Folder is optional; blank creates a folder from Filename. Upload generated files there and install only the generated loader.",
+            text: "After download, upload all generated files to the GitHub folder shown in UPLOAD_PLAN.md. Install only the generated loader in Tampermonkey.",
             style: { fontSize: "12px", color: "#475569", marginTop: "6px" }
         }));
 
+        panel.appendChild(status);
         panel.appendChild(output);
         document.body.appendChild(panel);
 
         state.panel = panel;
         state.sourceInput = sourceInput;
+        state.fileDirInput = fileDirInput;
         state.filenameInput = filenameInput;
+        state.outputFolderInput = outputFolderInput;
         state.maxLinesInput = maxLinesInput;
         state.markerInput = markerInput;
-        state.bundleInput = bundleInput;
-        state.repoRootInput = repoRootInput;
-        state.outputFolderInput = outputFolderInput;
+        state.status = status;
         state.output = output;
 
         renderFiles260705_RP8S3N();
