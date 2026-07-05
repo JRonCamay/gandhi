@@ -36,19 +36,32 @@ window.Transfork = window.Transfork || {};
             return 100 - (target.effects.ghost || 0);
         },
 
+        restoreVisualScale(target, savedScale) {
+            if (!target || !savedScale) return;
+            const xSign = target.__gandhiVisualFlipX ? -1 : 1;
+            api.drawable.setScale(target, [
+                xSign * Math.abs(savedScale[0] || 1),
+                savedScale[1]
+            ]);
+        },
+
         flipHorizontal(target) {
             if (!target) return;
             const oldDirection = target.direction;
+            const savedScale = api.drawable.getScale(target);
             target.setDirection(api.math.normalizeDirection(180 - oldDirection));
             target.__gandhiVisualFlipX = !target.__gandhiVisualFlipX;
+            this.restoreVisualScale(target, savedScale);
             api.vm.requestRedraw(target);
         },
 
         flipVertical(target) {
             if (!target) return;
             const oldDirection = target.direction;
+            const savedScale = api.drawable.getScale(target);
             target.setDirection(api.math.normalizeDirection(-oldDirection));
             target.__gandhiVisualFlipX = !target.__gandhiVisualFlipX;
+            this.restoreVisualScale(target, savedScale);
             api.vm.requestRedraw(target);
         }
     };
