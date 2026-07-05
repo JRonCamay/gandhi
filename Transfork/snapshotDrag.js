@@ -206,6 +206,16 @@ window.Transfork = window.Transfork || {};
         };
     }
 
+    function hideSnapshotUntilReady260705_HS9P4V(snapshot) {
+        if (!snapshot) return;
+        snapshot.style.visibility = "hidden";
+    }
+
+    function showSnapshotWhenReady260705_SS2K9B(snapshot) {
+        if (!snapshot) return;
+        snapshot.style.visibility = "visible";
+    }
+
     function createRendererSnapshot260705_RS3K8M(renderer, target, screenRect) {
         const source = extractDrawableCanvas260705_ED9M2R(
             renderer,
@@ -230,7 +240,8 @@ window.Transfork = window.Transfork || {};
             zIndex: "9998",
             boxSizing: "border-box",
             userSelect: "none",
-            background: "transparent"
+            background: "transparent",
+            visibility: "hidden"
         });
 
         document.body.appendChild(snapshot);
@@ -267,7 +278,8 @@ window.Transfork = window.Transfork || {};
             userSelect: "none",
             overflow: "visible",
             background: "transparent",
-            opacity: String(Math.max(0, Math.min(1, 1 - ghost / 100)))
+            opacity: String(Math.max(0, Math.min(1, 1 - ghost / 100))),
+            visibility: "hidden"
         });
 
         Object.assign(image.style, {
@@ -612,6 +624,7 @@ window.Transfork = window.Transfork || {};
             if (!state.active) return;
 
             state.ready = true;
+            showSnapshotWhenReady260705_SS2K9B(state.snapshot);
             move260705_MV7C3D(
                 state.lastMouseX,
                 state.lastMouseY,
@@ -668,6 +681,7 @@ window.Transfork = window.Transfork || {};
         modules.vm.setEditingTarget(target);
 
         if (snapshot) {
+            hideSnapshotUntilReady260705_HS9P4V(snapshot);
             setDrawableVisible260705_DV2M6F(vm, target, false);
             activateDragAfterOriginalHidden260705_AH6N3K();
         }
