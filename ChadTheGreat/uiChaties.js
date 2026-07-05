@@ -183,11 +183,19 @@ window.Chad = window.Chad || {};
     }
 
     function renderChaties() {
-        const wrap = el("div", { style: bodyStyle() });
+        const wrapStyle = bodyStyle();
+        Object.assign(wrapStyle, {
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            minHeight: "0"
+        });
+
+        const wrap = el("div", { style: wrapStyle });
         const agents = getAgents();
         const activeId = getActiveAgentId();
 
-        wrap.appendChild(el("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "7px" } }, [
+        const header = el("div", { style: { flex: "0 0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "7px" } }, [
             el("div", { html: `<b>Chaties</b><br><span style="color:#64748b">Global agents. Profiles start collapsed.</span>` }),
             btn("+", () => {
                 const agent = {
@@ -200,9 +208,23 @@ window.Chad = window.Chad || {};
                 setActiveAgentId(agent.id);
                 render();
             }, { bg: "#dcfce7", border: "#86efac", bold: true })
-        ]));
+        ]);
 
-        for (const agent of agents) wrap.appendChild(renderAgentCard(agent, agent.id === activeId));
+        const list = el("div", {
+            style: {
+                flex: "1 1 auto",
+                minHeight: "0",
+                overflowY: "auto",
+                overflowX: "hidden",
+                paddingRight: "6px",
+                scrollbarWidth: "thin"
+            }
+        });
+
+        for (const agent of agents) list.appendChild(renderAgentCard(agent, agent.id === activeId));
+
+        wrap.appendChild(header);
+        wrap.appendChild(list);
         return wrap;
     }
 
