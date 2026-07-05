@@ -131,6 +131,28 @@ window.Transfork = window.Transfork || {};
         return api.vm.getTargetByDrawableID(drawableID);
     }
 
+    function isBlockedBoxTarget260705_BT7N4C(target) {
+        if (!target || !target.closest) return false;
+
+        return !!target.closest(
+            "button,input,textarea,select,a,[contenteditable='true']"
+        );
+    }
+
+    function isBoxMoveStart260705_BM5K9R(target) {
+        if (!target) return false;
+        if (isBlockedBoxTarget260705_BT7N4C(target)) return false;
+
+        const cursor = getComputedStyle(target).cursor;
+        if (cursor === "move") return true;
+        if (String(target.textContent || "").trim() === "✥") return true;
+        if (cursor && cursor.includes("resize")) return false;
+        if (cursor === "grab" || cursor === "grabbing") return false;
+        if (cursor === "crosshair") return false;
+
+        return cursor === "auto" || cursor === "default" || cursor === "pointer";
+    }
+
     function start260705_ST2K7Q(event, targetOverride) {
         const modules = getModules260705_GM4P1R();
         if (!modules.vm || !modules.coords || !modules.selectionBox) return false;
@@ -236,12 +258,7 @@ window.Transfork = window.Transfork || {};
                 const insideBox = box && box.contains(event.target);
 
                 if (insideBox) {
-                    const cursor = getComputedStyle(event.target).cursor;
-                    const isMoveHandle =
-                    cursor === "move" ||
-                    event.target.textContent === "✥";
-
-                    if (!isMoveHandle) return;
+                    if (!isBoxMoveStart260705_BM5K9R(event.target)) return;
 
                     start260705_ST2K7Q(event, api.vm.getVM()?.editingTarget);
                     return;
