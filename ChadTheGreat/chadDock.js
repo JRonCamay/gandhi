@@ -19,11 +19,11 @@ window.Chad = window.Chad || {};
     }
 
     function getSavedState() {
-        return localStorage.getItem(STATE_KEY) || "open";
+        return localStorage.getItem(STATE_KEY) || "closed";
     }
 
     function saveState(value) {
-        localStorage.setItem(STATE_KEY, value === "closed" ? "closed" : "open");
+        localStorage.setItem(STATE_KEY, value === "open" ? "open" : "closed");
     }
 
     function shouldIgnoreBounce() {
@@ -40,11 +40,11 @@ window.Chad = window.Chad || {};
         const state = getSavedState();
 
         if (panel) {
-            panel.style.display = state === "closed" ? "none" : "block";
+            panel.style.display = state === "open" ? "flex" : "none";
             panel.dataset.chadDockState = state;
         }
 
-        dock.style.display = state === "closed" ? "block" : "none";
+        dock.style.display = state === "open" ? "none" : "block";
     }
 
     function openPanel() {
@@ -74,15 +74,15 @@ window.Chad = window.Chad || {};
                 position: "fixed",
                 right: "18px",
                 bottom: "18px",
-                zIndex: "999998",
-                width: "44px",
-                height: "44px",
-                borderRadius: "50%",
-                border: "2px solid #fcd34d",
-                background: "#fef3c7",
-                fontSize: "24px",
+                zIndex: "1000002",
+                width: "58px",
+                height: "58px",
+                borderRadius: "999px",
+                border: "2px solid #f59e0b",
+                background: "linear-gradient(135deg,#fef3c7,#fed7aa)",
+                fontSize: "31px",
                 cursor: "pointer",
-                boxShadow: "0 8px 24px rgba(15,23,42,.25)",
+                boxShadow: "0 12px 28px rgba(15,23,42,.28)",
                 display: "none"
             });
 
