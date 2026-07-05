@@ -3,8 +3,68 @@ window.Chad = window.Chad || {};
 (function () {
     "use strict";
 
+    const TEXT_EXTENSIONS = [
+        "txt",
+        "js",
+        "mjs",
+        "cjs",
+        "md",
+        "markdown",
+        "json",
+        "html",
+        "htm",
+        "css",
+        "ts",
+        "tsx",
+        "jsx",
+        "yml",
+        "yaml",
+        "xml",
+        "csv",
+        "log",
+        "py",
+        "java",
+        "c",
+        "cpp",
+        "h",
+        "hpp",
+        "cs",
+        "php",
+        "rb",
+        "go",
+        "rs",
+        "sh",
+        "bat",
+        "ps1",
+        "ini",
+        "env",
+        "toml"
+    ];
+
+    const TEXT_EXT_PATTERN = TEXT_EXTENSIONS.join("|");
+
     function nowStamp() {
         return new Date().toLocaleString();
+    }
+
+    function hasTextFileExtension(value) {
+        return new RegExp("\\.(?:" + TEXT_EXT_PATTERN + ")(?:$|[?#])", "i").test(String(value || ""));
+    }
+
+    function getFilename(value) {
+        const text = String(value || "").trim();
+        if (!text) return "";
+        try {
+            const parsed = new URL(text);
+            return decodeURIComponent(parsed.pathname.split("/").pop() || text);
+        }
+        catch {
+            return text.split(/[\\/]/).pop() || text;
+        }
+    }
+
+    function isTextFileCandidate(name, url) {
+        return hasTextFileExtension(name) || hasTextFileExtension(url) || hasTextFileExtension(getFilename(url));
     }
 
     function scanVisibleChatFiles(agent) {
@@ -15,12 +75,15 @@ window.Chad = window.Chad || {};
         function addFile(name, url, source) {
             const cleanName = String(name || "").trim();
             const cleanUrl = String(url || "").trim();
-            if (!cleanName && !cleanUrl) return;
-            const key = (cleanUrl || cleanName).toLowerCase();
+            const label = cleanName || getFilename(cleanUrl) || cleanUrl;
+            if (!label && !cleanUrl) return;
+            if (!isTextFileCandidate(label, cleanUrl)) return;
+
+            const key = (cleanUrl || label).toLowerCase();
             if (!map.has(key)) {
                 map.set(key, {
                     id: "file-" + Date.now() + "-" + map.size,
-                    name: cleanName || cleanUrl,
+                    name: label,
                     url: cleanUrl,
                     source: source || "chat",
                     chatUrl,
@@ -29,22 +92,13 @@ window.Chad = window.Chad || {};
             }
         }
 
-        const ext = "png|jpg|jpeg|webp|gif|pdf|js|txt|md|json|zip";
-        const extRegex = new RegExp("\\.(?:" + ext + ")", "i");
-        const filePattern = new RegExp("([A-Za-z0-9_./ -]+\\.(?:" + ext + "))", "gi");
+        const filePattern = new RegExp("([A-Za-z0-9_./ -]+\\.(?:" + TEXT_EXT_PATTERN + "))", "gi");
 
         document.querySelectorAll("a[href]").forEach(anchor => {
             const href = anchor.href || "";
             const text = anchor.textContent || "";
-            const label = text.trim() || href.split("/").pop() || href;
-            if (/github\.com|raw\.githubusercontent\.com|sandbox:/i.test(href) || extRegex.test(href) || extRegex.test(text)) {
-                addFile(label, href, "link");
-            }
-        });
-
-        document.querySelectorAll("img[src]").forEach(img => {
-            const src = img.src || "";
-            if (src) addFile(img.alt || src.split("/").pop() || "image", src, "image");
+            const label = text.trim() || getFilename(href) || href;
+            addFile(label, href, "link");
         });
 
         document.querySelectorAll("pre, code, p, li, div").forEach(node => {
@@ -59,7 +113,9 @@ window.Chad = window.Chad || {};
     function visibleFilesForAgent(agent) {
         const identity = window.Chad.agentIdentity;
         const agentUrl = identity.normalizeUrl(agent.chatUrl || "");
-        return (agent.files || []).filter(file => file.chatUrl && identity.normalizeUrl(file.chatUrl) === agentUrl);
+        return (agent.files || [])
+            .filter(file => file.chatUrl && identity.normalizeUrl(file.chatUrl) === agentUrl)
+            .filter(file => isTextFileCandidate(file.name, file.url));
     }
 
     function mergeFiles(agentId) {
@@ -103,6 +159,7 @@ window.Chad = window.Chad || {};
         scanVisibleChatFiles,
         visibleFilesForAgent,
         mergeFiles,
-        renderFile
+        renderFile,
+        isTextFileCandidate
     };
 })();
