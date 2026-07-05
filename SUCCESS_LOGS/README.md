@@ -6,27 +6,44 @@ This folder stores verified engineering lessons from successful project work.
 
 Use this as a permanent solution library for future AI engineers working on this repository.
 
-Before engineering tasks:
+## Workflow
+
+Before every engineering task:
 
 1. Read the project guides.
-2. Read relevant files in `SUCCESS_LOGS/`.
+2. Read **all** files inside `SUCCESS_LOGS/`.
 3. Use verified approaches before inventing new ones.
+4. Prefer previously successful methods whenever applicable.
 
-After confirmed successful tasks:
+After every **confirmed successful** task:
 
-Record only valuable verified data:
+1. Create one new markdown file.
+2. File name format:
 
+```
+success_log_yymmdd_hhmmss.md
+```
+
+3. Record only valuable verified information.
+
+Suggested sections:
+
+- Task
 - Problem
-- Root cause
-- Failed approaches to avoid
-- Winning approach
-- Files touched
-- Rule learned
-- When to reuse it
+- Root Cause
+- Failed Approaches
+- Winning Approach
+- Why it Worked
+- Files Modified
+- Reusable Engineering Rule
+- Applicable Future Tasks
 
-## Rule
+## Rules
 
-Do not log theories.
-Do not log guesses.
-Do not log unfinished attempts.
-Only log approaches that were confirmed successful by testing or user verification.
+- One markdown file per successful task.
+- Never overwrite previous success logs.
+- Do not log theories.
+- Do not log guesses.
+- Do not log unfinished attempts.
+- Only record approaches confirmed by testing or user verification.
+- Treat SUCCESS_LOGS as a permanent engineering knowledge base that must be read before starting future engineering tasks.
