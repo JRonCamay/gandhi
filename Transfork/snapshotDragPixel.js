@@ -14,6 +14,7 @@ window.Transfork = window.Transfork || {};
         snapshot: null,
         occluders: [],
         rect: null,
+        screenDelta: { x: 0, y: 0 },
         startMouseX: 0,
         startMouseY: 0,
         startX: 0,
@@ -96,6 +97,16 @@ window.Transfork = window.Transfork || {};
         api.overlayTop?.bringBoxToTop?.();
     }
 
+    function syncBox() {
+        if (!state.active || !state.rect) return;
+        placeBox(state.screenDelta || { x: 0, y: 0 });
+    }
+
+    function activeLoop() {
+        requestAnimationFrame(activeLoop);
+        setTimeout(syncBox, 0);
+    }
+
     function move(event) {
         if (!state.active) return;
 
@@ -109,6 +120,7 @@ window.Transfork = window.Transfork || {};
 
         state.finalX = state.startX + scratch.x;
         state.finalY = state.startY + scratch.y;
+        state.screenDelta = screen;
 
         if (state.snapshot) {
             state.snapshot.style.left = state.rect.left + screen.x + "px";
@@ -141,6 +153,7 @@ window.Transfork = window.Transfork || {};
             snapshot,
             occluders: api.snapshotLayer.createOccluders(vm, target, canvas),
             rect,
+            screenDelta: { x: 0, y: 0 },
             startMouseX: event.clientX,
             startMouseY: event.clientY,
             startX: target.x,
@@ -152,6 +165,7 @@ window.Transfork = window.Transfork || {};
 
         if (api.vm?.setEditingTarget) api.vm.setEditingTarget(target);
         setVisible(vm, target, false);
+        placeBox(state.screenDelta);
 
         requestAnimationFrame(() => requestAnimationFrame(() => {
             api.snapshotLayer.setVisible([snapshot].concat(state.occluders), true);
@@ -182,6 +196,7 @@ window.Transfork = window.Transfork || {};
         state.active = false;
         state.snapshot = null;
         state.occluders = [];
+        state.screenDelta = { x: 0, y: 0 };
     }
 
     function isMoveHandle(element) {
@@ -206,6 +221,8 @@ window.Transfork = window.Transfork || {};
     function bind() {
         if (state.bound) return;
         state.bound = true;
+
+        activeLoop();
 
         window.addEventListener("mousedown", onMouseDown, true);
         window.addEventListener("mousemove", event => {
