@@ -39,16 +39,7 @@ window.Transfork = window.Transfork || {};
 
     function createPreview(rect) {
         const preview = document.createElement("canvas");
-        Object.assign(preview.style, {
-            position: "fixed",
-            left: rect.left + "px",
-            top: rect.top + "px",
-            width: rect.width + "px",
-            height: rect.height + "px",
-            pointerEvents: "none",
-            zIndex: "9998",
-            visibility: "hidden"
-        });
+        Object.assign(preview.style, { position: "fixed", left: rect.left + "px", top: rect.top + "px", width: rect.width + "px", height: rect.height + "px", pointerEvents: "none", zIndex: "9998", visibility: "hidden" });
         document.body.appendChild(preview);
         return preview;
     }
@@ -58,43 +49,35 @@ window.Transfork = window.Transfork || {};
         try { data = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data; }
         catch (_error) { return null; }
         let minX = canvas.width, minY = canvas.height, maxX = -1, maxY = -1;
-        for (let y = 0; y < canvas.height; y++) {
-            for (let x = 0; x < canvas.width; x++) {
-                if (data[(y * canvas.width + x) * 4 + 3] <= 5) continue;
-                if (x < minX) minX = x;
-                if (y < minY) minY = y;
-                if (x > maxX) maxX = x;
-                if (y > maxY) maxY = y;
-            }
+        for (let y = 0; y < canvas.height; y++) for (let x = 0; x < canvas.width; x++) {
+            if (data[(y * canvas.width + x) * 4 + 3] <= 5) continue;
+            if (x < minX) minX = x; if (y < minY) minY = y; if (x > maxX) maxX = x; if (y > maxY) maxY = y;
         }
         if (maxX < minX || maxY < minY) return null;
         return { left: origin.left + minX, top: origin.top + minY, width: maxX - minX + 1, height: maxY - minY + 1 };
     }
 
     function place(rect) {
-        window.__transforkCanvasPreviewActive = true;
-        try { api.selectionBox?.place?.(rect); }
-        finally { window.__transforkCanvasPreviewActive = false; }
+        const box = getBox();
+        if (!box || !rect) return;
+        box.style.display = "block";
+        box.style.left = rect.left + "px";
+        box.style.top = rect.top + "px";
+        box.style.width = rect.width + "px";
+        box.style.height = rect.height + "px";
         api.overlayTop?.bringBoxToTop?.();
     }
 
     function renderPreview(sx, sy, rotate) {
-        const source = state.source;
-        const preview = state.preview;
-        const base = state.rect;
+        const source = state.source, preview = state.preview, base = state.rect;
         if (!source || !preview || !base) return null;
         if (source instanceof HTMLImageElement && !source.complete) return null;
-        const sw = base.width * Math.abs(sx);
-        const sh = base.height * Math.abs(sy);
-        const rad = rotate * Math.PI / 180;
+        const sw = base.width * Math.abs(sx), sh = base.height * Math.abs(sy), rad = rotate * Math.PI / 180;
         const outW = Math.max(1, Math.ceil(Math.abs(sw * Math.cos(rad)) + Math.abs(sh * Math.sin(rad))) + 4);
         const outH = Math.max(1, Math.ceil(Math.abs(sw * Math.sin(rad)) + Math.abs(sh * Math.cos(rad))) + 4);
-        const cx = base.left + base.width / 2;
-        const cy = base.top + base.height / 2;
-        const left = cx - outW / 2;
-        const top = cy - outH / 2;
-        preview.width = outW;
-        preview.height = outH;
+        const cx = base.left + base.width / 2, cy = base.top + base.height / 2;
+        const left = cx - outW / 2, top = cy - outH / 2;
+        preview.width = outW; preview.height = outH;
         Object.assign(preview.style, { left: left + "px", top: top + "px", width: outW + "px", height: outH + "px", visibility: "visible" });
         const ctx = preview.getContext("2d");
         ctx.clearRect(0, 0, outW, outH);
@@ -107,28 +90,14 @@ window.Transfork = window.Transfork || {};
 
     function apply(event) {
         if (!state.active || !state.snapshot) return;
-        const dx = event.clientX - state.mx;
-        const dy = event.clientY - state.my;
+        const dx = event.clientX - state.mx, dy = event.clientY - state.my;
         let sx = 1, sy = 1, rotate = 0;
-        if (state.mode === "width") {
-            const next = signedScale(state.scale[0], dx);
-            sx = Math.abs(next) / Math.max(0.01, Math.abs(state.scale[0]));
-            state.finalScale = [next, state.scale[1]];
-        }
-        else if (state.mode === "height") {
-            const next = signedScale(state.scale[1], dy);
-            sy = Math.abs(next) / Math.max(0.01, Math.abs(state.scale[1]));
-            state.finalScale = [state.scale[0], next];
-        }
-        else if (state.mode === "uniform") {
-            const ratio = Math.max(0.01, Math.abs(state.scale[0]) + dx) / Math.max(0.01, Math.abs(state.scale[0]));
-            sx = ratio; sy = ratio;
-            state.finalScale = [state.scale[0] * ratio, state.scale[1] * ratio];
-        }
+        if (state.mode === "width") { const next = signedScale(state.scale[0], dx); sx = Math.abs(next) / Math.max(0.01, Math.abs(state.scale[0])); state.finalScale = [next, state.scale[1]]; }
+        else if (state.mode === "height") { const next = signedScale(state.scale[1], dy); sy = Math.abs(next) / Math.max(0.01, Math.abs(state.scale[1])); state.finalScale = [state.scale[0], next]; }
+        else if (state.mode === "uniform") { const ratio = Math.max(0.01, Math.abs(state.scale[0]) + dx) / Math.max(0.01, Math.abs(state.scale[0])); sx = ratio; sy = ratio; state.finalScale = [state.scale[0] * ratio, state.scale[1] * ratio]; }
         else if (state.mode === "rotate") {
             const rect = getBox()?.getBoundingClientRect() || state.rect;
-            const cx = rect.left + rect.width / 2;
-            const cy = rect.top + rect.height / 2;
+            const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
             rotate = (Math.atan2(event.clientY - cy, event.clientX - cx) - Math.atan2(state.my - cy, state.mx - cx)) * 180 / Math.PI;
             state.finalDirection = state.dir + rotate;
             state.finalScale = state.scale.slice();
@@ -138,8 +107,7 @@ window.Transfork = window.Transfork || {};
     }
 
     function start(event, mode) {
-        const vm = getVM();
-        const canvas = getCanvas();
+        const vm = getVM(), canvas = getCanvas();
         if (!vm?.runtime?.renderer || !canvas || !api.snapshotLayer) return false;
         const target = vm.editingTarget;
         if (!target || target.isStage) return false;
@@ -173,7 +141,6 @@ window.Transfork = window.Transfork || {};
         nodes.forEach(node => { if (node?.parentNode) node.remove(); });
         state.snapshot = null; state.preview = null; state.source = null; state.occluders = []; state.active = false;
         window.__transforkTransformActive = false;
-        window.__transforkCanvasPreviewActive = false;
     }
 
     window.addEventListener("mousedown", event => { if (event.button !== 0 || state.active) return; const box = getBox(); if (!box || !box.contains(event.target)) return; const mode = modeFrom(event.target); if (mode) start(event, mode); }, true);
