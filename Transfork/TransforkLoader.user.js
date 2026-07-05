@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gandhi Transfork Modular Loader
 // @namespace    http://tampermonkey.net/
-// @version      1.20
+// @version      1.21
 // @description  Loads modular Transfork files dynamically
 // @match        *://www.cocrea.world/*
 // @grant        none
@@ -11,7 +11,7 @@
     "use strict";
 
     const base = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/";
-    const cache = "26070538";
+    const cache = "26070539";
     const modules = [
         "namespace.js",
         "state.js",
@@ -26,7 +26,7 @@
         "transformSnapshotGuard.js",
         "overlayTop.js",
         "snapGuideOverlay.js",
-        "pixelBoxSync.js",
+        // "pixelBoxSync.js", // disabled for box-owner test
         "snapshotDragPixel.js",
         "snapshotToolsPixel.js",
         "resize.js",
@@ -50,7 +50,7 @@
         if (window.__gandhiTransforkDynamicLoader) return;
         window.__gandhiTransforkDynamicLoader = true;
         for (const name of modules) await loadModule(name);
-        console.log("Gandhi Transfork modular loader active 1.20 offscreen-alpha-scan.");
+        console.log("Gandhi Transfork modular loader active 1.21 pixelBoxSync-disabled-test.");
     }
 
     loadAll().catch(error => console.error("Gandhi Transfork loader failed", error));
