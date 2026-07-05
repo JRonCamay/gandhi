@@ -1,30 +1,29 @@
 # Brenda Current Tasks
 
 Objective:
-Finish Transfork upright pixel-bounds behavior for selected sprites and transform snapshots.
+Apply true live alpha-pixel scanning for Transfork upright pixel bounds.
 
 Status:
 Completed repository patch and verification.
 
-Files edited:
+Files edited / created:
 - Transfork/pixelBoxSync.js
-- Transfork/snapshotToolsPixel.js
 - Transfork/TransforkLoader.user.js
+- Transfork/snapshotLivePixelScan.js
 
 Implementation:
-- `pixelBoxSync.js` now installs a screen-first pixel bounds override that scans rendered screen-space pixels before falling back to older bounds.
-- The screen-space rect path is cached by target/drawable/canvas transform state to avoid repeated expensive pixel scans when nothing changed.
-- `snapshotToolsPixel.js` uses the live transformed snapshot DOM bounds during active resize/rotate/scale so the upright box encloses the current transformed pixels.
-- Static occluder/target snapshots continue to compute through the pixel rect path when the operation starts.
-- Loader cache refreshed for `pixelBoxSync.js`.
+- `pixelBoxSync.js` includes `scanAlpha()` and `liveSnapshotRect()`.
+- During active resize, rotate, or scale, the current transformed snapshot is drawn to a temporary canvas.
+- The temporary canvas is scanned with `getImageData()` alpha values.
+- The upright transform box is placed from the scanned min/max alpha pixels.
+- Loader was replaced with a dynamic sequential module loader using cache key `26070534`.
 
 Verification:
-- Fetched `pixelBoxSync.js` after update.
-- Fetched `snapshotToolsPixel.js` after update.
-- Fetched `TransforkLoader.user.js` after cache refresh.
+- Fetched `pixelBoxSync.js` and confirmed live alpha scan functions.
+- Fetched `TransforkLoader.user.js` and confirmed dynamic loader version `1.16`.
 
 Current stopping point:
-Ready for Jay to hard-refresh and browser-test upright pixel bounds during drag, rotate, resize, scale, and flip.
+Ready for Jay to hard-refresh and browser-test live alpha scan bounds.
 
 Questions:
 None.
