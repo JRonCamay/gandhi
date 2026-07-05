@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Gandhi Transfork Modular Loader
 // @namespace    http://tampermonkey.net/
-// @version      1.0
-// @description  Loads Transfork transform box modules in deterministic order
+// @version      1.1
+// @description  Loads the active Transfork transform box entrypoint
 // @match        *://www.cocrea.world/*
 // @grant        none
 // ==/UserScript==
@@ -15,8 +15,7 @@
         loaded: false,
         loading: false,
         modules: [
-            "TransformBoxTool.js",
-            "TransforkSpriteSnapshotDragPatch.js"
+            "TransformBoxTool.js"
         ]
     };
 
@@ -71,7 +70,7 @@
 
             state.loaded = true;
             console.log(
-                "Gandhi Transfork modules loaded",
+                "Gandhi Transfork active entrypoint loaded",
                 state.modules
             );
         }
