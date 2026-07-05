@@ -14,26 +14,49 @@ window.Chad = window.Chad || {};
     function loadJSON(key, fallback) { try { const raw = localStorage.getItem(key); return raw ? (JSON.parse(raw) || fallback) : fallback; } catch { return fallback; } }
     function saveJSON(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
     function loadMessages() { const messages = loadJSON(CHAT_KEY, []); return Array.isArray(messages) ? messages : []; }
-    function saveMessages(messages) { saveJSON(CHAT_KEY, messages.slice(-120)); }
+    function saveMessages(messages) { saveJSON(CHAT_KEY, messages.slice(-160)); }
     function stamp() { return new Date().toLocaleString(); }
     function timeValue(value) { if (typeof value === "number" && Number.isFinite(value)) return value; if (!value) return 0; const parsed = Date.parse(value); return Number.isFinite(parsed) ? parsed : 0; }
 
     function sampleMessages(now) {
-        return [
-            { id: "sample-001", role: "agent", icon: "👱🏻‍♀️", name: "Brenda", text: "Convo tab online. Messages display oldest to newest.", status: "sample", createdAt: new Date(now - 780000).toLocaleString(), timestamp: now - 780000 },
-            { id: "sample-002", role: "buddy", icon: "🧔", name: "Shaggy", text: "Chaties keeps agents. Convo keeps messages.", status: "sample", createdAt: new Date(now - 720000).toLocaleString(), timestamp: now - 720000 },
-            { id: "sample-003", role: "user", icon: "👤", name: "Jay", text: "Testing Jay convo-file save.", status: "sample", createdAt: new Date(now - 660000).toLocaleString(), timestamp: now - 660000 },
-            { id: "sample-004", role: "agent", icon: "👱🏻‍♀️", name: "Brenda", text: "Sample 4: scrollbar test line. The list should stay inside the Chad panel.", status: "sample", createdAt: new Date(now - 600000).toLocaleString(), timestamp: now - 600000 },
-            { id: "sample-005", role: "buddy", icon: "🧔", name: "Shaggy", text: "Sample 5: switching tabs should not hide the Convo button.", status: "sample", createdAt: new Date(now - 540000).toLocaleString(), timestamp: now - 540000 },
-            { id: "sample-006", role: "user", icon: "👤", name: "Jay", text: "Sample 6: clicking this input should keep focus here.", status: "sample", createdAt: new Date(now - 480000).toLocaleString(), timestamp: now - 480000 },
-            { id: "sample-007", role: "agent", icon: "🤖", name: "Chad", text: "Sample 7: local message storage is active.", status: "sample", createdAt: new Date(now - 420000).toLocaleString(), timestamp: now - 420000 },
-            { id: "sample-008", role: "buddy", icon: "🤝", name: "Buddy", text: "Sample 8: this message helps force overflow for the scrollbar.", status: "sample", createdAt: new Date(now - 360000).toLocaleString(), timestamp: now - 360000 },
-            { id: "sample-009", role: "agent", icon: "👱🏻‍♀️", name: "Brenda", text: "Sample 9: scrollbar should appear on the right side of the message list.", status: "sample", createdAt: new Date(now - 300000).toLocaleString(), timestamp: now - 300000 },
-            { id: "sample-010", role: "user", icon: "👤", name: "Jay", text: "Sample 10: SEND should add a new Jay message below these samples.", status: "sample", createdAt: new Date(now - 240000).toLocaleString(), timestamp: now - 240000 },
-            { id: "sample-011", role: "agent", icon: "🐒", name: "GitGit", text: "Sample 11: bottom dock can use the same Convo folder later.", status: "sample", createdAt: new Date(now - 180000).toLocaleString(), timestamp: now - 180000 },
-            { id: "sample-012", role: "buddy", icon: "🧔", name: "Shaggy", text: "Sample 12: more content, more scroll testing.", status: "sample", createdAt: new Date(now - 120000).toLocaleString(), timestamp: now - 120000 },
-            { id: "sample-013", role: "agent", icon: "👱🏻‍♀️", name: "Brenda", text: "Sample 13: end of seeded test messages.", status: "sample", createdAt: new Date(now - 60000).toLocaleString(), timestamp: now - 60000 }
+        const base = [
+            ["agent", "👱🏻‍♀️", "Brenda", "Convo tab online. Messages display oldest to newest."],
+            ["buddy", "🧔", "Shaggy", "Chaties keeps agents. Convo keeps messages."],
+            ["user", "👤", "Jay", "Testing Jay convo-file save."],
+            ["agent", "👱🏻‍♀️", "Brenda", "Sample 4: scrollbar test line. The list should stay inside the Chad panel."],
+            ["buddy", "🧔", "Shaggy", "Sample 5: switching tabs should not hide the Convo button."],
+            ["user", "👤", "Jay", "Sample 6: clicking this input should keep focus here."],
+            ["agent", "🤖", "Chad", "Sample 7: local message storage is active."],
+            ["buddy", "🤝", "Buddy", "Sample 8: this message helps force overflow for the scrollbar."],
+            ["agent", "👱🏻‍♀️", "Brenda", "Sample 9: scrollbar should appear on the right side of the message list."],
+            ["user", "👤", "Jay", "Sample 10: SEND should add a new Jay message below these samples."],
+            ["agent", "🐒", "GitGit", "Sample 11: bottom dock can use the same Convo folder later."],
+            ["buddy", "🧔", "Shaggy", "Sample 12: more content, more scroll testing."],
+            ["agent", "👱🏻‍♀️", "Brenda", "Sample 13: end of first seeded test batch."],
+            ["user", "👤", "Jay", "Sample 14: this should appear under the Convo chat history window."],
+            ["agent", "👱🏻‍♀️", "Brenda", "Sample 15: added extra history for visual testing."],
+            ["buddy", "🧔", "Shaggy", "Sample 16: enough messages should force the internal scrollbar."],
+            ["agent", "🤖", "Chad", "Sample 17: click the textarea after this and focus should stay in Chad."],
+            ["user", "👤", "Jay", "Sample 18: pressing Enter saves; Shift+Enter makes a newline."],
+            ["agent", "🐒", "GitGit", "Sample 19: Convo folder storage should update after SEND."],
+            ["buddy", "🤝", "Buddy", "Sample 20: testing long history window behavior."],
+            ["agent", "👱🏻‍♀️", "Brenda", "Sample 21: message history still sorted oldest to newest."],
+            ["user", "👤", "Jay", "Sample 22: this is another Jay test line."],
+            ["agent", "🤖", "Chad", "Sample 23: sample batch continues below the fold."],
+            ["buddy", "🧔", "Shaggy", "Sample 24: near the bottom of seeded history."],
+            ["agent", "👱🏻‍♀️", "Brenda", "Sample 25: final seeded sample for Convo history."],
+            ["agent", "👱🏻‍♀️", "Brenda", "Sample 26: extra visible message under the chat history window."],
+            ["user", "👤", "Jay", "Sample 27: more Jay-side history for testing."],
+            ["agent", "🐒", "GitGit", "Sample 28: bottom of the extended test set."],
+            ["buddy", "🤝", "Buddy", "Sample 29: scroll test continues."],
+            ["agent", "👱🏻‍♀️", "Brenda", "Sample 30: end of expanded Convo samples."]
         ];
+        return base.map((item, index) => ({
+            id: "sample-" + String(index + 1).padStart(3, "0"),
+            role: item[0], icon: item[1], name: item[2], text: item[3], status: "sample",
+            createdAt: new Date(now - ((base.length - index) * 60000)).toLocaleString(),
+            timestamp: now - ((base.length - index) * 60000)
+        }));
     }
 
     function seedSampleMessages() {
@@ -47,47 +70,6 @@ window.Chad = window.Chad || {};
         saveJayConvoFile(next);
     }
 
-    function isInsideChadPanel(element) { return !!(element && element.closest && element.closest("#gandhi-chad-panel")); }
-
-    function findPromptBox() {
-        const candidates = Array.from(document.querySelectorAll("#prompt-textarea, textarea[data-id='root'], [contenteditable='true'], textarea"));
-        return candidates.find(element => !isInsideChadPanel(element)) || null;
-    }
-
-    function setNativeValue(element, value) {
-        const proto = element instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : element instanceof HTMLInputElement ? HTMLInputElement.prototype : null;
-        if (proto) {
-            const descriptor = Object.getOwnPropertyDescriptor(proto, "value");
-            if (descriptor && descriptor.set) descriptor.set.call(element, value);
-            else element.value = value;
-        }
-        else element.textContent = value;
-        element.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: value }));
-        element.dispatchEvent(new Event("change", { bubbles: true }));
-    }
-
-    function clickMainSendButton() {
-        const buttons = Array.from(document.querySelectorAll("button"));
-        const sendButton = buttons.find(btn => {
-            if (isInsideChadPanel(btn)) return false;
-            const label = (btn.getAttribute("aria-label") || btn.textContent || "").toLowerCase();
-            return !btn.disabled && (label.includes("send") || label.includes("submit"));
-        });
-        if (sendButton) { sendButton.click(); return true; }
-        return false;
-    }
-
-    function sendToMainChat(text) {
-        const prompt = findPromptBox();
-        if (!prompt) { if (window.Chad.actions && window.Chad.actions.copyText) window.Chad.actions.copyText(text); return false; }
-        prompt.focus();
-        setNativeValue(prompt, text);
-        setTimeout(() => {
-            if (!clickMainSendButton()) prompt.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "Enter", code: "Enter" }));
-        }, 60);
-        return true;
-    }
-
     function messageToMarkdown(message) {
         return `## ${message.createdAt || ""}\n${message.icon || ""} ${message.name || message.role || "Unknown"}\n\n${message.text || ""}`;
     }
@@ -99,7 +81,7 @@ window.Chad = window.Chad || {};
     }
 
     function saveConvoFolder(messages) {
-        const sorted = messages.slice(-120).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+        const sorted = messages.slice(-160).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
         saveJSON(CONVO_FOLDER_KEY, {
             folder: "CONVO",
             files: {
@@ -113,13 +95,15 @@ window.Chad = window.Chad || {};
     function addMessage(role, text, status) {
         const now = Date.now();
         const messages = loadMessages();
-        const message = { id: "msg-" + now, role, icon: role === "user" ? "👤" : "🤖", name: role === "user" ? "Jay" : "Chad", text, status: status || "sent", createdAt: stamp(), timestamp: now };
+        const message = { id: "msg-" + now, role, icon: role === "user" ? "👤" : "🤖", name: role === "user" ? "Jay" : "Chad", text, status: status || "saved", createdAt: stamp(), timestamp: now };
         messages.push(message);
         saveMessages(messages);
         saveConvoFolder(messages);
         saveJayConvoFile(messages);
         return message;
     }
+
+    function timeSort(a, b) { return (a.timestamp || 0) - (b.timestamp || 0) || String(a.createdAt || "").localeCompare(String(b.createdAt || "")); }
 
     function normalizeMessage(raw, fallback) {
         if (!raw || typeof raw !== "object") return null;
@@ -162,7 +146,7 @@ window.Chad = window.Chad || {};
             const key = `${message.source}|${message.id}|${message.text}|${message.timestamp || index}`;
             if (!map.has(key)) map.set(key, message);
         });
-        return Array.from(map.values()).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0) || String(a.createdAt || "").localeCompare(String(b.createdAt || "")));
+        return Array.from(map.values()).sort(timeSort);
     }
 
     function renderMessage(message) {
@@ -170,9 +154,20 @@ window.Chad = window.Chad || {};
         const timestamp = message.createdAt || (message.timestamp ? new Date(message.timestamp).toLocaleString() : "");
         return el("div", { style: { border: "1px solid " + (isUser ? "#bfdbfe" : "#e2e8f0"), borderRadius: "9px", padding: "7px", marginBottom: "7px", background: isUser ? "#eff6ff" : "#f8fafc" } }, [
             el("div", { html: `${esc(message.icon || "🤖")} <b>${esc(message.name || "Agent")}:</b> ${esc(message.text || "")}`, style: { whiteSpace: "pre-wrap", lineHeight: "1.35", color: "#0f172a" } }),
-            el("div", { text: timestamp, style: { color: "#64748b", fontSize: "10px", marginTop: "4px", paddingLeft: "22px" } }),
-            message.status === "copied" ? el("div", { text: "Prompt box not found. Message saved to CONVO and copied instead.", style: { color: "#ca8a04", fontSize: "11px", marginTop: "5px", paddingLeft: "22px" } }) : null
+            el("div", { text: timestamp, style: { color: "#64748b", fontSize: "10px", marginTop: "4px", paddingLeft: "22px" } })
         ]);
+    }
+
+    function protectConvoInput(input) {
+        input.dataset.chadConvoInput = "1";
+        const keepFocus = event => {
+            event.stopPropagation();
+            setTimeout(() => { if (document.activeElement !== input) input.focus(); }, 0);
+        };
+        ["pointerdown", "mousedown", "mouseup", "click", "dblclick", "focus", "focusin", "keydown", "keyup", "input", "beforeinput"].forEach(type => {
+            input.addEventListener(type, keepFocus, true);
+            input.addEventListener(type, event => event.stopPropagation(), false);
+        });
     }
 
     function renderConvo() {
@@ -181,17 +176,17 @@ window.Chad = window.Chad || {};
         const messageRow = el("div", { style: { flex: "1 1 auto", minHeight: "0", overflow: "hidden", display: "flex", paddingRight: "2px" } });
         const list = el("div", { style: { flex: "1 1 auto", minWidth: "0", minHeight: "0", height: "100%", overflowY: "scroll", overflowX: "hidden", scrollbarGutter: "stable", padding: "8px", paddingRight: "12px", boxSizing: "border-box" } });
         const messages = getDisplayMessages();
-        list.appendChild(el("div", { html: "<b>Convo</b><br><span style='color:#64748b'>Conversation messages only. SEND saves to the CONVO folder store.</span>", style: { marginBottom: "8px", lineHeight: "1.35" } }));
+        list.appendChild(el("div", { html: "<b>Convo Chat History</b><br><span style='color:#64748b'>SEND saves here and into the CONVO folder store.</span>", style: { marginBottom: "8px", lineHeight: "1.35" } }));
         if (!messages.length) list.appendChild(el("div", { text: "No local messages yet.", style: { color: "#64748b", padding: "10px", border: "1px dashed #cbd5e1", borderRadius: "8px" } }));
         else messages.forEach(message => list.appendChild(renderMessage(message)));
         messageRow.appendChild(list);
 
         const input = el("textarea", { placeholder: "Message as Jay...", style: { flex: "1 1 auto", width: "100%", height: "44px", minHeight: "44px", maxHeight: "88px", resize: "vertical", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "8px", fontSize: "12px", lineHeight: "1.35", outline: "none", boxSizing: "border-box" } });
+        protectConvoInput(input);
         function send() {
             const text = input.value.trim();
             if (!text) return;
-            const sent = sendToMainChat(text);
-            addMessage("user", text, sent ? "sent" : "copied");
+            addMessage("user", text, "saved");
             input.value = "";
             ui().render();
         }
@@ -208,7 +203,6 @@ window.Chad = window.Chad || {};
     window.Chad.uiConvo = {
         render: renderConvo,
         addMessage,
-        sendToMainChat,
         getDisplayMessages,
         loadLocalBuddyMessages,
         seedSampleMessages,
