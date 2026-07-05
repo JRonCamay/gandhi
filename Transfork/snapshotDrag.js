@@ -7,6 +7,7 @@ window.Transfork = window.Transfork || {};
 
     const snapshotDragState260705_SDG9X2 = {
         active: false,
+        ready: false,
         target: null,
         drawable: null,
         snapshot: null,
@@ -26,7 +27,8 @@ window.Transfork = window.Transfork || {};
         startVisible: true,
         startScreenRect: null,
         frame: 0,
-        useRealSprite: false
+        useRealSprite: false,
+        snapBoxes: []
     };
 
     function getModules260705_GM4P1R() {
@@ -349,9 +351,51 @@ window.Transfork = window.Transfork || {};
         return 12 * (nativeSize[0] / rect.width);
     }
 
+    function clearSnapBoxes260705_CB9Q3H() {
+        const state = snapshotDragState260705_SDG9X2;
+        state.snapBoxes.forEach(box => box.remove());
+        state.snapBoxes = [];
+    }
+
+    function addSnapBox260705_AB4N7C(bounds, canvas, vm) {
+        const modules = getModules260705_GM4P1R();
+        const rect = modules.coords.boundsToScreenRect(bounds, canvas, vm);
+        const box = document.createElement("div");
+
+        Object.assign(box.style, {
+            position: "fixed",
+            left: rect.left + "px",
+            top: rect.top + "px",
+            width: rect.width + "px",
+            height: rect.height + "px",
+            border: "2px dashed #f59e0b",
+            background: "rgba(245, 158, 11, 0.08)",
+            boxSizing: "border-box",
+            pointerEvents: "none",
+            zIndex: "9997",
+            userSelect: "none"
+        });
+
+        document.body.appendChild(box);
+        snapshotDragState260705_SDG9X2.snapBoxes.push(box);
+    }
+
+    function showSnapBoxes260705_SB5F2M(boundsList, canvas, vm) {
+        clearSnapBoxes260705_CB9Q3H();
+
+        const seen = new Set();
+        boundsList.forEach(bounds => {
+            if (!bounds) return;
+            const key = [bounds.left, bounds.right, bounds.top, bounds.bottom].join(":");
+            if (seen.has(key)) return;
+            seen.add(key);
+            addSnapBox260705_AB4N7C(bounds, canvas, vm);
+        });
+    }
+
     function findEdgeSnapPosition260705_ES7Q2V(vm, state, desiredX, desiredY) {
         if (!state.target || !state.drawable) {
-            return { x: desiredX, y: desiredY };
+            return { x: desiredX, y: desiredY, targets: [] };
         }
 
         const renderer = vm.runtime.renderer;
@@ -430,7 +474,8 @@ window.Transfork = window.Transfork || {};
 
         return {
             x: desiredX + (snapX === null ? 0 : snapX),
-            y: desiredY + (snapY === null ? 0 : snapY)
+            y: desiredY + (snapY === null ? 0 : snapY),
+            targets: [snapXTarget, snapYTarget].filter(Boolean)
         };
     }
 
@@ -456,6 +501,8 @@ window.Transfork = window.Transfork || {};
         state.lastMouseY = clientY;
         state.lastShiftKey = !!shiftKey;
 
+        if (!state.ready) return;
+
         const rawDX = clientX - state.startMouseX;
         const rawDY = clientY - state.startMouseY;
         const scratchDelta = modules.coords.screenDeltaToScratch(
@@ -478,6 +525,10 @@ window.Transfork = window.Transfork || {};
 
             desiredX = snapped.x;
             desiredY = snapped.y;
+            showSnapBoxes260705_SB5F2M(snapped.targets, state.canvas, vm);
+        }
+        else {
+            clearSnapBoxes260705_CB9Q3H();
         }
 
         state.finalX = desiredX;
@@ -553,6 +604,23 @@ window.Transfork = window.Transfork || {};
         return cursor === "auto" || cursor === "default" || cursor === "pointer";
     }
 
+    function activateDragAfterOriginalHidden260705_AH6N3K() {
+        const state = snapshotDragState260705_SDG9X2;
+        if (!state.active) return;
+
+        requestAnimationFrame(() => {
+            if (!state.active) return;
+
+            state.ready = true;
+            move260705_MV7C3D(
+                state.lastMouseX,
+                state.lastMouseY,
+                state.lastShiftKey
+            );
+            holdBox260705_HB4W8S();
+        });
+    }
+
     function start260705_ST2K7Q(event, targetOverride) {
         const modules = getModules260705_GM4P1R();
         if (!modules.vm || !modules.coords || !modules.selectionBox) return false;
@@ -576,6 +644,7 @@ window.Transfork = window.Transfork || {};
         const state = snapshotDragState260705_SDG9X2;
 
         state.active = true;
+        state.ready = false;
         state.target = target;
         state.drawable = drawable;
         state.snapshot = snapshot;
@@ -600,14 +669,15 @@ window.Transfork = window.Transfork || {};
 
         if (snapshot) {
             setDrawableVisible260705_DV2M6F(vm, target, false);
+            activateDragAfterOriginalHidden260705_AH6N3K();
         }
         else {
+            state.ready = true;
             setDrawableVisible260705_DV2M6F(vm, target, state.startVisible);
             console.warn("Transfork snapshot unavailable; using real sprite drag fallback.");
+            move260705_MV7C3D(event.clientX, event.clientY, event.shiftKey);
+            holdBox260705_HB4W8S();
         }
-
-        move260705_MV7C3D(event.clientX, event.clientY, event.shiftKey);
-        holdBox260705_HB4W8S();
 
         event.preventDefault();
         event.stopPropagation();
@@ -630,7 +700,9 @@ window.Transfork = window.Transfork || {};
     function clearState260705_CL5N8M() {
         const state = snapshotDragState260705_SDG9X2;
 
+        clearSnapBoxes260705_CB9Q3H();
         state.active = false;
+        state.ready = false;
         state.target = null;
         state.drawable = null;
         state.snapshot = null;
