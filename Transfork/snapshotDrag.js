@@ -35,9 +35,22 @@ window.Transfork = window.Transfork || {};
         };
     }
 
-    function createSnapshot260705_CS8A7N(canvas, screenRect) {
-        const canvasRect = canvas.getBoundingClientRect();
-        const snapshot = document.createElement("div");
+    function getCostumeUrl260705_CU8P3L(target) {
+        if (!target || !target.sprite || !target.sprite.costumes) return "";
+
+        const costume = target.sprite.costumes[target.currentCostume];
+        if (!costume || !costume.asset) return "";
+
+        if (typeof costume.asset.encodeDataURI === "function") {
+            return costume.asset.encodeDataURI();
+        }
+
+        return "";
+    }
+
+    function createSnapshot260705_CS8A7N(target, screenRect) {
+        const snapshot = document.createElement("img");
+        const source = getCostumeUrl260705_CU8P3L(target);
 
         Object.assign(snapshot.style, {
             position: "fixed",
@@ -45,17 +58,16 @@ window.Transfork = window.Transfork || {};
             top: screenRect.top + "px",
             width: screenRect.width + "px",
             height: screenRect.height + "px",
-            backgroundImage: "url(" + canvas.toDataURL("image/png") + ")",
-            backgroundRepeat: "no-repeat",
-            backgroundSize: canvasRect.width + "px " + canvasRect.height + "px",
-            backgroundPosition:
-                "-" + (screenRect.left - canvasRect.left) + "px " +
-                "-" + (screenRect.top - canvasRect.top) + "px",
             pointerEvents: "none",
             zIndex: "9998",
             boxSizing: "border-box",
-            userSelect: "none"
+            userSelect: "none",
+            objectFit: "fill",
+            transformOrigin: "center center"
         });
+
+        if (source) snapshot.src = source;
+        else snapshot.style.background = "transparent";
 
         document.body.appendChild(snapshot);
         return snapshot;
@@ -172,7 +184,7 @@ window.Transfork = window.Transfork || {};
 
         const bounds = drawable.getAABB();
         const screenRect = modules.coords.boundsToScreenRect(bounds, canvas, vm);
-        const snapshot = createSnapshot260705_CS8A7N(canvas, screenRect);
+        const snapshot = createSnapshot260705_CS8A7N(target, screenRect);
         const state = snapshotDragState260705_SDG9X2;
 
         state.active = true;
