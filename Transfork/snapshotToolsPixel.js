@@ -28,9 +28,7 @@ window.Transfork = window.Transfork || {};
         vm.runtime.requestRedraw?.();
     }
 
-    function signedScale(value, delta) {
-        return Math.sign(value || 1) * Math.max(0.01, Math.abs(value) + delta);
-    }
+    function signedScale(value, delta) { return Math.sign(value || 1) * Math.max(0.01, Math.abs(value) + delta); }
 
     function sourceFrom(snapshot) {
         if (snapshot instanceof HTMLCanvasElement) return snapshot;
@@ -57,22 +55,36 @@ window.Transfork = window.Transfork || {};
         return { left: origin.left + minX, top: origin.top + minY, width: maxX - minX + 1, height: maxY - minY + 1 };
     }
 
+    function trimSource(source) {
+        if (source instanceof HTMLImageElement && !source.complete) return null;
+        const srcW = source.naturalWidth || source.width;
+        const srcH = source.naturalHeight || source.height;
+        if (!srcW || !srcH) return null;
+        const temp = document.createElement("canvas");
+        temp.width = srcW;
+        temp.height = srcH;
+        const ctx = temp.getContext("2d");
+        ctx.drawImage(source, 0, 0, srcW, srcH);
+        const box = scanAlpha(temp, { left: 0, top: 0 });
+        if (!box) return source;
+        const tight = document.createElement("canvas");
+        tight.width = Math.max(1, Math.ceil(box.width));
+        tight.height = Math.max(1, Math.ceil(box.height));
+        tight.getContext("2d").drawImage(temp, box.left, box.top, box.width, box.height, 0, 0, box.width, box.height);
+        return tight;
+    }
+
     function place(rect) {
         const box = getBox();
         if (!box || !rect) return;
-        box.style.display = "block";
-        box.style.left = rect.left + "px";
-        box.style.top = rect.top + "px";
-        box.style.width = rect.width + "px";
-        box.style.height = rect.height + "px";
+        box.style.display = "block"; box.style.left = rect.left + "px"; box.style.top = rect.top + "px"; box.style.width = rect.width + "px"; box.style.height = rect.height + "px";
         api.overlayTop?.bringBoxToTop?.();
     }
 
     function renderPreview(sx, sy, rotate) {
         const source = state.source, preview = state.preview, base = state.rect;
         if (!source || !preview || !base) return null;
-        if (source instanceof HTMLImageElement && !source.complete) return null;
-        const sw = base.width * Math.abs(sx), sh = base.height * Math.abs(sy), rad = rotate * Math.PI / 180;
+        const sw = source.width * Math.abs(sx), sh = source.height * Math.abs(sy), rad = rotate * Math.PI / 180;
         const outW = Math.max(1, Math.ceil(Math.abs(sw * Math.cos(rad)) + Math.abs(sh * Math.sin(rad))) + 4);
         const outH = Math.max(1, Math.ceil(Math.abs(sw * Math.sin(rad)) + Math.abs(sh * Math.cos(rad))) + 4);
         const cx = base.left + base.width / 2, cy = base.top + base.height / 2;
@@ -80,11 +92,8 @@ window.Transfork = window.Transfork || {};
         preview.width = outW; preview.height = outH;
         Object.assign(preview.style, { left: left + "px", top: top + "px", width: outW + "px", height: outH + "px", visibility: "visible" });
         const ctx = preview.getContext("2d");
-        ctx.clearRect(0, 0, outW, outH);
-        ctx.translate(outW / 2, outH / 2);
-        ctx.rotate(rad);
-        ctx.scale(sx, sy);
-        ctx.drawImage(source, -base.width / 2, -base.height / 2, base.width, base.height);
+        ctx.clearRect(0, 0, outW, outH); ctx.translate(outW / 2, outH / 2); ctx.rotate(rad); ctx.scale(sx, sy);
+        ctx.drawImage(source, -source.width / 2, -source.height / 2, source.width, source.height);
         return scanAlpha(preview, { left, top }) || { left, top, width: outW, height: outH };
     }
 
@@ -95,15 +104,8 @@ window.Transfork = window.Transfork || {};
         if (state.mode === "width") { const next = signedScale(state.scale[0], dx); sx = Math.abs(next) / Math.max(0.01, Math.abs(state.scale[0])); state.finalScale = [next, state.scale[1]]; }
         else if (state.mode === "height") { const next = signedScale(state.scale[1], dy); sy = Math.abs(next) / Math.max(0.01, Math.abs(state.scale[1])); state.finalScale = [state.scale[0], next]; }
         else if (state.mode === "uniform") { const ratio = Math.max(0.01, Math.abs(state.scale[0]) + dx) / Math.max(0.01, Math.abs(state.scale[0])); sx = ratio; sy = ratio; state.finalScale = [state.scale[0] * ratio, state.scale[1] * ratio]; }
-        else if (state.mode === "rotate") {
-            const rect = getBox()?.getBoundingClientRect() || state.rect;
-            const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
-            rotate = (Math.atan2(event.clientY - cy, event.clientX - cx) - Math.atan2(state.my - cy, state.mx - cx)) * 180 / Math.PI;
-            state.finalDirection = state.dir + rotate;
-            state.finalScale = state.scale.slice();
-        }
-        const rect = renderPreview(sx, sy, rotate);
-        if (rect) place(rect);
+        else if (state.mode === "rotate") { const rect = getBox()?.getBoundingClientRect() || state.rect; const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2; rotate = (Math.atan2(event.clientY - cy, event.clientX - cx) - Math.atan2(state.my - cy, state.mx - cx)) * 180 / Math.PI; state.finalDirection = state.dir + rotate; state.finalScale = state.scale.slice(); }
+        const rect = renderPreview(sx, sy, rotate); if (rect) place(rect);
     }
 
     function start(event, mode) {
@@ -115,7 +117,7 @@ window.Transfork = window.Transfork || {};
         if (!drawable?.getAABB) return false;
         const rect = api.pixelBounds?.rect?.(vm, target, drawable, canvas) || api.snapshotLayer.screenRect(drawable.getAABB(), canvas, vm);
         const snapshot = api.snapshotLayer.makeSnapshot(vm, target, drawable, canvas, rect, 9998);
-        const source = sourceFrom(snapshot);
+        const source = trimSource(sourceFrom(snapshot));
         if (!snapshot || !source) return false;
         snapshot.style.visibility = "hidden";
         const preview = createPreview(rect);
@@ -132,15 +134,10 @@ window.Transfork = window.Transfork || {};
         if (!state.active) return;
         const vm = getVM(), target = state.target, drawable = state.drawable;
         const nodes = [state.snapshot, state.preview].concat(state.occluders || []);
-        if (commit && vm && target && drawable) {
-            if (state.mode === "rotate") target.setDirection(state.finalDirection);
-            drawable.updateScale(state.finalScale);
-            target.emitVisualChange?.(); vm.runtime.requestRedraw?.();
-        }
+        if (commit && vm && target && drawable) { if (state.mode === "rotate") target.setDirection(state.finalDirection); drawable.updateScale(state.finalScale); target.emitVisualChange?.(); vm.runtime.requestRedraw?.(); }
         if (vm && target) setVisible(vm, target, state.visible);
         nodes.forEach(node => { if (node?.parentNode) node.remove(); });
-        state.snapshot = null; state.preview = null; state.source = null; state.occluders = []; state.active = false;
-        window.__transforkTransformActive = false;
+        state.snapshot = null; state.preview = null; state.source = null; state.occluders = []; state.active = false; window.__transforkTransformActive = false;
     }
 
     window.addEventListener("mousedown", event => { if (event.button !== 0 || state.active) return; const box = getBox(); if (!box || !box.contains(event.target)) return; const mode = modeFrom(event.target); if (mode) start(event, mode); }, true);
