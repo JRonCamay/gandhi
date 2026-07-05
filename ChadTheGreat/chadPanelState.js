@@ -3,6 +3,12 @@ window.Chad = window.Chad || {};
 (function () {
     "use strict";
 
+    const STATE_KEY = "gandhi_chad_panel_state_v1";
+
+    function forceStartupDocked() {
+        localStorage.setItem(STATE_KEY, "closed");
+    }
+
     function applyStateSoon() {
         if (window.Chad.chadDock && window.Chad.chadDock.applySavedState) {
             window.Chad.chadDock.applySavedState();
@@ -16,10 +22,18 @@ window.Chad = window.Chad || {};
         const originalStart = ui.start;
 
         ui.start = function () {
+            forceStartupDocked();
             originalStart.apply(ui, arguments);
+            forceStartupDocked();
             applyStateSoon();
-            requestAnimationFrame(applyStateSoon);
-            setTimeout(applyStateSoon, 150);
+            requestAnimationFrame(() => {
+                forceStartupDocked();
+                applyStateSoon();
+            });
+            setTimeout(() => {
+                forceStartupDocked();
+                applyStateSoon();
+            }, 150);
         };
 
         ui.__panelStatePatched = true;
@@ -33,7 +47,8 @@ window.Chad = window.Chad || {};
 
     window.Chad.chadPanelState = {
         applyStateSoon,
-        patchUiStart
+        patchUiStart,
+        forceStartupDocked
     };
 
     start();
