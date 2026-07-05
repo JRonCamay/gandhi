@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gandhi File Splitter
 // @namespace    http://tampermonkey.net/
-// @version      0.5
+// @version      0.6
 // @description  Split large source files and generate loader-ready module sets
 // @match        *://chatgpt.com/*
 // @match        *://github.com/*
@@ -12,6 +12,9 @@
 (function () {
     "use strict";
 
+    const GANDHI_RAW_ROOT_260705 =
+    "https://raw.githubusercontent.com/JRonCamay/gandhi/main/";
+
     const splitterState260705_FS4M9Q = {
         panel: null,
         sourceInput: null,
@@ -20,7 +23,7 @@
         maxLinesInput: null,
         markerInput: null,
         bundleInput: null,
-        baseUrlInput: null,
+        outputFolderInput: null,
         files: []
     };
 
@@ -90,6 +93,20 @@
         return dot > 0 ? clean.slice(dot) : ".js";
     }
 
+    function safeFolder260705(value, filename) {
+        const fallback = cleanBase260705(filename);
+        const raw = String(value || "").trim() || fallback;
+        return raw
+            .replace(/^\/+/, "")
+            .replace(/\/+$/, "")
+            .replace(/\\/g, "/")
+            .replace(/[^a-zA-Z0-9_\-/]/g, "_");
+    }
+
+    function makeBaseUrl260705(folder, filename) {
+        return GANDHI_RAW_ROOT_260705 + safeFolder260705(folder, filename) + "/";
+    }
+
     function makePartName260705_MN9D4V(filename, index) {
         return cleanBase260705(filename) + ".part" + String(index).padStart(2, "0") + cleanExt260705(filename);
     }
@@ -141,12 +158,6 @@
             .replace(/^[^a-zA-Z_$]/, "_$&");
     }
 
-    function normalizeBaseUrl260705(url) {
-        const clean = String(url || "").trim();
-        if (!clean) return "";
-        return clean.endsWith("/") ? clean : clean + "/";
-    }
-
     function makeModulePart260705(bundle, partName, source) {
         const key = sanitize260705(bundle);
         return [
@@ -160,7 +171,7 @@
         ].join("\n");
     }
 
-    function makeModuleLoader260705(bundle, filename, partNames, baseUrl) {
+    function makeModuleLoader260705(bundle, partNames, baseUrl) {
         const key = sanitize260705(bundle);
         const requires = partNames.map(name => "// @require      " + baseUrl + name).join("\n");
 
@@ -179,6 +190,23 @@
             "    window.GandhiModuleSets.active = window.GandhiModuleSets." + key + ";\n" +
             "    console.log(\"Gandhi module set loaded: " + key + "\");\n" +
             "})();\n";
+    }
+
+    function makeUploadPlan260705(folder, baseUrl, files) {
+        return [
+            "# Gandhi File Splitter Upload Plan",
+            "",
+            "Upload folder:",
+            folder,
+            "",
+            "Raw base URL:",
+            baseUrl,
+            "",
+            "Upload these files into that folder:",
+            ...files.map(file => "- " + file.name),
+            "",
+            "Install only the generated .loader.user.js in Tampermonkey."
+        ].join("\n");
     }
 
     function downloadText260705_DL6F8R(filename, text) {
@@ -278,14 +306,15 @@
     function buildModuleSet260705_MS7K2P() {
         const state = splitterState260705_FS4M9Q;
         const filename = state.filenameInput.value;
+        const folder = safeFolder260705(state.outputFolderInput.value, filename);
         const bundle = state.bundleInput.value || cleanBase260705(filename);
-        const baseUrl = normalizeBaseUrl260705(state.baseUrlInput.value);
+        const baseUrl = makeBaseUrl260705(folder, filename);
         const parts = getSplitParts260705();
         const partNames = parts.map((_, index) => makePartName260705_MN9D4V(filename, index + 1));
 
         const files = [{
             name: cleanBase260705(filename) + ".loader.user.js",
-            content: makeModuleLoader260705(bundle, filename, partNames, baseUrl)
+            content: makeModuleLoader260705(bundle, partNames, baseUrl)
         }];
 
         parts.forEach((part, index) => {
@@ -293,6 +322,11 @@
                 name: partNames[index],
                 content: makeModulePart260705(bundle, partNames[index], part)
             });
+        });
+
+        files.push({
+            name: "UPLOAD_PLAN.md",
+            content: makeUploadPlan260705(folder, baseUrl, files)
         });
 
         setFiles260705(files);
@@ -363,11 +397,7 @@
         maxLinesInput.min = "1";
         const markerInput = makeInput260705("", "130px", "optional marker");
         const bundleInput = makeInput260705("GandhiModuleSet", "150px", "module set name");
-        const baseUrlInput = makeInput260705(
-            "https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/",
-            "390px",
-            "raw GitHub folder URL"
-        );
+        const outputFolderInput = makeInput260705("", "190px", "blank = filename folder");
         const output = createEl260705_CE8N3W("div", { style: { marginTop: "8px" } });
 
         panel.appendChild(createEl260705_CE8N3W("div", {
@@ -399,12 +429,12 @@
             style: { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginTop: "8px" }
         }, [
             createEl260705_CE8N3W("span", { text: "Set:" }), bundleInput,
-            createEl260705_CE8N3W("span", { text: "Base URL:" }), baseUrlInput,
+            createEl260705_CE8N3W("span", { text: "Folder:" }), outputFolderInput,
             button260705_BT2H6F("BUILD MODULE SET", buildModuleSet260705_MS7K2P, true)
         ]));
 
         panel.appendChild(createEl260705_CE8N3W("div", {
-            text: "Module set creates one loader plus wrapped part files. Upload all generated files to the Base URL folder, then install only the loader.",
+            text: "Folder is optional. Blank creates a folder from Filename. Upload generated files there and install only the generated loader.",
             style: { fontSize: "12px", color: "#475569", marginTop: "6px" }
         }));
 
@@ -417,7 +447,7 @@
         state.maxLinesInput = maxLinesInput;
         state.markerInput = markerInput;
         state.bundleInput = bundleInput;
-        state.baseUrlInput = baseUrlInput;
+        state.outputFolderInput = outputFolderInput;
         state.output = output;
 
         renderFiles260705_RP8S3N();
