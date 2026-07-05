@@ -1533,10 +1533,10 @@
                             mode: "width",
                             vm,
                             getDrawable: target =>
-                                vm.runtime.renderer
-                                ._allDrawables[
-                                    target.drawableID
-                                ],
+                            vm.runtime.renderer
+                            ._allDrawables[
+                                target.drawableID
+                            ],
                             installShearHook,
                             getVisualFlipX: () => visualFlipX
                         }
@@ -1556,10 +1556,10 @@
                             mode: "height",
                             vm,
                             getDrawable: target =>
-                                vm.runtime.renderer
-                                ._allDrawables[
-                                    target.drawableID
-                                ],
+                            vm.runtime.renderer
+                            ._allDrawables[
+                                target.drawableID
+                            ],
                             installShearHook,
                             getVisualFlipX: () => visualFlipX
                         }
@@ -1644,10 +1644,10 @@
                             mode: "uniform",
                             vm,
                             getDrawable: target =>
-                                vm.runtime.renderer
-                                ._allDrawables[
-                                    target.drawableID
-                                ],
+                            vm.runtime.renderer
+                            ._allDrawables[
+                                target.drawableID
+                            ],
                             installShearHook,
                             getVisualFlipX: () => visualFlipX
                         }
@@ -1667,10 +1667,10 @@
                             mode: "uniform",
                             vm,
                             getDrawable: target =>
-                                vm.runtime.renderer
-                                ._allDrawables[
-                                    target.drawableID
-                                ],
+                            vm.runtime.renderer
+                            ._allDrawables[
+                                target.drawableID
+                            ],
                             installShearHook,
                             getVisualFlipX: () => visualFlipX
                         }
@@ -2145,10 +2145,10 @@
                             renderer: vm.runtime.renderer,
                             overlay,
                             getDrawable: target =>
-                                vm.runtime.renderer
-                                ._allDrawables[
-                                    target.drawableID
-                                ],
+                            vm.runtime.renderer
+                            ._allDrawables[
+                                target.drawableID
+                            ],
                             installShearHook
                         }
                     );
@@ -2264,10 +2264,10 @@
                         e,
                         {
                             getDrawable: target =>
-                                vm.runtime.renderer
-                                ._allDrawables[
-                                    target.drawableID
-                                ],
+                            vm.runtime.renderer
+                            ._allDrawables[
+                                target.drawableID
+                            ],
                             getVisualFlipX: () => visualFlipX
                         }
                     );
@@ -2276,10 +2276,10 @@
                         e,
                         {
                             getDrawable: target =>
-                                vm.runtime.renderer
-                                ._allDrawables[
-                                    target.drawableID
-                                ]
+                            vm.runtime.renderer
+                            ._allDrawables[
+                                target.drawableID
+                            ]
                         }
                     );
 
@@ -2681,21 +2681,21 @@
                     snapLock.x
                     ? snapLock.x.value
                     : desiredX +
-                      (
-                          snapX === null
-                          ? 0
-                          : snapX
-                      ),
+                    (
+                        snapX === null
+                        ? 0
+                        : snapX
+                    ),
 
                     y:
                     snapLock.y
                     ? snapLock.y.value
                     : desiredY +
-                      (
-                          snapY === null
-                          ? 0
-                          : snapY
-                      )
+                    (
+                        snapY === null
+                        ? 0
+                        : snapY
+                    )
                 };
 
                 window.Transfork.snapVisuals.update(
@@ -2811,24 +2811,26 @@
                     target
                 );
 
-                const rawBounds =
-                drawable.getAABB();
+                if (
+                    window.Transfork &&
+                    window.Transfork.snapshotToolsPixel &&
+                    typeof window.Transfork.snapshotToolsPixel.idlePixelRect === "function"
+                ) {
+                    const pixelRect =
+                    window.Transfork.snapshotToolsPixel.idlePixelRect(
+                        vm,
+                        target,
+                        drawable,
+                        canvas
+                    );
 
-                const bounds =
-                getShearAdjustedBounds(
-                    rawBounds,
-                    drawable
-                );
-                const tl = scratchToScreen(bounds.left, bounds.top, canvas);
-                const br = scratchToScreen(bounds.right, bounds.bottom, canvas);
-
-                overlay.style.left =
-                tl.x + "px";
-
-                overlay.style.top =
-                tl.y + "px";
-                overlay.style.width = (br.x - tl.x) + "px";
-                overlay.style.height = (br.y - tl.y) + "px";
+                    if (pixelRect) {
+                        overlay.style.left = pixelRect.left + "px";
+                        overlay.style.top = pixelRect.top + "px";
+                        overlay.style.width = pixelRect.width + "px";
+                        overlay.style.height = pixelRect.height + "px";
+                    }
+                }
                 if (document.activeElement !== alphaInput) {
                     const alpha =
                     getSpriteAlpha();
