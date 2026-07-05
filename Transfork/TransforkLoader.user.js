@@ -1,37 +1,64 @@
 // ==UserScript==
 // @name         Gandhi Transfork Modular Loader
 // @namespace    http://tampermonkey.net/
-// @version      1.15
-// @description  Loads modular Transfork files
+// @version      1.16
+// @description  Loads modular Transfork files dynamically
 // @match        *://www.cocrea.world/*
 // @grant        none
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/namespace.js?v=26070526
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/state.js?v=26070526
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/vm.js?v=26070526
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/coords.js?v=26070526
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/drawable.js?v=26070526
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/math.js?v=26070526
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/selectionBox.js?v=26070526
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/transformOps.js?v=26070526
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/snapshotLayer.js?v=26070526
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/pixelBounds.js?v=26070526
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/transformSnapshotGuard.js?v=26070526
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/overlayTop.js?v=26070526
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/snapGuideOverlay.js?v=26070526
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/pixelBoxSync.js?v=26070529
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/snapshotDragPixel.js?v=26070526
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/snapshotToolsPixel.js?v=26070528
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/resize.js?v=26070526
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/rotate.js?v=26070526
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/alpha.js?v=26070526
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/flip.js?v=26070526
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/skew.js?v=26070526
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/legacyBridge.js?v=26070526
-// @require      https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/main.js?v=26070526
 // ==/UserScript==
 
 (function () {
     "use strict";
 
-    console.log("Gandhi Transfork modular loader active 1.15 pixel-refresh.");
+    const base = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/";
+    const cache = "26070534";
+    const modules = [
+        "namespace.js",
+        "state.js",
+        "vm.js",
+        "coords.js",
+        "drawable.js",
+        "math.js",
+        "selectionBox.js",
+        "transformOps.js",
+        "snapshotLayer.js",
+        "pixelBounds.js",
+        "transformSnapshotGuard.js",
+        "overlayTop.js",
+        "snapGuideOverlay.js",
+        "pixelBoxSync.js",
+        "snapshotDragPixel.js",
+        "snapshotToolsPixel.js",
+        "resize.js",
+        "rotate.js",
+        "alpha.js",
+        "flip.js",
+        "skew.js",
+        "legacyBridge.js",
+        "main.js"
+    ];
+
+    function loadModule(name) {
+        return new Promise((resolve, reject) => {
+            const script = document.createElement("script");
+            script.src = base + name + "?v=" + cache;
+            script.async = false;
+            script.onload = resolve;
+            script.onerror = () => reject(new Error("Failed to load " + name));
+            document.documentElement.appendChild(script);
+        });
+    }
+
+    async function loadAll() {
+        if (window.__gandhiTransforkDynamicLoader) return;
+        window.__gandhiTransforkDynamicLoader = true;
+
+        for (const name of modules) {
+            await loadModule(name);
+        }
+
+        console.log("Gandhi Transfork modular loader active 1.16 live-alpha-scan.");
+    }
+
+    loadAll().catch(error => console.error("Gandhi Transfork loader failed", error));
 })();
