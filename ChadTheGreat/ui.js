@@ -9,7 +9,9 @@ window.Chad = window.Chad || {};
     let bodyHost = null;
     let monkeyDock = null;
     let didInitialAutoOpen = false;
+    let startupDockStartedAt = 0;
 
+    const STARTUP_DOCK_MS = 3000;
     const GLOBAL_AGENTS_KEY = "gandhi_chad_global_agents_v1";
     const ACTIVE_AGENT_KEY = "gandhi_chad_active_agent_id_v1";
     const DONE_FLASH_KEY = "gandhi_chad_task_done_flash_v1";
@@ -503,21 +505,52 @@ window.Chad = window.Chad || {};
         }, true);
     }
 
+    function areStartupModulesReady() {
+        return !!(
+            window.Chad.storage &&
+            window.Chad.uiChaties &&
+            window.Chad.uiConvo &&
+            window.Chad.uiTasks &&
+            window.Chad.uiRoadmap &&
+            window.Chad.uiPins &&
+            window.Chad.uiRepo &&
+            window.Chad.uiNotes
+        );
+    }
+
     function autoOpenAfterInitialLayout() {
         if (!panel || didInitialAutoOpen) return;
         didInitialAutoOpen = true;
-        void panel.offsetHeight;
-        requestAnimationFrame(() => {
+
+        function tryOpen() {
+            const elapsed = Date.now() - startupDockStartedAt;
+            const waitedLongEnough = elapsed >= STARTUP_DOCK_MS;
+
+            if (!waitedLongEnough || !areStartupModulesReady()) {
+                setTimeout(tryOpen, 100);
+                return;
+            }
+
+            render();
+            panel.style.display = "flex";
+            panel.style.visibility = "hidden";
+            panel.style.opacity = "0";
+            panel.style.pointerEvents = "none";
             void panel.offsetHeight;
+
             requestAnimationFrame(() => {
+                void panel.offsetHeight;
                 openPanelFromDock();
             });
-        });
+        }
+
+        tryOpen();
     }
 
     function start() {
         if (document.querySelector("#gandhi-chad-panel")) return;
         window.Chad.storage.state.activeTab = window.Chad.storage.state.activeTab || "chaties";
+        startupDockStartedAt = Date.now();
 
         showMonkeyDock();
 
@@ -538,11 +571,8 @@ window.Chad = window.Chad || {};
                 fontSize: "12px",
                 boxShadow: "0 10px 35px rgba(15,23,42,.20)",
                 overflow: "hidden",
-                display: "flex",
-                flexDirection: "column",
-                visibility: "hidden",
-                opacity: "0",
-                pointerEvents: "none"
+                display: "none",
+                flexDirection: "column"
             }
         });
         document.body.appendChild(panel);
