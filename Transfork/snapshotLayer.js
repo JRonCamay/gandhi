@@ -186,8 +186,9 @@ window.Transfork = window.Transfork || {};
             return tight;
         }
         function makeRendererSnapshot260705_LY4E9X(vm, target, rect, zIndex) {
-            const source = extractDrawableCanvas260705_LY5E3D(vm.runtime.renderer, target.drawableID);
-            if (!source) return null;
+            const source = trimCanvas260705_LY2P6B(
+                extractDrawableCanvas260705_LY5E3D(vm.runtime.renderer, target.drawableID)
+            );
 
             const snap = document.createElement("canvas");
             snap.width = source.width;
