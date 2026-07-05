@@ -3,6 +3,11 @@ window.Transfork = window.Transfork || {};
 (function () {
     "use strict";
 
+    fetch("https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/pixelTransformedBounds.js?v=26070518")
+        .then(response => response.text())
+        .then(code => Function(code)())
+        .catch(error => console.warn("Transfork pixel transformed bounds load failed", error));
+
     const api = window.Transfork;
     let busy = false;
 
