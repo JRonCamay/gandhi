@@ -1,29 +1,53 @@
 # LAST TASK HANDOFF
 
 ## Current Objective
-Fix Transfork R key activation being swallowed by the Gandhi banner / page UI.
+Create the initial `TransforkNew` project folder and UI skeleton using Jay's object-folder / method-file architecture.
 
 ## Current Status
-Applied an early R hotkey guard in `Transfork/bootloader.js`.
+Created `TransforkNew/` with root files and first UI object hierarchy.
 
 ## Files Involved
-- `Transfork/bootloader.js`
+- `TransforkNew/README.md`
+- `TransforkNew/Transfork_Main.js`
+- `TransforkNew/Transfork_Loader.js`
+- `TransforkNew/UI/ui.js`
+- `TransforkNew/UI/ELEMENTS/boundingBox.js`
+- `TransforkNew/UI/ELEMENTS/BOUNDINGBOX/draw.js`
+- `TransforkNew/UI/ELEMENTS/BOUNDINGBOX/update.js`
+- `TransforkNew/UI/ELEMENTS/BOUNDINGBOX/show.js`
+- `TransforkNew/UI/ELEMENTS/BOUNDINGBOX/hide.js`
+- `TransforkNew/UI/ELEMENTS/buttons.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/rotateButton.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/ROTATEBUTTON/draw.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/ROTATEBUTTON/mouseDown.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/ROTATEBUTTON/mouseMove.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/ROTATEBUTTON/mouseUp.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/scaleButton.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/SCALEBUTTON/draw.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/SCALEBUTTON/mouseDown.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/SCALEBUTTON/mouseMove.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/SCALEBUTTON/mouseUp.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/moveButton.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/MOVEBUTTON/draw.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/MOVEBUTTON/mouseDown.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/MOVEBUTTON/mouseMove.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/MOVEBUTTON/mouseUp.js`
 - `LAST_TASK_HANDOFF.md`
 
 ## Decisions Made
-- Added a capture-phase `keydown`/`keyup` guard for `R` / `KeyR`.
-- Guard consumes R before page/banner UI can use it.
-- Real editable fields are still protected so typing is not hijacked.
-- Banner/notice/alert/toast inputs are allowed to pass through as transform hotkey targets.
-- Added `window.__TransforkInstallTransformToggle(toggleTransformMode)` injection for `transfork-main.js` at load time.
-- If R is pressed before `transfork-main.js` exposes the toggle, the bootloader queues one pending toggle.
+- Root stays minimal: only main script, loader, and README.
+- UI files follow object-folder / method-file structure.
+- Object files declare/init only.
+- Each method lives in its own file.
+- Current files are skeletons only; no transform logic yet.
 
 ## Remaining Work
-- Jay should hard refresh and test pressing R once while the Gandhi banner is visible/focused.
+- Jay can approve the next UI objects or adjust folder naming.
+- Add VM startup, selection detection, and transform engine only after UI structure is accepted.
 
 ## Known Issues / Blockers
-- If the installed userscript does not load `Transfork/bootloader.js`, this fix will not run.
-- If another listener was registered earlier on `window` and calls `stopImmediatePropagation()`, the userscript may need `@run-at document-start` in the installed wrapper.
+- The loader can load the UI skeleton, but no real sprite tracking exists yet.
+- Current button event files are placeholders.
 
 ## Next Recommended Step
-Hard refresh Gandhi, click/leave the banner visible, press R once, and verify the transform box toggles immediately.
+Review the `TransforkNew/UI/` structure, then decide the next object group to add.
