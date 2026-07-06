@@ -107,6 +107,7 @@ window.Transfork = window.Transfork || {};
         untrimmedPivot: null,
         trimmedPivot: null,
         pivotOffset: { x: 0, y: 0 },
+        trimPad: { left: 0, top: 0, right: 0, bottom: 0 },
         alphaBounds: null,
         mx: 0,
         my: 0,
@@ -479,6 +480,7 @@ window.Transfork = window.Transfork || {};
             untrimmedPivot: null,
             trimmedPivot: null,
             pivotOffset: { x: 0, y: 0 },
+            trimPad: { left: 0, top: 0, right: 0, bottom: 0 },
             alphaBounds: null,
             mx: input.clientX,
             my: input.clientY,
@@ -504,6 +506,13 @@ window.Transfork = window.Transfork || {};
         sequence.trim(TRIM.CREATE_TRIMMED_SOURCE);
         state.rect = state.alphaBounds ? rectFromAlphaSameOrigin(state.fullRect, state.alphaBounds) : state.fullRect;
         state.source = makeTrimmedCanvas(state.untrimmedSource, state.alphaBounds);
+        state.trimPad = {
+            left: state.rect.left - state.fullRect.left,
+            top: state.rect.top - state.fullRect.top,
+            right: (state.fullRect.left + state.fullRect.width) - (state.rect.left + state.rect.width),
+            bottom: (state.fullRect.top + state.fullRect.height) - (state.rect.top + state.rect.height)
+        };
+        window.__transforkTrimPad = state.trimPad;
         sequence.trim(TRIM.MEASURE_TRIMMED_PIVOT);
         state.trimmedPivot = center(state.rect);
         state.desiredFinalCenter = state.trimmedPivot;
@@ -558,8 +567,18 @@ window.Transfork = window.Transfork || {};
         if (!sequence.is(MAIN.COMPENSATE_FINAL_CENTER)) return;
         const desired = state.desiredFinalCenter || state.trimmedPivot || center(state.rect);
         if (!desired || !state.measuredCenter || !api.coords?.screenDeltaToScratch) return;
+        const preview = sequence.currentPreview || { sx: 1, sy: 1 };
+        const pad = state.trimPad || { right: 0, bottom: 0 };
+        const corrected = { x: desired.x, y: desired.y };
+        if ((state.mode === "width" || state.mode === "uniform") && Math.abs((preview.sx || 1) - 1) > 0.0001) {
+            corrected.x -= pad.right * Math.abs(preview.sx || 1);
+        }
+        if ((state.mode === "height" || state.mode === "uniform") && Math.abs((preview.sy || 1) - 1) > 0.0001) {
+            corrected.y -= pad.bottom * Math.abs(preview.sy || 1);
+        }
+        window.__transforkCorrectedDesired = corrected;
         const vm = getVM();
-        const delta = api.coords.screenDeltaToScratch(desired.x - state.measuredCenter.x, desired.y - state.measuredCenter.y, state.canvas, vm);
+        const delta = api.coords.screenDeltaToScratch(corrected.x - state.measuredCenter.x, corrected.y - state.measuredCenter.y, state.canvas, vm);
         if (!delta) return;
         state.target.setXY(state.target.x + delta.x, state.target.y + delta.y);
         state.target.emitVisualChange?.();
@@ -570,6 +589,7 @@ window.Transfork = window.Transfork || {};
         if (!sequence.is(MAIN.APPLY_FINAL_TRANSFORM)) return;
         const input = sequence.latestInput || { clientX: state.mx, clientY: state.my };
         const preview = compute(input);
+        sequence.currentPreview = preview;
         state.previewRect = scanTransform(preview.sx, preview.sy, preview.rotation);
         state.desiredFinalCenter = transformedTrimmedCenter(preview.sx, preview.sy, preview.rotation);
         if (state.mode === "rotate") state.target.setDirection(state.finalDirection);
@@ -639,6 +659,7 @@ window.Transfork = window.Transfork || {};
             untrimmedPivot: null,
             trimmedPivot: null,
             pivotOffset: { x: 0, y: 0 },
+            trimPad: { left: 0, top: 0, right: 0, bottom: 0 },
             alphaBounds: null
         });
         window.__transforkTransformActive = false;
