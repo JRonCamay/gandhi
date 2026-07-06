@@ -431,6 +431,8 @@ window.Transfork = window.Transfork || {};
         const source = trimSource(sourceFrom(snapshot));
         if (!snapshot || !source) return false;
 
+        const savedDirection = typeof target.direction === "number" ? target.direction : 90;
+
         Object.assign(state, {
             active: true,
             target,
@@ -446,11 +448,11 @@ window.Transfork = window.Transfork || {};
             measuredCenter: null,
             mx: input.clientX,
             my: input.clientY,
-            dir: target.direction || 90,
+            dir: savedDirection,
             scale: drawable.scale ? drawable.scale.slice() : [100, 100],
             visible: drawable._visible !== false,
             finalScale: drawable.scale ? drawable.scale.slice() : [100, 100],
-            finalDirection: target.direction || 90
+            finalDirection: savedDirection
         });
 
         sequence.latestInput = input;
@@ -498,6 +500,7 @@ window.Transfork = window.Transfork || {};
 
     function compensateFinalCenter() {
         if (!sequence.is(MAIN.COMPENSATE_FINAL_CENTER)) return;
+        if (state.mode === "rotate") return;
         if (!state.startPixelCenter || !state.measuredCenter || !api.coords?.screenDeltaToScratch) return;
 
         const vm = getVM();
