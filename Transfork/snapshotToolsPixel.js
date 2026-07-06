@@ -1,49 +1,689 @@
 window.Transfork = window.Transfork || {};
 
 (function () {
-        "use strict";
+    "use strict";
 
-        const api = window.Transfork;
-        const offscreen = document.createElement("canvas");
-        const offctx = offscreen.getContext("2d");
-        const cache = new Map();
-        const state = { active:false,target:null,drawable:null,canvas:null,snapshot:null,source:null,occluders:[],mode:"",rect:null,previewRect:null,startPixelCenter:null,mx:0,my:0,lastEvent:null,dir:90,scale:[100,100],visible:true,finalScale:[100,100],finalDirection:90 };
+    const api = window.Transfork;
+    const offscreen = document.createElement("canvas");
+    const offctx = offscreen.getContext("2d");
+    const cache = new Map();
 
-        function getVM(){ return api.vm?.getVM?.() || window.vm || window.Scratch?.vm || null; }
-        function getCanvas(){ return api.coords?.getStageCanvas?.() || document.querySelector("canvas"); }
-        function getBox(){ return api.selectionBox?.getBox?.() || document.querySelector("#gandi-transform-box"); }
-        function modeFrom(el){ const t=String(el?.textContent||"").trim(); if(el?.closest?.("#transform-alpha-container"))return""; if(t==="↻")return"rotate"; if(t==="↔")return"width"; if(t==="↕")return"height"; if(t==="◲")return"uniform"; return""; }
-        function sourceFrom(snapshot){ return snapshot instanceof HTMLCanvasElement ? snapshot : snapshot?.querySelector?.("canvas,img") || null; }
-        function signedScale(v,d){ return Math.sign(v||1)*Math.max(0.01,Math.abs(v)+d); }
-        function center(rect){ return rect ? {x:rect.left+rect.width/2,y:rect.top+rect.height/2} : null; }
-        function screenDeltaToScratch(dx,dy,canvas,vm){ return api.coords?.screenDeltaToScratch?.(dx,dy,canvas,vm) || {x:0,y:0}; }
-        function setVisible(vm,target,visible){ const r=vm.runtime.renderer,d=r._allDrawables[target.drawableID]; if(typeof r.updateDrawableVisible==="function")r.updateDrawableVisible(target.drawableID,visible); else if(d)d._visible=visible; target.emitVisualChange?.(); vm.runtime.requestRedraw?.(); }
+    const MAIN = {
+        IDLE: 0,
+        WAIT_START_STABLE: 1,
+        CAPTURE_SNAPSHOT: 2,
+        HIDE_REAL_SPRITE: 3,
+        ENTER_PREVIEW: 4,
+        PAUSE_FOR_FRAME_LOOP: 5,
+        STOP_FRAME_LOOP: 6,
+        APPLY_FINAL_TRANSFORM: 7,
+        WAIT_COMMIT_STABLE: 8,
+        MEASURE_FINAL_CENTER: 9,
+        COMPENSATE_FINAL_CENTER: 10,
+        WAIT_COMPENSATE_STABLE: 11,
+        RESTORE_REAL_SPRITE: 12,
+        REMOVE_SNAPSHOT: 13
+    };
 
-        function scanAlpha(canvas, origin){ let data; try{ data=canvas.getContext("2d").getImageData(0,0,canvas.width,canvas.height).data; }catch(_){ return null; } let minX=canvas.width,minY=canvas.height,maxX=-1,maxY=-1; for(let y=0;y<canvas.height;y++)for(let x=0;x<canvas.width;x++){ if(data[(y*canvas.width+x)*4+3]<=5)continue; if(x<minX)minX=x; if(y<minY)minY=y; if(x>maxX)maxX=x; if(y>maxY)maxY=y; } if(maxX<minX||maxY<minY)return null; return {left:origin.left+minX,top:origin.top+minY,width:maxX-minX+1,height:maxY-minY+1,raw:{minX,minY,maxX,maxY,width:canvas.width,height:canvas.height}}; }
+    const FRAME = {
+        IDLE: 100,
+        READ_INPUT: 101,
+        COMPUTE_PREVIEW: 102,
+        DRAW_SNAPSHOT: 103,
+        DRAW_BOX: 104
+    };
 
-        function trimSource(source){ if(source instanceof HTMLImageElement && !source.complete)return null; const w=source.naturalWidth||source.width,h=source.naturalHeight||source.height; if(!w||!h)return null; const temp=document.createElement("canvas"); temp.width=w; temp.height=h; temp.getContext("2d").drawImage(source,0,0,w,h); const b=scanAlpha(temp,{left:0,top:0}); if(!b)return temp; const tight=document.createElement("canvas"); tight.width=Math.max(1,Math.ceil(b.width)); tight.height=Math.max(1,Math.ceil(b.height)); tight.getContext("2d").drawImage(temp,b.left,b.top,b.width,b.height,0,0,b.width,b.height); return tight; }
+    const sequence = {
+        seq: MAIN.IDLE,
+        frameSeq: FRAME.IDLE,
+        frameRAF: 0,
+        latestInput: null,
+        currentPreview: null,
+        starting: false,
+        committing: false,
+        pendingFinish: false,
+        pendingCommit: true,
+        run(id) {
+            this.seq = id;
+            window.__transforkTransformSeq = id;
+        },
+        frame(id) {
+            this.frameSeq = id;
+            window.__transforkTransformFrameSeq = id;
+        },
+        is(id) {
+            return this.seq === id;
+        },
+        reset() {
+            if (this.frameRAF) cancelAnimationFrame(this.frameRAF);
+            this.seq = MAIN.IDLE;
+            this.frameSeq = FRAME.IDLE;
+            this.frameRAF = 0;
+            this.latestInput = null;
+            this.currentPreview = null;
+            this.starting = false;
+            this.committing = false;
+            this.pendingFinish = false;
+            this.pendingCommit = true;
+            window.__transforkTransformSeq = this.seq;
+            window.__transforkTransformFrameSeq = this.frameSeq;
+        }
+    };
 
-        function normalizeExtracted(extracted){ if(!extracted)return null; if(extracted instanceof HTMLCanvasElement)return extracted; if(typeof ImageData!=="undefined"&&extracted instanceof ImageData){ const c=document.createElement("canvas"); c.width=extracted.width; c.height=extracted.height; c.getContext("2d").putImageData(extracted,0,0); return c; } if(extracted.imageData)return normalizeExtracted(extracted.imageData); if(extracted.data&&extracted.width&&extracted.height)return normalizeExtracted(new ImageData(new Uint8ClampedArray(extracted.data),extracted.width,extracted.height)); return null; }
-        function boundsToScreen(bounds,canvas,vm){ const native=vm.runtime.renderer.getNativeSize(), r=canvas.getBoundingClientRect(); const left=r.left+((bounds.left+native[0]/2)/native[0])*r.width, top=r.top+((native[1]/2-bounds.top)/native[1])*r.height, right=r.left+((bounds.right+native[0]/2)/native[0])*r.width, bottom=r.top+((native[1]/2-bounds.bottom)/native[1])*r.height; return {left,top,width:right-left,height:bottom-top}; }
-        function cacheKey(target,drawable,canvas){ const r=canvas.getBoundingClientRect(), s=drawable?.scale||[]; return [target.id,target.drawableID,target.x,target.y,target.direction,target.currentCostume,s[0],s[1],r.left,r.top,r.width,r.height].join("|"); }
-        function idlePixelRect(vm,target,drawable,canvas){ const key=cacheKey(target,drawable,canvas), cached=cache.get(key); if(cached)return cached; let source=null; try{ if(typeof vm.runtime.renderer.extractDrawableScreenSpace==="function")source=normalizeExtracted(vm.runtime.renderer.extractDrawableScreenSpace(target.drawableID)); }catch(_){} if(!source)return null; const alpha=scanAlpha(source,{left:0,top:0}); if(!alpha)return null; const full=boundsToScreen(drawable.getAABB(),canvas,vm), a=alpha.raw, minX=a.minX, minY=a.minY, maxX=a.maxX, maxY=a.maxY; const rect={left:full.left+(minX/a.width)*full.width,top:full.top+(minY/a.height)*full.height,width:((maxX-minX+1)/a.width)*full.width,height:((maxY-minY+1)/a.height)*full.height}; cache.set(key,rect); if(cache.size>80)cache.clear(); return rect; }
+    const state = {
+        active: false,
+        target: null,
+        drawable: null,
+        canvas: null,
+        snapshot: null,
+        source: null,
+        occluders: [],
+        mode: "",
+        rect: null,
+        previewRect: null,
+        startPixelCenter: null,
+        measuredCenter: null,
+        mx: 0,
+        my: 0,
+        dir: 90,
+        scale: [100, 100],
+        visible: true,
+        finalScale: [100, 100],
+        finalDirection: 90
+    };
 
-        function placeBox(rect){ const box=getBox(); if(!box||!rect||box.style.display==="none")return; box.style.left=rect.left+"px"; box.style.top=rect.top+"px"; box.style.width=rect.width+"px"; box.style.height=rect.height+"px"; api.overlayTop?.bringBoxToTop?.(); }
-        function applyVisibleTransform(sx,sy,rot){ if(!state.snapshot||!state.rect)return; state.snapshot.style.visibility="visible"; state.snapshot.style.transformOrigin="50% 50%"; state.snapshot.style.transform="rotate("+rot+"deg) scale("+sx+","+sy+")"; }
-        function scanTransform(sx,sy,rot){ const s=state.source,b=state.rect; if(!s||!b)return null; if(Math.abs(sx-1)<0.0001&&Math.abs(sy-1)<0.0001&&Math.abs(rot)<0.0001)return b; const rad=rot*Math.PI/180, cos=Math.cos(rad), sin=Math.sin(rad), baseW=Math.max(1,b.width), baseH=Math.max(1,b.height), sw=baseW*Math.abs(sx), sh=baseH*Math.abs(sy); const w=Math.max(1,Math.ceil(Math.abs(sw*cos)+Math.abs(sh*sin))), h=Math.max(1,Math.ceil(Math.abs(sw*sin)+Math.abs(sh*cos))); const left=b.left+b.width/2-w/2, top=b.top+b.height/2-h/2; offscreen.width=w; offscreen.height=h; offctx.setTransform(1,0,0,1,0,0); offctx.clearRect(0,0,w,h); offctx.translate(w/2,h/2); offctx.rotate(rad); offctx.scale(sx,sy); offctx.drawImage(s,-baseW/2,-baseH/2,baseW,baseH); return scanAlpha(offscreen,{left,top}) || {left,top,width:w,height:h}; }
-        function compute(event){ const dx=event.clientX-state.mx, dy=event.clientY-state.my; let sx=1,sy=1,rot=0; if(state.mode==="width"){ const next=signedScale(state.scale[0],dx); sx=Math.abs(next)/Math.max(0.01,Math.abs(state.scale[0])); state.finalScale=[next,state.scale[1]]; } else if(state.mode==="height"){ const next=signedScale(state.scale[1],dy); sy=Math.abs(next)/Math.max(0.01,Math.abs(state.scale[1])); state.finalScale=[state.scale[0],next]; } else if(state.mode==="uniform"){ const r=Math.max(0.01,Math.abs(state.scale[0])+dx)/Math.max(0.01,Math.abs(state.scale[0])); sx=r; sy=r; state.finalScale=[state.scale[0]*r,state.scale[1]*r]; } else if(state.mode==="rotate"){ const r=getBox()?.getBoundingClientRect()||state.rect,cx=r.left+r.width/2,cy=r.top+r.height/2; rot=(Math.atan2(event.clientY-cy,event.clientX-cx)-Math.atan2(state.my-cy,state.mx-cx))*180/Math.PI; state.finalDirection=state.dir+rot; state.finalScale=state.scale.slice(); } return {sx,sy,rot}; }
-        function drawActiveBox(){ if(!state.active||!state.lastEvent)return false; const t=compute(state.lastEvent), rect=scanTransform(t.sx,t.sy,t.rot); state.previewRect=rect; applyVisibleTransform(t.sx,t.sy,t.rot); placeBox(rect); return true; }
-        function apply(event){ if(!state.active)return; state.lastEvent=event; drawActiveBox(); }
-        function start(event,mode){ const vm=getVM(),canvas=getCanvas(); if(!vm?.runtime?.renderer||!canvas||!api.snapshotLayer)return false; const target=vm.editingTarget; if(!target||target.isStage)return false; const drawable=vm.runtime.renderer._allDrawables[target.drawableID]; if(!drawable?.getAABB)return false; const rect=api.pixelBounds?.rect?.(vm,target,drawable,canvas)||api.snapshotLayer.screenRect(drawable.getAABB(),canvas,vm); const snapshot=api.snapshotLayer.makeSnapshot(vm,target,drawable,canvas,rect,9998); const source=trimSource(sourceFrom(snapshot)); if(!snapshot||!source)return false; Object.assign(state,{active:true,target,drawable,canvas,snapshot,source,occluders:api.snapshotLayer.createOccluders(vm,target,canvas),mode,rect,previewRect:rect,startPixelCenter:center(rect),mx:event.clientX,my:event.clientY,lastEvent:event,dir:target.direction||90,scale:drawable.scale?drawable.scale.slice():[100,100],visible:drawable._visible!==false,finalScale:drawable.scale?drawable.scale.slice():[100,100],finalDirection:target.direction||90}); window.__transforkTransformActive=true; setVisible(vm,target,false); applyVisibleTransform(1,1,0); placeBox(state.rect); requestAnimationFrame(()=>requestAnimationFrame(()=>api.snapshotLayer.setVisible([snapshot].concat(state.occluders),true))); event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation(); return true; }
-        function compensateFinalCenter(vm,target,drawable){ if(!state.startPixelCenter||!api.pixelBounds?.rect||!api.coords?.screenDeltaToScratch)return; const after=center(api.pixelBounds.rect(vm,target,drawable,state.canvas)); if(!after)return; const delta=api.coords.screenDeltaToScratch(state.startPixelCenter.x-after.x,state.startPixelCenter.y-after.y,state.canvas,vm); if(!delta)return; target.setXY(target.x+delta.x,target.y+delta.y); }
-        function finish(commit){ if(!state.active)return; const vm=getVM(),target=state.target,drawable=state.drawable,nodes=[state.snapshot].concat(state.occluders||[]); if(commit&&vm&&target&&drawable){ if(state.mode==="rotate")target.setDirection(state.finalDirection); drawable.updateScale(state.finalScale); compensateFinalCenter(vm,target,drawable); target.emitVisualChange?.(); vm.runtime.requestRedraw?.(); } if(vm&&target)setVisible(vm,target,state.visible); Object.assign(state,{active:false,target:null,drawable:null,canvas:null,snapshot:null,source:null,occluders:[],lastEvent:null,previewRect:null,startPixelCenter:null}); window.__transforkTransformActive=false; requestAnimationFrame(()=>requestAnimationFrame(()=>nodes.forEach(n=>n?.parentNode&&n.remove()))); }
-        function lateLoop(){ requestAnimationFrame(lateLoop); setTimeout(()=>{ if(state.active){ drawActiveBox(); return; } const vm=getVM(),canvas=getCanvas(),target=vm?.editingTarget; if(!vm||!canvas||!target||target.isStage)return; const drawable=vm.runtime.renderer._allDrawables[target.drawableID]; if(!drawable||drawable._visible===false||typeof drawable.getAABB!=="function")return; const rect=api.pixelBounds?.rect?.(vm,target,drawable,canvas)||idlePixelRect(vm,target,drawable,canvas); if(rect)placeBox(rect); },0); }
+    function getVM() {
+        return api.vm?.getVM?.() || window.vm || window.Scratch?.vm || null;
+    }
 
-        window.addEventListener("mousedown",e=>{ if(e.button!==0||state.active)return; const box=getBox(); if(!box||!box.contains(e.target))return; const m=modeFrom(e.target); if(m)start(e,m); },true);
-        window.addEventListener("mousemove",e=>{ if(state.active){ apply(e); e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); }},true);
-        window.addEventListener("mouseup",e=>{ if(state.active){ apply(e); finish(true); e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); }},true);
-        window.addEventListener("keydown",e=>{ if(e.key==="Escape"&&state.active){ finish(false); e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); }},true);
-        window.addEventListener("blur",()=>finish(false),true);
-        lateLoop();
-        api.registerModule260705_NS8Q2M("snapshotToolsPixel",{state,start,finish,apply,idlePixelRect});
+    function getCanvas() {
+        return api.coords?.getStageCanvas?.() || document.querySelector("canvas");
+    }
+
+    function getBox() {
+        return api.selectionBox?.getBox?.() || document.querySelector("#gandi-transform-box");
+    }
+
+    function readPointer(event) {
+        return {
+            clientX: event.clientX,
+            clientY: event.clientY,
+            target: event.target
+        };
+    }
+
+    function modeFrom(element) {
+        const text = String(element?.textContent || "").trim();
+        if (element?.closest?.("#transform-alpha-container")) return "";
+        if (text === "↻") return "rotate";
+        if (text === "↔") return "width";
+        if (text === "↕") return "height";
+        if (text === "◲") return "uniform";
+        return "";
+    }
+
+    function sourceFrom(snapshot) {
+        return snapshot instanceof HTMLCanvasElement ? snapshot : snapshot?.querySelector?.("canvas,img") || null;
+    }
+
+    function signedScale(value, delta) {
+        return Math.sign(value || 1) * Math.max(0.01, Math.abs(value) + delta);
+    }
+
+    function center(rect) {
+        return rect ? {
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height / 2
+        } : null;
+    }
+
+    function setVisible(vm, target, visible) {
+        const renderer = vm.runtime.renderer;
+        const drawable = renderer._allDrawables[target.drawableID];
+        if (typeof renderer.updateDrawableVisible === "function") {
+            renderer.updateDrawableVisible(target.drawableID, visible);
+        }
+        else if (drawable) {
+            drawable._visible = visible;
+        }
+        target.emitVisualChange?.();
+        vm.runtime.requestRedraw?.();
+    }
+
+    function waitForScratchStable() {
+        const vm = getVM();
+        vm?.runtime?.requestRedraw?.();
+        return new Promise(resolve => {
+            requestAnimationFrame(() => requestAnimationFrame(resolve));
+        });
+    }
+
+    function scanAlpha(canvas, origin) {
+        let data;
+        try {
+            data = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data;
+        }
+        catch (_error) {
+            return null;
+        }
+
+        let minX = canvas.width;
+        let minY = canvas.height;
+        let maxX = -1;
+        let maxY = -1;
+
+        for (let y = 0; y < canvas.height; y++) {
+            for (let x = 0; x < canvas.width; x++) {
+                if (data[(y * canvas.width + x) * 4 + 3] <= 5) continue;
+                if (x < minX) minX = x;
+                if (y < minY) minY = y;
+                if (x > maxX) maxX = x;
+                if (y > maxY) maxY = y;
+            }
+        }
+
+        if (maxX < minX || maxY < minY) return null;
+        return {
+            left: origin.left + minX,
+            top: origin.top + minY,
+            width: maxX - minX + 1,
+            height: maxY - minY + 1,
+            raw: { minX, minY, maxX, maxY, width: canvas.width, height: canvas.height }
+        };
+    }
+
+    function trimSource(source) {
+        if (source instanceof HTMLImageElement && !source.complete) return null;
+        const width = source.naturalWidth || source.width;
+        const height = source.naturalHeight || source.height;
+        if (!width || !height) return null;
+
+        const temp = document.createElement("canvas");
+        temp.width = width;
+        temp.height = height;
+        temp.getContext("2d").drawImage(source, 0, 0, width, height);
+
+        const bounds = scanAlpha(temp, { left: 0, top: 0 });
+        if (!bounds) return temp;
+
+        const tight = document.createElement("canvas");
+        tight.width = Math.max(1, Math.ceil(bounds.width));
+        tight.height = Math.max(1, Math.ceil(bounds.height));
+        tight.getContext("2d").drawImage(
+            temp,
+            bounds.left,
+            bounds.top,
+            bounds.width,
+            bounds.height,
+            0,
+            0,
+            bounds.width,
+            bounds.height
+        );
+        return tight;
+    }
+
+    function normalizeExtracted(extracted) {
+        if (!extracted) return null;
+        if (extracted instanceof HTMLCanvasElement) return extracted;
+        if (typeof ImageData !== "undefined" && extracted instanceof ImageData) {
+            const canvas = document.createElement("canvas");
+            canvas.width = extracted.width;
+            canvas.height = extracted.height;
+            canvas.getContext("2d").putImageData(extracted, 0, 0);
+            return canvas;
+        }
+        if (extracted.imageData) return normalizeExtracted(extracted.imageData);
+        if (extracted.data && extracted.width && extracted.height) {
+            return normalizeExtracted(new ImageData(new Uint8ClampedArray(extracted.data), extracted.width, extracted.height));
+        }
+        return null;
+    }
+
+    function boundsToScreen(bounds, canvas, vm) {
+        const native = vm.runtime.renderer.getNativeSize();
+        const rect = canvas.getBoundingClientRect();
+        const left = rect.left + ((bounds.left + native[0] / 2) / native[0]) * rect.width;
+        const top = rect.top + ((native[1] / 2 - bounds.top) / native[1]) * rect.height;
+        const right = rect.left + ((bounds.right + native[0] / 2) / native[0]) * rect.width;
+        const bottom = rect.top + ((native[1] / 2 - bounds.bottom) / native[1]) * rect.height;
+        return { left, top, width: right - left, height: bottom - top };
+    }
+
+    function cacheKey(target, drawable, canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const scale = drawable?.scale || [];
+        return [
+            target.id,
+            target.drawableID,
+            target.x,
+            target.y,
+            target.direction,
+            target.currentCostume,
+            scale[0],
+            scale[1],
+            rect.left,
+            rect.top,
+            rect.width,
+            rect.height
+        ].join("|");
+    }
+
+    function idlePixelRect(vm, target, drawable, canvas) {
+        const key = cacheKey(target, drawable, canvas);
+        const cached = cache.get(key);
+        if (cached) return cached;
+
+        let source = null;
+        try {
+            if (typeof vm.runtime.renderer.extractDrawableScreenSpace === "function") {
+                source = normalizeExtracted(vm.runtime.renderer.extractDrawableScreenSpace(target.drawableID));
+            }
+        }
+        catch (_error) {}
+
+        if (!source) return null;
+        const alpha = scanAlpha(source, { left: 0, top: 0 });
+        if (!alpha) return null;
+
+        const full = boundsToScreen(drawable.getAABB(), canvas, vm);
+        const raw = alpha.raw;
+        const rect = {
+            left: full.left + (raw.minX / raw.width) * full.width,
+            top: full.top + (raw.minY / raw.height) * full.height,
+            width: ((raw.maxX - raw.minX + 1) / raw.width) * full.width,
+            height: ((raw.maxY - raw.minY + 1) / raw.height) * full.height
+        };
+
+        cache.set(key, rect);
+        if (cache.size > 80) cache.clear();
+        return rect;
+    }
+
+    function placeBox(rect) {
+        const box = getBox();
+        if (!box || !rect || box.style.display === "none") return;
+        box.style.left = rect.left + "px";
+        box.style.top = rect.top + "px";
+        box.style.width = rect.width + "px";
+        box.style.height = rect.height + "px";
+        api.overlayTop?.bringBoxToTop?.();
+    }
+
+    function applyVisibleTransform(sx, sy, rotation) {
+        if (!state.snapshot || !state.rect) return;
+        state.snapshot.style.visibility = "visible";
+        state.snapshot.style.transformOrigin = "50% 50%";
+        state.snapshot.style.transform = "rotate(" + rotation + "deg) scale(" + sx + "," + sy + ")";
+    }
+
+    function scanTransform(sx, sy, rotation) {
+        const source = state.source;
+        const base = state.rect;
+        if (!source || !base) return null;
+        if (Math.abs(sx - 1) < 0.0001 && Math.abs(sy - 1) < 0.0001 && Math.abs(rotation) < 0.0001) return base;
+
+        const radians = rotation * Math.PI / 180;
+        const cos = Math.cos(radians);
+        const sin = Math.sin(radians);
+        const baseW = Math.max(1, base.width);
+        const baseH = Math.max(1, base.height);
+        const scaledW = baseW * Math.abs(sx);
+        const scaledH = baseH * Math.abs(sy);
+        const width = Math.max(1, Math.ceil(Math.abs(scaledW * cos) + Math.abs(scaledH * sin)));
+        const height = Math.max(1, Math.ceil(Math.abs(scaledW * sin) + Math.abs(scaledH * cos)));
+        const left = base.left + base.width / 2 - width / 2;
+        const top = base.top + base.height / 2 - height / 2;
+
+        offscreen.width = width;
+        offscreen.height = height;
+        offctx.setTransform(1, 0, 0, 1, 0, 0);
+        offctx.clearRect(0, 0, width, height);
+        offctx.translate(width / 2, height / 2);
+        offctx.rotate(radians);
+        offctx.scale(sx, sy);
+        offctx.drawImage(source, -baseW / 2, -baseH / 2, baseW, baseH);
+
+        return scanAlpha(offscreen, { left, top }) || { left, top, width, height };
+    }
+
+    function compute(input) {
+        const dx = input.clientX - state.mx;
+        const dy = input.clientY - state.my;
+        let sx = 1;
+        let sy = 1;
+        let rotation = 0;
+
+        if (state.mode === "width") {
+            const next = signedScale(state.scale[0], dx);
+            sx = Math.abs(next) / Math.max(0.01, Math.abs(state.scale[0]));
+            state.finalScale = [next, state.scale[1]];
+        }
+        else if (state.mode === "height") {
+            const next = signedScale(state.scale[1], dy);
+            sy = Math.abs(next) / Math.max(0.01, Math.abs(state.scale[1]));
+            state.finalScale = [state.scale[0], next];
+        }
+        else if (state.mode === "uniform") {
+            const ratio = Math.max(0.01, Math.abs(state.scale[0]) + dx) / Math.max(0.01, Math.abs(state.scale[0]));
+            sx = ratio;
+            sy = ratio;
+            state.finalScale = [state.scale[0] * ratio, state.scale[1] * ratio];
+        }
+        else if (state.mode === "rotate") {
+            const rect = getBox()?.getBoundingClientRect() || state.rect;
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            rotation = (
+                Math.atan2(input.clientY - centerY, input.clientX - centerX) -
+                Math.atan2(state.my - centerY, state.mx - centerX)
+            ) * 180 / Math.PI;
+            state.finalDirection = state.dir + rotation;
+            state.finalScale = state.scale.slice();
+        }
+
+        return { sx, sy, rotation };
+    }
+
+    function runFrameSequence() {
+        sequence.frameRAF = 0;
+        if (!state.active || !sequence.is(MAIN.PAUSE_FOR_FRAME_LOOP) || sequence.committing) return;
+
+        sequence.frame(FRAME.READ_INPUT);
+        const input = sequence.latestInput;
+        if (!input) {
+            sequence.frame(FRAME.IDLE);
+            return;
+        }
+
+        sequence.frame(FRAME.COMPUTE_PREVIEW);
+        const preview = compute(input);
+        sequence.currentPreview = preview;
+
+        sequence.frame(FRAME.DRAW_SNAPSHOT);
+        const rect = scanTransform(preview.sx, preview.sy, preview.rotation);
+        state.previewRect = rect;
+        applyVisibleTransform(preview.sx, preview.sy, preview.rotation);
+
+        sequence.frame(FRAME.DRAW_BOX);
+        placeBox(rect);
+
+        sequence.frame(FRAME.IDLE);
+    }
+
+    function queueFrame(input) {
+        if (!state.active || !sequence.is(MAIN.PAUSE_FOR_FRAME_LOOP)) return;
+        sequence.latestInput = input;
+        if (!sequence.frameRAF) {
+            sequence.frameRAF = requestAnimationFrame(runFrameSequence);
+        }
+    }
+
+    function captureSnapshot(input, mode) {
+        if (!sequence.is(MAIN.CAPTURE_SNAPSHOT)) return false;
+
+        const vm = getVM();
+        const canvas = getCanvas();
+        if (!vm?.runtime?.renderer || !canvas || !api.snapshotLayer) return false;
+
+        const target = vm.editingTarget;
+        if (!target || target.isStage) return false;
+
+        const drawable = vm.runtime.renderer._allDrawables[target.drawableID];
+        if (!drawable?.getAABB) return false;
+
+        const rect = api.pixelBounds?.rect?.(vm, target, drawable, canvas) ||
+            api.snapshotLayer.screenRect(drawable.getAABB(), canvas, vm);
+        const snapshot = api.snapshotLayer.makeSnapshot(vm, target, drawable, canvas, rect, 9998);
+        const source = trimSource(sourceFrom(snapshot));
+        if (!snapshot || !source) return false;
+
+        Object.assign(state, {
+            active: true,
+            target,
+            drawable,
+            canvas,
+            snapshot,
+            source,
+            occluders: api.snapshotLayer.createOccluders(vm, target, canvas),
+            mode,
+            rect,
+            previewRect: rect,
+            startPixelCenter: center(rect),
+            measuredCenter: null,
+            mx: input.clientX,
+            my: input.clientY,
+            dir: target.direction || 90,
+            scale: drawable.scale ? drawable.scale.slice() : [100, 100],
+            visible: drawable._visible !== false,
+            finalScale: drawable.scale ? drawable.scale.slice() : [100, 100],
+            finalDirection: target.direction || 90
+        });
+
+        sequence.latestInput = input;
+        window.__transforkTransformActive = true;
+        return true;
+    }
+
+    async function start(input, mode) {
+        if (state.active || sequence.seq !== MAIN.IDLE || sequence.starting || sequence.committing) return false;
+
+        sequence.starting = true;
+        sequence.run(MAIN.WAIT_START_STABLE);
+        await waitForScratchStable();
+
+        sequence.run(MAIN.CAPTURE_SNAPSHOT);
+        if (!captureSnapshot(input, mode)) {
+            cleanupState();
+            sequence.reset();
+            return false;
+        }
+
+        sequence.run(MAIN.HIDE_REAL_SPRITE);
+        setVisible(getVM(), state.target, false);
+
+        sequence.run(MAIN.ENTER_PREVIEW);
+        applyVisibleTransform(1, 1, 0);
+        placeBox(state.rect);
+        api.snapshotLayer.setVisible([state.snapshot].concat(state.occluders), true);
+
+        sequence.run(MAIN.PAUSE_FOR_FRAME_LOOP);
+        sequence.starting = false;
+        queueFrame(input);
+
+        if (sequence.pendingFinish) {
+            finish(sequence.pendingCommit);
+        }
+
+        return true;
+    }
+
+    function measureFinalCenter() {
+        if (!sequence.is(MAIN.MEASURE_FINAL_CENTER)) return null;
+        if (!state.startPixelCenter || !api.pixelBounds?.rect) return null;
+        const rect = api.pixelBounds.rect(getVM(), state.target, state.drawable, state.canvas);
+        state.measuredCenter = center(rect);
+        return state.measuredCenter;
+    }
+
+    function compensateFinalCenter() {
+        if (!sequence.is(MAIN.COMPENSATE_FINAL_CENTER)) return;
+        if (!state.startPixelCenter || !state.measuredCenter || !api.coords?.screenDeltaToScratch) return;
+
+        const vm = getVM();
+        const delta = api.coords.screenDeltaToScratch(
+            state.startPixelCenter.x - state.measuredCenter.x,
+            state.startPixelCenter.y - state.measuredCenter.y,
+            state.canvas,
+            vm
+        );
+        if (!delta) return;
+
+        state.target.setXY(state.target.x + delta.x, state.target.y + delta.y);
+        state.target.emitVisualChange?.();
+        vm?.runtime?.requestRedraw?.();
+    }
+
+    function applyFinalTransform() {
+        if (!sequence.is(MAIN.APPLY_FINAL_TRANSFORM)) return;
+        const input = sequence.latestInput || { clientX: state.mx, clientY: state.my };
+        compute(input);
+
+        if (state.mode === "rotate") {
+            state.target.setDirection(state.finalDirection);
+        }
+        if (state.drawable?.updateScale) {
+            state.drawable.updateScale(state.finalScale);
+        }
+        else {
+            api.drawable?.setScale?.(state.target, state.finalScale);
+        }
+
+        state.target.emitVisualChange?.();
+        getVM()?.runtime?.requestRedraw?.();
+    }
+
+    async function finish(commit) {
+        if (!state.active && sequence.starting) {
+            sequence.pendingFinish = true;
+            sequence.pendingCommit = commit;
+            return;
+        }
+        if (!state.active || sequence.committing) return;
+
+        sequence.committing = true;
+        const vm = getVM();
+        const target = state.target;
+        const nodes = [state.snapshot].concat(state.occluders || []);
+
+        sequence.run(MAIN.STOP_FRAME_LOOP);
+        if (sequence.frameRAF) cancelAnimationFrame(sequence.frameRAF);
+        sequence.frameRAF = 0;
+        sequence.frame(FRAME.IDLE);
+
+        if (commit && vm && target && state.drawable) {
+            sequence.run(MAIN.APPLY_FINAL_TRANSFORM);
+            applyFinalTransform();
+
+            sequence.run(MAIN.WAIT_COMMIT_STABLE);
+            await waitForScratchStable();
+
+            sequence.run(MAIN.MEASURE_FINAL_CENTER);
+            measureFinalCenter();
+
+            sequence.run(MAIN.COMPENSATE_FINAL_CENTER);
+            compensateFinalCenter();
+
+            sequence.run(MAIN.WAIT_COMPENSATE_STABLE);
+            await waitForScratchStable();
+        }
+
+        if (vm && target) {
+            sequence.run(MAIN.RESTORE_REAL_SPRITE);
+            setVisible(vm, target, state.visible);
+        }
+
+        sequence.run(MAIN.REMOVE_SNAPSHOT);
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            nodes.forEach(node => {
+                if (node?.parentNode) node.remove();
+            });
+        }));
+
+        cleanupState();
+        sequence.reset();
+    }
+
+    function cleanupState() {
+        Object.assign(state, {
+            active: false,
+            target: null,
+            drawable: null,
+            canvas: null,
+            snapshot: null,
+            source: null,
+            occluders: [],
+            mode: "",
+            rect: null,
+            previewRect: null,
+            startPixelCenter: null,
+            measuredCenter: null
+        });
+        window.__transforkTransformActive = false;
+    }
+
+    function idleLoop() {
+        requestAnimationFrame(idleLoop);
+        if (state.active || sequence.seq !== MAIN.IDLE) return;
+
+        const vm = getVM();
+        const canvas = getCanvas();
+        const target = vm?.editingTarget;
+        if (!vm || !canvas || !target || target.isStage) return;
+
+        const drawable = vm.runtime.renderer._allDrawables[target.drawableID];
+        if (!drawable || drawable._visible === false || typeof drawable.getAABB !== "function") return;
+
+        const rect = api.pixelBounds?.rect?.(vm, target, drawable, canvas) || idlePixelRect(vm, target, drawable, canvas);
+        if (rect) placeBox(rect);
+    }
+
+    function ownsInput() {
+        return state.active || sequence.seq !== MAIN.IDLE || sequence.starting || sequence.committing;
+    }
+
+    window.addEventListener("mousedown", event => {
+        if (event.button !== 0 || ownsInput()) return;
+
+        const box = getBox();
+        if (!box || !box.contains(event.target)) return;
+
+        const mode = modeFrom(event.target);
+        if (!mode) return;
+
+        const input = readPointer(event);
+        start(input, mode);
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+    }, true);
+
+    window.addEventListener("mousemove", event => {
+        if (!ownsInput()) return;
+        if (state.active) queueFrame(readPointer(event));
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+    }, true);
+
+    window.addEventListener("mouseup", event => {
+        if (!ownsInput()) return;
+        if (state.active) queueFrame(readPointer(event));
+        finish(true);
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+    }, true);
+
+    window.addEventListener("keydown", event => {
+        if (event.key !== "Escape" || !ownsInput()) return;
+        finish(false);
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+    }, true);
+
+    window.addEventListener("blur", () => finish(false), true);
+
+    idleLoop();
+
+    api.registerModule260705_NS8Q2M("snapshotToolsPixel", {
+        state,
+        sequence,
+        start,
+        finish,
+        queueFrame,
+        idlePixelRect,
+        waitForScratchStable
+    });
 })();
