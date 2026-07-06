@@ -1,53 +1,51 @@
 # LAST TASK HANDOFF
 
 ## Current Objective
-Create the initial `TransforkNew` project folder and UI skeleton using Jay's object-folder / method-file architecture.
+Add more `TransforkNew` UI button skeletons using Jay's object-folder / method-file architecture.
 
 ## Current Status
-Created `TransforkNew/` with root files and first UI object hierarchy.
+Added skeleton UI objects for flip horizontal, flip vertical, reset transform, transparency/alpha, size width, and size height. Updated `TransforkNew/Transfork_Loader.js` to load the new files and bumped it to version `0.2`.
 
 ## Files Involved
-- `TransforkNew/README.md`
-- `TransforkNew/Transfork_Main.js`
 - `TransforkNew/Transfork_Loader.js`
-- `TransforkNew/UI/ui.js`
-- `TransforkNew/UI/ELEMENTS/boundingBox.js`
-- `TransforkNew/UI/ELEMENTS/BOUNDINGBOX/draw.js`
-- `TransforkNew/UI/ELEMENTS/BOUNDINGBOX/update.js`
-- `TransforkNew/UI/ELEMENTS/BOUNDINGBOX/show.js`
-- `TransforkNew/UI/ELEMENTS/BOUNDINGBOX/hide.js`
 - `TransforkNew/UI/ELEMENTS/buttons.js`
-- `TransforkNew/UI/ELEMENTS/BUTTONS/rotateButton.js`
-- `TransforkNew/UI/ELEMENTS/BUTTONS/ROTATEBUTTON/draw.js`
-- `TransforkNew/UI/ELEMENTS/BUTTONS/ROTATEBUTTON/mouseDown.js`
-- `TransforkNew/UI/ELEMENTS/BUTTONS/ROTATEBUTTON/mouseMove.js`
-- `TransforkNew/UI/ELEMENTS/BUTTONS/ROTATEBUTTON/mouseUp.js`
-- `TransforkNew/UI/ELEMENTS/BUTTONS/scaleButton.js`
-- `TransforkNew/UI/ELEMENTS/BUTTONS/SCALEBUTTON/draw.js`
-- `TransforkNew/UI/ELEMENTS/BUTTONS/SCALEBUTTON/mouseDown.js`
-- `TransforkNew/UI/ELEMENTS/BUTTONS/SCALEBUTTON/mouseMove.js`
-- `TransforkNew/UI/ELEMENTS/BUTTONS/SCALEBUTTON/mouseUp.js`
-- `TransforkNew/UI/ELEMENTS/BUTTONS/moveButton.js`
-- `TransforkNew/UI/ELEMENTS/BUTTONS/MOVEBUTTON/draw.js`
-- `TransforkNew/UI/ELEMENTS/BUTTONS/MOVEBUTTON/mouseDown.js`
-- `TransforkNew/UI/ELEMENTS/BUTTONS/MOVEBUTTON/mouseMove.js`
-- `TransforkNew/UI/ELEMENTS/BUTTONS/MOVEBUTTON/mouseUp.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/flipHButton.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/FLIPHBUTTON/draw.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/FLIPHBUTTON/click.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/flipVButton.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/FLIPVBUTTON/draw.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/FLIPVBUTTON/click.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/resetTransformButton.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/CLEARBUTTON/draw.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/CLEARBUTTON/click.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/transparencyButton.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/TRANSPARENCYBUTTON/draw.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/sizeWButton.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/SIZEWBUTTON/draw.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/SIZEWBUTTON/mouseDown.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/SIZEWBUTTON/mouseMove.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/SIZEWBUTTON/mouseUp.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/sizeHButton.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/SIZEHBUTTON/draw.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/SIZEHBUTTON/mouseDown.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/SIZEHBUTTON/mouseMove.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/SIZEHBUTTON/mouseUp.js`
 - `LAST_TASK_HANDOFF.md`
 
 ## Decisions Made
-- Root stays minimal: only main script, loader, and README.
-- UI files follow object-folder / method-file structure.
-- Object files declare/init only.
-- Each method lives in its own file.
-- Current files are skeletons only; no transform logic yet.
+- One-click buttons use `click.js` only.
+- Drag-style buttons use `mouseDown.js`, `mouseMove.js`, and `mouseUp.js`.
+- Reset transform is currently wired through `CLEARBUTTON` method files.
+- Alpha is currently represented as `transparencyButton` / `TRANSPARENCYBUTTON`.
+- Current files are UI skeletons only; no transform execution yet.
 
 ## Remaining Work
-- Jay can approve the next UI objects or adjust folder naming.
-- Add VM startup, selection detection, and transform engine only after UI structure is accepted.
+- Jay can decide whether to rename `CLEARBUTTON` and `TRANSPARENCYBUTTON` later.
+- Add real behavior only after UI structure is approved.
 
 ## Known Issues / Blockers
 - The loader can load the UI skeleton, but no real sprite tracking exists yet.
-- Current button event files are placeholders.
+- Current event files are placeholders.
 
 ## Next Recommended Step
-Review the `TransforkNew/UI/` structure, then decide the next object group to add.
+Review the added button positions and naming, then decide whether to add labels/tooltips or start VM/selection detection.
