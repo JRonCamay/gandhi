@@ -11,18 +11,22 @@ window.Transfork = window.Transfork || {};
     const MAIN = {
         IDLE: 0,
         WAIT_START_STABLE: 1,
-        CAPTURE_SNAPSHOT: 2,
-        HIDE_REAL_SPRITE: 3,
-        ENTER_PREVIEW: 4,
-        PAUSE_FOR_FRAME_LOOP: 5,
-        STOP_FRAME_LOOP: 6,
-        APPLY_FINAL_TRANSFORM: 7,
-        WAIT_COMMIT_STABLE: 8,
-        MEASURE_FINAL_CENTER: 9,
-        COMPENSATE_FINAL_CENTER: 10,
-        WAIT_COMPENSATE_STABLE: 11,
-        RESTORE_REAL_SPRITE: 12,
-        REMOVE_SNAPSHOT: 13
+        CAPTURE_UNTRIMMED_SNAPSHOT: 2,
+        MEASURE_UNTRIMMED_PIVOT: 3,
+        TRIM_ALPHA_PIXELS: 4,
+        MEASURE_TRIMMED_PIVOT: 5,
+        STORE_PIVOT_OFFSET: 6,
+        HIDE_REAL_SPRITE: 7,
+        ENTER_PREVIEW: 8,
+        PAUSE_FOR_FRAME_LOOP: 9,
+        STOP_FRAME_LOOP: 10,
+        APPLY_FINAL_TRANSFORM: 11,
+        WAIT_COMMIT_STABLE: 12,
+        MEASURE_FINAL_CENTER: 13,
+        COMPENSATE_FINAL_CENTER: 14,
+        WAIT_COMPENSATE_STABLE: 15,
+        RESTORE_REAL_SPRITE: 16,
+        REMOVE_SNAPSHOT: 17
     };
 
     const FRAME = {
@@ -79,10 +83,15 @@ window.Transfork = window.Transfork || {};
         source: null,
         occluders: [],
         mode: "",
+        fullRect: null,
         rect: null,
         previewRect: null,
-        startPixelCenter: null,
+        desiredFinalCenter: null,
         measuredCenter: null,
+        untrimmedPivot: null,
+        trimmedPivot: null,
+        pivotOffset: { x: 0, y: 0 },
+        alphaBounds: null,
         mx: 0,
         my: 0,
         dir: 90,
@@ -105,11 +114,7 @@ window.Transfork = window.Transfork || {};
     }
 
     function readPointer(event) {
-        return {
-            clientX: event.clientX,
-            clientY: event.clientY,
-            target: event.target
-        };
+        return { clientX: event.clientX, clientY: event.clientY, target: event.target };
     }
 
     function modeFrom(element) {
@@ -122,19 +127,17 @@ window.Transfork = window.Transfork || {};
         return "";
     }
 
-    function sourceFrom(snapshot) {
-        return snapshot instanceof HTMLCanvasElement ? snapshot : snapshot?.querySelector?.("canvas,img") || null;
-    }
-
     function signedScale(value, delta) {
         return Math.sign(value || 1) * Math.max(0.01, Math.abs(value) + delta);
     }
 
     function center(rect) {
-        return rect ? {
-            x: rect.left + rect.width / 2,
-            y: rect.top + rect.height / 2
-        } : null;
+        return rect ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : null;
+    }
+
+    function alphaValue(target) {
+        const ghost = typeof target?.effects?.ghost === "number" ? target.effects.ghost : 0;
+        return String(Math.max(0, Math.min(1, 1 - ghost / 100)));
     }
 
     function setVisible(vm, target, visible) {
@@ -153,12 +156,54 @@ window.Transfork = window.Transfork || {};
     function waitForScratchStable() {
         const vm = getVM();
         vm?.runtime?.requestRedraw?.();
-        return new Promise(resolve => {
-            requestAnimationFrame(() => requestAnimationFrame(resolve));
-        });
+        return new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    }
+
+    function normalizeExtracted(extracted) {
+        if (!extracted) return null;
+        if (extracted instanceof HTMLCanvasElement) return extracted.width && extracted.height ? extracted : null;
+        if (typeof ImageBitmap !== "undefined" && extracted instanceof ImageBitmap) {
+            const canvas = document.createElement("canvas");
+            canvas.width = extracted.width;
+            canvas.height = extracted.height;
+            canvas.getContext("2d").drawImage(extracted, 0, 0);
+            return canvas;
+        }
+        if (typeof ImageData !== "undefined" && extracted instanceof ImageData) {
+            const canvas = document.createElement("canvas");
+            canvas.width = extracted.width;
+            canvas.height = extracted.height;
+            canvas.getContext("2d").putImageData(extracted, 0, 0);
+            return canvas;
+        }
+        if (extracted.imageData) return normalizeExtracted(extracted.imageData);
+        if (extracted.data && extracted.width && extracted.height) {
+            return normalizeExtracted(new ImageData(new Uint8ClampedArray(extracted.data), extracted.width, extracted.height));
+        }
+        return null;
+    }
+
+    function extractDrawableCanvas(vm, target) {
+        const renderer = vm?.runtime?.renderer;
+        if (!renderer || !target) return null;
+        try {
+            if (typeof renderer.extractDrawableScreenSpace === "function") {
+                const canvas = normalizeExtracted(renderer.extractDrawableScreenSpace(target.drawableID));
+                if (canvas) return canvas;
+            }
+        }
+        catch (_error) {}
+        try {
+            if (typeof renderer.extractDrawable === "function") {
+                return normalizeExtracted(renderer.extractDrawable(target.drawableID));
+            }
+        }
+        catch (_error) {}
+        return null;
     }
 
     function scanAlpha(canvas, origin) {
+        if (!canvas?.width || !canvas?.height) return null;
         let data;
         try {
             data = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data;
@@ -192,52 +237,15 @@ window.Transfork = window.Transfork || {};
         };
     }
 
-    function trimSource(source) {
-        if (source instanceof HTMLImageElement && !source.complete) return null;
-        const width = source.naturalWidth || source.width;
-        const height = source.naturalHeight || source.height;
-        if (!width || !height) return null;
-
-        const temp = document.createElement("canvas");
-        temp.width = width;
-        temp.height = height;
-        temp.getContext("2d").drawImage(source, 0, 0, width, height);
-
-        const bounds = scanAlpha(temp, { left: 0, top: 0 });
-        if (!bounds) return temp;
-
-        const tight = document.createElement("canvas");
-        tight.width = Math.max(1, Math.ceil(bounds.width));
-        tight.height = Math.max(1, Math.ceil(bounds.height));
-        tight.getContext("2d").drawImage(
-            temp,
-            bounds.left,
-            bounds.top,
-            bounds.width,
-            bounds.height,
-            0,
-            0,
-            bounds.width,
-            bounds.height
-        );
-        return tight;
-    }
-
-    function normalizeExtracted(extracted) {
-        if (!extracted) return null;
-        if (extracted instanceof HTMLCanvasElement) return extracted;
-        if (typeof ImageData !== "undefined" && extracted instanceof ImageData) {
-            const canvas = document.createElement("canvas");
-            canvas.width = extracted.width;
-            canvas.height = extracted.height;
-            canvas.getContext("2d").putImageData(extracted, 0, 0);
-            return canvas;
-        }
-        if (extracted.imageData) return normalizeExtracted(extracted.imageData);
-        if (extracted.data && extracted.width && extracted.height) {
-            return normalizeExtracted(new ImageData(new Uint8ClampedArray(extracted.data), extracted.width, extracted.height));
-        }
-        return null;
+    function trimRectFromAlpha(fullRect, alpha) {
+        if (!fullRect || !alpha?.raw) return fullRect;
+        const raw = alpha.raw;
+        return {
+            left: fullRect.left + (raw.minX / raw.width) * fullRect.width,
+            top: fullRect.top + (raw.minY / raw.height) * fullRect.height,
+            width: ((raw.maxX - raw.minX + 1) / raw.width) * fullRect.width,
+            height: ((raw.maxY - raw.minY + 1) / raw.height) * fullRect.height
+        };
     }
 
     function boundsToScreen(bounds, canvas, vm) {
@@ -253,20 +261,7 @@ window.Transfork = window.Transfork || {};
     function cacheKey(target, drawable, canvas) {
         const rect = canvas.getBoundingClientRect();
         const scale = drawable?.scale || [];
-        return [
-            target.id,
-            target.drawableID,
-            target.x,
-            target.y,
-            target.direction,
-            target.currentCostume,
-            scale[0],
-            scale[1],
-            rect.left,
-            rect.top,
-            rect.width,
-            rect.height
-        ].join("|");
+        return [target.id, target.drawableID, target.x, target.y, target.direction, target.currentCostume, scale[0], scale[1], rect.left, rect.top, rect.width, rect.height].join("|");
     }
 
     function idlePixelRect(vm, target, drawable, canvas) {
@@ -287,17 +282,40 @@ window.Transfork = window.Transfork || {};
         if (!alpha) return null;
 
         const full = boundsToScreen(drawable.getAABB(), canvas, vm);
-        const raw = alpha.raw;
-        const rect = {
-            left: full.left + (raw.minX / raw.width) * full.width,
-            top: full.top + (raw.minY / raw.height) * full.height,
-            width: ((raw.maxX - raw.minX + 1) / raw.width) * full.width,
-            height: ((raw.maxY - raw.minY + 1) / raw.height) * full.height
-        };
-
+        const rect = trimRectFromAlpha(full, alpha);
         cache.set(key, rect);
         if (cache.size > 80) cache.clear();
         return rect;
+    }
+
+    function makeCanvasSnapshot(source, rect, target, zIndex) {
+        if (!source || !rect) return null;
+        const cssWidth = Math.max(1, rect.width);
+        const cssHeight = Math.max(1, rect.height);
+        const ratio = Math.max(1, window.devicePixelRatio || 1);
+        const snap = document.createElement("canvas");
+        snap.width = Math.max(1, Math.round(cssWidth * ratio));
+        snap.height = Math.max(1, Math.round(cssHeight * ratio));
+        const ctx = snap.getContext("2d");
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        ctx.drawImage(source, 0, 0, cssWidth, cssHeight);
+        Object.assign(snap.style, {
+            position: "fixed",
+            left: rect.left + "px",
+            top: rect.top + "px",
+            width: cssWidth + "px",
+            height: cssHeight + "px",
+            pointerEvents: "none",
+            zIndex: String(zIndex || 9998),
+            boxSizing: "border-box",
+            userSelect: "none",
+            background: "transparent",
+            opacity: alphaValue(target),
+            visibility: "hidden",
+            transformOrigin: "50% 50%"
+        });
+        document.body.appendChild(snap);
+        return snap;
     }
 
     function placeBox(rect) {
@@ -311,7 +329,7 @@ window.Transfork = window.Transfork || {};
     }
 
     function applyVisibleTransform(sx, sy, rotation) {
-        if (!state.snapshot || !state.rect) return;
+        if (!state.snapshot || !state.fullRect) return;
         state.snapshot.style.visibility = "visible";
         state.snapshot.style.transformOrigin = "50% 50%";
         state.snapshot.style.transform = "rotate(" + rotation + "deg) scale(" + sx + "," + sy + ")";
@@ -319,9 +337,9 @@ window.Transfork = window.Transfork || {};
 
     function scanTransform(sx, sy, rotation) {
         const source = state.source;
-        const base = state.rect;
+        const base = state.fullRect || state.rect;
         if (!source || !base) return null;
-        if (Math.abs(sx - 1) < 0.0001 && Math.abs(sy - 1) < 0.0001 && Math.abs(rotation) < 0.0001) return base;
+        if (Math.abs(sx - 1) < 0.0001 && Math.abs(sy - 1) < 0.0001 && Math.abs(rotation) < 0.0001) return state.rect || base;
 
         const radians = rotation * Math.PI / 180;
         const cos = Math.cos(radians);
@@ -374,10 +392,7 @@ window.Transfork = window.Transfork || {};
             const rect = getBox()?.getBoundingClientRect() || state.rect;
             const centerX = rect.left + rect.width / 2;
             const centerY = rect.top + rect.height / 2;
-            rotation = (
-                Math.atan2(input.clientY - centerY, input.clientX - centerX) -
-                Math.atan2(state.my - centerY, state.mx - centerX)
-            ) * 180 / Math.PI;
+            rotation = (Math.atan2(input.clientY - centerY, input.clientX - centerX) - Math.atan2(state.my - centerY, state.mx - centerX)) * 180 / Math.PI;
             state.finalDirection = state.dir + rotation;
             state.finalScale = state.scale.slice();
         }
@@ -403,24 +418,22 @@ window.Transfork = window.Transfork || {};
         sequence.frame(FRAME.DRAW_SNAPSHOT);
         const rect = scanTransform(preview.sx, preview.sy, preview.rotation);
         state.previewRect = rect;
+        state.desiredFinalCenter = center(rect);
         applyVisibleTransform(preview.sx, preview.sy, preview.rotation);
 
         sequence.frame(FRAME.DRAW_BOX);
         placeBox(rect);
-
         sequence.frame(FRAME.IDLE);
     }
 
     function queueFrame(input) {
         if (!state.active || !sequence.is(MAIN.PAUSE_FOR_FRAME_LOOP)) return;
         sequence.latestInput = input;
-        if (!sequence.frameRAF) {
-            sequence.frameRAF = requestAnimationFrame(runFrameSequence);
-        }
+        if (!sequence.frameRAF) sequence.frameRAF = requestAnimationFrame(runFrameSequence);
     }
 
-    function captureSnapshot(input, mode) {
-        if (!sequence.is(MAIN.CAPTURE_SNAPSHOT)) return false;
+    function captureUntrimmedSnapshot(input, mode) {
+        if (!sequence.is(MAIN.CAPTURE_UNTRIMMED_SNAPSHOT)) return false;
 
         const vm = getVM();
         const canvas = getCanvas();
@@ -432,10 +445,11 @@ window.Transfork = window.Transfork || {};
         const drawable = vm.runtime.renderer._allDrawables[target.drawableID];
         if (!drawable?.getAABB) return false;
 
-        const rect = api.pixelBounds?.rect?.(vm, target, drawable, canvas) ||
-            api.snapshotLayer.screenRect(drawable.getAABB(), canvas, vm);
-        const snapshot = api.snapshotLayer.makeSnapshot(vm, target, drawable, canvas, rect, 9998);
-        const source = trimSource(sourceFrom(snapshot));
+        const fullRect = api.snapshotLayer.screenRect(drawable.getAABB(), canvas, vm);
+        const source = extractDrawableCanvas(vm, target);
+        const alpha = scanAlpha(source, { left: 0, top: 0 });
+        const visibleRect = alpha ? trimRectFromAlpha(fullRect, alpha) : (api.pixelBounds?.rect?.(vm, target, drawable, canvas) || fullRect);
+        const snapshot = makeCanvasSnapshot(source, fullRect, target, 9998) || api.snapshotLayer.makeSnapshot(vm, target, drawable, canvas, visibleRect, 9998);
         if (!snapshot || !source) return false;
 
         Object.assign(state, {
@@ -447,10 +461,15 @@ window.Transfork = window.Transfork || {};
             source,
             occluders: api.snapshotLayer.createOccluders(vm, target, canvas),
             mode,
-            rect,
-            previewRect: rect,
-            startPixelCenter: center(rect),
+            fullRect,
+            rect: visibleRect,
+            previewRect: visibleRect,
+            desiredFinalCenter: center(visibleRect),
             measuredCenter: null,
+            untrimmedPivot: null,
+            trimmedPivot: null,
+            pivotOffset: { x: 0, y: 0 },
+            alphaBounds: alpha,
             mx: input.clientX,
             my: input.clientY,
             dir: target.direction || 90,
@@ -465,6 +484,31 @@ window.Transfork = window.Transfork || {};
         return true;
     }
 
+    function measureUntrimmedPivot() {
+        if (!sequence.is(MAIN.MEASURE_UNTRIMMED_PIVOT)) return;
+        state.untrimmedPivot = center(state.fullRect);
+    }
+
+    function trimAlphaPixels() {
+        if (!sequence.is(MAIN.TRIM_ALPHA_PIXELS)) return;
+        if (state.alphaBounds && state.fullRect) state.rect = trimRectFromAlpha(state.fullRect, state.alphaBounds);
+    }
+
+    function measureTrimmedPivot() {
+        if (!sequence.is(MAIN.MEASURE_TRIMMED_PIVOT)) return;
+        state.trimmedPivot = center(state.rect);
+    }
+
+    function storePivotOffset() {
+        if (!sequence.is(MAIN.STORE_PIVOT_OFFSET)) return;
+        if (!state.untrimmedPivot || !state.trimmedPivot) return;
+        state.pivotOffset = {
+            x: state.trimmedPivot.x - state.untrimmedPivot.x,
+            y: state.trimmedPivot.y - state.untrimmedPivot.y
+        };
+        window.__transforkPivotOffset = state.pivotOffset;
+    }
+
     async function start(input, mode) {
         if (state.active || sequence.seq !== MAIN.IDLE || sequence.starting || sequence.committing) return false;
 
@@ -472,12 +516,24 @@ window.Transfork = window.Transfork || {};
         sequence.run(MAIN.WAIT_START_STABLE);
         await waitForScratchStable();
 
-        sequence.run(MAIN.CAPTURE_SNAPSHOT);
-        if (!captureSnapshot(input, mode)) {
+        sequence.run(MAIN.CAPTURE_UNTRIMMED_SNAPSHOT);
+        if (!captureUntrimmedSnapshot(input, mode)) {
             cleanupState();
             sequence.reset();
             return false;
         }
+
+        sequence.run(MAIN.MEASURE_UNTRIMMED_PIVOT);
+        measureUntrimmedPivot();
+
+        sequence.run(MAIN.TRIM_ALPHA_PIXELS);
+        trimAlphaPixels();
+
+        sequence.run(MAIN.MEASURE_TRIMMED_PIVOT);
+        measureTrimmedPivot();
+
+        sequence.run(MAIN.STORE_PIVOT_OFFSET);
+        storePivotOffset();
 
         sequence.run(MAIN.HIDE_REAL_SPRITE);
         setVisible(getVM(), state.target, false);
@@ -491,16 +547,13 @@ window.Transfork = window.Transfork || {};
         sequence.starting = false;
         queueFrame(input);
 
-        if (sequence.pendingFinish) {
-            finish(sequence.pendingCommit);
-        }
-
+        if (sequence.pendingFinish) finish(sequence.pendingCommit);
         return true;
     }
 
     function measureFinalCenter() {
         if (!sequence.is(MAIN.MEASURE_FINAL_CENTER)) return null;
-        if (!state.startPixelCenter || !api.pixelBounds?.rect) return null;
+        if (!api.pixelBounds?.rect) return null;
         const rect = api.pixelBounds.rect(getVM(), state.target, state.drawable, state.canvas);
         state.measuredCenter = center(rect);
         return state.measuredCenter;
@@ -508,15 +561,11 @@ window.Transfork = window.Transfork || {};
 
     function compensateFinalCenter() {
         if (!sequence.is(MAIN.COMPENSATE_FINAL_CENTER)) return;
-        if (!state.startPixelCenter || !state.measuredCenter || !api.coords?.screenDeltaToScratch) return;
+        const desired = state.desiredFinalCenter || center(state.previewRect) || center(state.rect);
+        if (!desired || !state.measuredCenter || !api.coords?.screenDeltaToScratch) return;
 
         const vm = getVM();
-        const delta = api.coords.screenDeltaToScratch(
-            state.startPixelCenter.x - state.measuredCenter.x,
-            state.startPixelCenter.y - state.measuredCenter.y,
-            state.canvas,
-            vm
-        );
+        const delta = api.coords.screenDeltaToScratch(desired.x - state.measuredCenter.x, desired.y - state.measuredCenter.y, state.canvas, vm);
         if (!delta) return;
 
         state.target.setXY(state.target.x + delta.x, state.target.y + delta.y);
@@ -527,17 +576,14 @@ window.Transfork = window.Transfork || {};
     function applyFinalTransform() {
         if (!sequence.is(MAIN.APPLY_FINAL_TRANSFORM)) return;
         const input = sequence.latestInput || { clientX: state.mx, clientY: state.my };
-        compute(input);
+        const preview = compute(input);
+        const rect = scanTransform(preview.sx, preview.sy, preview.rotation);
+        state.previewRect = rect;
+        state.desiredFinalCenter = center(rect);
 
-        if (state.mode === "rotate") {
-            state.target.setDirection(state.finalDirection);
-        }
-        if (state.drawable?.updateScale) {
-            state.drawable.updateScale(state.finalScale);
-        }
-        else {
-            api.drawable?.setScale?.(state.target, state.finalScale);
-        }
+        if (state.mode === "rotate") state.target.setDirection(state.finalDirection);
+        if (state.drawable?.updateScale) state.drawable.updateScale(state.finalScale);
+        else api.drawable?.setScale?.(state.target, state.finalScale);
 
         state.target.emitVisualChange?.();
         getVM()?.runtime?.requestRedraw?.();
@@ -604,10 +650,15 @@ window.Transfork = window.Transfork || {};
             source: null,
             occluders: [],
             mode: "",
+            fullRect: null,
             rect: null,
             previewRect: null,
-            startPixelCenter: null,
-            measuredCenter: null
+            desiredFinalCenter: null,
+            measuredCenter: null,
+            untrimmedPivot: null,
+            trimmedPivot: null,
+            pivotOffset: { x: 0, y: 0 },
+            alphaBounds: null
         });
         window.__transforkTransformActive = false;
     }
@@ -634,15 +685,11 @@ window.Transfork = window.Transfork || {};
 
     window.addEventListener("mousedown", event => {
         if (event.button !== 0 || ownsInput()) return;
-
         const box = getBox();
         if (!box || !box.contains(event.target)) return;
-
         const mode = modeFrom(event.target);
         if (!mode) return;
-
-        const input = readPointer(event);
-        start(input, mode);
+        start(readPointer(event), mode);
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
