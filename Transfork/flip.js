@@ -9,6 +9,18 @@ window.Transfork = window.Transfork || {};
         return api.vm?.getVM?.() || window.vm || window.Scratch?.vm || null;
     }
 
+    function getCanvas() {
+        return api.coords?.getStageCanvas?.() || document.querySelector("canvas");
+    }
+
+    function center(rect) {
+        return rect ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : null;
+    }
+
+    function pixelRect(vm, target, drawable, canvas) {
+        return api.pixelBounds?.rect?.(vm, target, drawable, canvas) || null;
+    }
+
     function preserveLegacyFlipScale(event) {
         const box = api.selectionBox?.getBox?.() || document.querySelector("#gandi-transform-box");
         if (!box || !box.contains(event.target)) return;
@@ -17,10 +29,12 @@ window.Transfork = window.Transfork || {};
         if (text !== "⇋" && text !== "⇅") return;
 
         const vm = getVM();
+        const canvas = getCanvas();
         const target = vm?.editingTarget;
         const drawable = api.drawable?.getDrawable?.(target);
         const savedScale = drawable?.scale?.slice?.();
-        if (!vm || !target || !drawable || !savedScale) return;
+        const beforeCenter = center(pixelRect(vm, target, drawable, canvas));
+        if (!vm || !canvas || !target || !drawable || !savedScale) return;
 
         setTimeout(() => {
             const latestDrawable = api.drawable?.getDrawable?.(target);
@@ -31,6 +45,17 @@ window.Transfork = window.Transfork || {};
                 xSign * Math.abs(savedScale[0] || 1),
                 savedScale[1]
             ]);
+
+            const afterCenter = center(pixelRect(vm, target, latestDrawable, canvas));
+            if (beforeCenter && afterCenter && api.coords?.screenDeltaToScratch) {
+                const delta = api.coords.screenDeltaToScratch(
+                    beforeCenter.x - afterCenter.x,
+                    beforeCenter.y - afterCenter.y,
+                    canvas,
+                    vm
+                );
+                target.setXY(target.x + delta.x, target.y + delta.y);
+            }
 
             target.emitVisualChange?.();
             vm.runtime.requestRedraw?.();
