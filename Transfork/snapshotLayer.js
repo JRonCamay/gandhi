@@ -196,12 +196,15 @@ window.Transfork = window.Transfork || {};
             );
             if (!source) return null;
 
-            const cssWidth = Math.max(1, Math.round(rect.width));
-            const cssHeight = Math.max(1, Math.round(rect.height));
+            const cssWidth = Math.max(1, rect.width);
+            const cssHeight = Math.max(1, rect.height);
+            const ratio = Math.max(1, window.devicePixelRatio || 1);
             const snap = document.createElement("canvas");
-            snap.width = cssWidth;
-            snap.height = cssHeight;
-            snap.getContext("2d").drawImage(source, 0, 0, cssWidth, cssHeight);
+            snap.width = Math.max(1, Math.round(cssWidth * ratio));
+            snap.height = Math.max(1, Math.round(cssHeight * ratio));
+            const ctx = snap.getContext("2d");
+            ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+            ctx.drawImage(source, 0, 0, cssWidth, cssHeight);
 
             Object.assign(snap.style, {
                     position: "fixed",
@@ -297,7 +300,26 @@ window.Transfork = window.Transfork || {};
         }
 
         function createOccluders260705_LY3K7R(vm, target, canvas) {
-            return [];
+            if (!target || target !== vm.editingTarget) return [];
+            const renderer = vm.runtime.renderer;
+            const drawList = getDrawList260705_LY6V2B(renderer);
+            const targetIndex = drawList.indexOf(target.drawableID);
+            if (targetIndex < 0) return [];
+
+            const occluders = [];
+            drawList.slice(targetIndex + 1).forEach((drawableID, index) => {
+                    const other = targetByDrawable260705_LY2T9H(vm, drawableID);
+                    if (!other || other === target) return;
+
+                    const drawable = renderer._allDrawables[drawableID];
+                    if (!drawable || drawable._visible === false || typeof drawable.getAABB !== "function") return;
+
+                    const rect = screenRect260705_LY4C8N(drawable.getAABB(), canvas, vm);
+                    const snap = makeSnapshot260705_LY8A4B(vm, other, drawable, canvas, rect, 9999 + index);
+                    if (snap) occluders.push(snap);
+            });
+
+            return occluders;
         }
 
         function setVisible260705_LY8Q1D(nodes, value) {
