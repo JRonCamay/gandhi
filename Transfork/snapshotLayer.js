@@ -194,18 +194,21 @@ window.Transfork = window.Transfork || {};
             const source = trimCanvas260705_LY2P6B(
                 extractDrawableCanvas260705_LY5E3D(vm.runtime.renderer, target.drawableID)
             );
+            if (!source) return null;
 
+            const cssWidth = Math.max(1, Math.round(rect.width));
+            const cssHeight = Math.max(1, Math.round(rect.height));
             const snap = document.createElement("canvas");
-            snap.width = source.width;
-            snap.height = source.height;
-            snap.getContext("2d").drawImage(source, 0, 0);
+            snap.width = cssWidth;
+            snap.height = cssHeight;
+            snap.getContext("2d").drawImage(source, 0, 0, cssWidth, cssHeight);
 
             Object.assign(snap.style, {
                     position: "fixed",
                     left: rect.left + "px",
                     top: rect.top + "px",
-                    width: rect.width + "px",
-                    height: rect.height + "px",
+                    width: cssWidth + "px",
+                    height: cssHeight + "px",
                     pointerEvents: "none",
                     zIndex: String(zIndex || 9998),
                     boxSizing: "border-box",
@@ -294,25 +297,7 @@ window.Transfork = window.Transfork || {};
         }
 
         function createOccluders260705_LY3K7R(vm, target, canvas) {
-            const renderer = vm.runtime.renderer;
-            const drawList = getDrawList260705_LY6V2B(renderer);
-            const targetIndex = drawList.indexOf(target.drawableID);
-            if (targetIndex < 0) return [];
-
-            const occluders = [];
-            drawList.slice(targetIndex + 1).forEach((drawableID, index) => {
-                    const other = targetByDrawable260705_LY2T9H(vm, drawableID);
-                    if (!other || other === target) return;
-
-                    const drawable = renderer._allDrawables[drawableID];
-                    if (!drawable || drawable._visible === false || typeof drawable.getAABB !== "function") return;
-
-                    const rect = screenRect260705_LY4C8N(drawable.getAABB(), canvas, vm);
-                    const snap = makeSnapshot260705_LY8A4B(vm, other, drawable, canvas, rect, 9999 + index);
-                    if (snap) occluders.push(snap);
-            });
-
-            return occluders;
+            return [];
         }
 
         function setVisible260705_LY8Q1D(nodes, value) {
