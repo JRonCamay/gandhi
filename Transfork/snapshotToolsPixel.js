@@ -4,29 +4,34 @@ window.Transfork = window.Transfork || {};
     "use strict";
 
     const api = window.Transfork;
-    const offscreen = document.createElement("canvas");
-    const offctx = offscreen.getContext("2d");
     const cache = new Map();
 
     const MAIN = {
         IDLE: 0,
         WAIT_START_STABLE: 1,
-        CAPTURE_UNTRIMMED_SNAPSHOT: 2,
-        MEASURE_UNTRIMMED_PIVOT: 3,
-        TRIM_ALPHA_PIXELS: 4,
-        MEASURE_TRIMMED_PIVOT: 5,
-        STORE_PIVOT_OFFSET: 6,
-        HIDE_REAL_SPRITE: 7,
-        ENTER_PREVIEW: 8,
-        PAUSE_FOR_FRAME_LOOP: 9,
-        STOP_FRAME_LOOP: 10,
-        APPLY_FINAL_TRANSFORM: 11,
-        WAIT_COMMIT_STABLE: 12,
-        MEASURE_FINAL_CENTER: 13,
-        COMPENSATE_FINAL_CENTER: 14,
-        WAIT_COMPENSATE_STABLE: 15,
-        RESTORE_REAL_SPRITE: 16,
-        REMOVE_SNAPSHOT: 17
+        RUN_TRIM_PIPELINE: 2,
+        HIDE_REAL_SPRITE: 3,
+        ENTER_PREVIEW: 4,
+        PAUSE_FOR_FRAME_LOOP: 5,
+        STOP_FRAME_LOOP: 6,
+        APPLY_FINAL_TRANSFORM: 7,
+        WAIT_COMMIT_STABLE: 8,
+        MEASURE_FINAL_CENTER: 9,
+        COMPENSATE_FINAL_CENTER: 10,
+        WAIT_COMPENSATE_STABLE: 11,
+        RESTORE_REAL_SPRITE: 12,
+        REMOVE_SNAPSHOT: 13
+    };
+
+    const TRIM = {
+        IDLE: 200,
+        CAPTURE_UNTRIMMED: 201,
+        MEASURE_UNTRIMMED_PIVOT: 202,
+        MEASURE_ALPHA: 203,
+        CREATE_TRIMMED_SOURCE: 204,
+        MEASURE_TRIMMED_PIVOT: 205,
+        STORE_PIVOT_OFFSET: 206,
+        CREATE_PREVIEW_SNAPSHOT: 207
     };
 
     const FRAME = {
@@ -39,6 +44,7 @@ window.Transfork = window.Transfork || {};
 
     const sequence = {
         seq: MAIN.IDLE,
+        trimSeq: TRIM.IDLE,
         frameSeq: FRAME.IDLE,
         frameRAF: 0,
         latestInput: null,
@@ -51,6 +57,10 @@ window.Transfork = window.Transfork || {};
             this.seq = id;
             window.__transforkTransformSeq = id;
         },
+        trim(id) {
+            this.trimSeq = id;
+            window.__transforkTransformTrimSeq = id;
+        },
         frame(id) {
             this.frameSeq = id;
             window.__transforkTransformFrameSeq = id;
@@ -58,9 +68,13 @@ window.Transfork = window.Transfork || {};
         is(id) {
             return this.seq === id;
         },
+        isTrim(id) {
+            return this.trimSeq === id;
+        },
         reset() {
             if (this.frameRAF) cancelAnimationFrame(this.frameRAF);
             this.seq = MAIN.IDLE;
+            this.trimSeq = TRIM.IDLE;
             this.frameSeq = FRAME.IDLE;
             this.frameRAF = 0;
             this.latestInput = null;
@@ -70,6 +84,7 @@ window.Transfork = window.Transfork || {};
             this.pendingFinish = false;
             this.pendingCommit = true;
             window.__transforkTransformSeq = this.seq;
+            window.__transforkTransformTrimSeq = this.trimSeq;
             window.__transforkTransformFrameSeq = this.frameSeq;
         }
     };
@@ -81,6 +96,7 @@ window.Transfork = window.Transfork || {};
         canvas: null,
         snapshot: null,
         source: null,
+        untrimmedSource: null,
         occluders: [],
         mode: "",
         fullRect: null,
@@ -143,12 +159,8 @@ window.Transfork = window.Transfork || {};
     function setVisible(vm, target, visible) {
         const renderer = vm.runtime.renderer;
         const drawable = renderer._allDrawables[target.drawableID];
-        if (typeof renderer.updateDrawableVisible === "function") {
-            renderer.updateDrawableVisible(target.drawableID, visible);
-        }
-        else if (drawable) {
-            drawable._visible = visible;
-        }
+        if (typeof renderer.updateDrawableVisible === "function") renderer.updateDrawableVisible(target.drawableID, visible);
+        else if (drawable) drawable._visible = visible;
         target.emitVisualChange?.();
         vm.runtime.requestRedraw?.();
     }
@@ -194,9 +206,7 @@ window.Transfork = window.Transfork || {};
         }
         catch (_error) {}
         try {
-            if (typeof renderer.extractDrawable === "function") {
-                return normalizeExtracted(renderer.extractDrawable(target.drawableID));
-            }
+            if (typeof renderer.extractDrawable === "function") return normalizeExtracted(renderer.extractDrawable(target.drawableID));
         }
         catch (_error) {}
         return null;
@@ -237,7 +247,7 @@ window.Transfork = window.Transfork || {};
         };
     }
 
-    function trimRectFromAlpha(fullRect, alpha) {
+    function rectFromAlphaSameOrigin(fullRect, alpha) {
         if (!fullRect || !alpha?.raw) return fullRect;
         const raw = alpha.raw;
         return {
@@ -246,6 +256,16 @@ window.Transfork = window.Transfork || {};
             width: ((raw.maxX - raw.minX + 1) / raw.width) * fullRect.width,
             height: ((raw.maxY - raw.minY + 1) / raw.height) * fullRect.height
         };
+    }
+
+    function makeTrimmedCanvas(source, alpha) {
+        if (!source || !alpha?.raw) return source;
+        const raw = alpha.raw;
+        const trim = document.createElement("canvas");
+        trim.width = Math.max(1, raw.maxX - raw.minX + 1);
+        trim.height = Math.max(1, raw.maxY - raw.minY + 1);
+        trim.getContext("2d").drawImage(source, raw.minX, raw.minY, trim.width, trim.height, 0, 0, trim.width, trim.height);
+        return trim;
     }
 
     function boundsToScreen(bounds, canvas, vm) {
@@ -268,21 +288,16 @@ window.Transfork = window.Transfork || {};
         const key = cacheKey(target, drawable, canvas);
         const cached = cache.get(key);
         if (cached) return cached;
-
         let source = null;
         try {
-            if (typeof vm.runtime.renderer.extractDrawableScreenSpace === "function") {
-                source = normalizeExtracted(vm.runtime.renderer.extractDrawableScreenSpace(target.drawableID));
-            }
+            if (typeof vm.runtime.renderer.extractDrawableScreenSpace === "function") source = normalizeExtracted(vm.runtime.renderer.extractDrawableScreenSpace(target.drawableID));
         }
         catch (_error) {}
-
         if (!source) return null;
         const alpha = scanAlpha(source, { left: 0, top: 0 });
         if (!alpha) return null;
-
         const full = boundsToScreen(drawable.getAABB(), canvas, vm);
-        const rect = trimRectFromAlpha(full, alpha);
+        const rect = rectFromAlphaSameOrigin(full, alpha);
         cache.set(key, rect);
         if (cache.size > 80) cache.clear();
         return rect;
@@ -311,11 +326,15 @@ window.Transfork = window.Transfork || {};
             userSelect: "none",
             background: "transparent",
             opacity: alphaValue(target),
-            visibility: "hidden",
-            transformOrigin: "50% 50%"
+            visibility: "hidden"
         });
         document.body.appendChild(snap);
         return snap;
+    }
+
+    function pivotOrigin() {
+        if (!state.untrimmedPivot || !state.rect) return "50% 50%";
+        return (state.untrimmedPivot.x - state.rect.left) + "px " + (state.untrimmedPivot.y - state.rect.top) + "px";
     }
 
     function placeBox(rect) {
@@ -329,40 +348,46 @@ window.Transfork = window.Transfork || {};
     }
 
     function applyVisibleTransform(sx, sy, rotation) {
-        if (!state.snapshot || !state.fullRect) return;
+        if (!state.snapshot) return;
         state.snapshot.style.visibility = "visible";
-        state.snapshot.style.transformOrigin = "50% 50%";
+        state.snapshot.style.transformOrigin = pivotOrigin();
         state.snapshot.style.transform = "rotate(" + rotation + "deg) scale(" + sx + "," + sy + ")";
     }
 
-    function scanTransform(sx, sy, rotation) {
-        const source = state.source;
-        const base = state.fullRect || state.rect;
-        if (!source || !base) return null;
-        if (Math.abs(sx - 1) < 0.0001 && Math.abs(sy - 1) < 0.0001 && Math.abs(rotation) < 0.0001) return state.rect || base;
-
+    function transformPoint(point, pivot, sx, sy, rotation) {
         const radians = rotation * Math.PI / 180;
         const cos = Math.cos(radians);
         const sin = Math.sin(radians);
-        const baseW = Math.max(1, base.width);
-        const baseH = Math.max(1, base.height);
-        const scaledW = baseW * Math.abs(sx);
-        const scaledH = baseH * Math.abs(sy);
-        const width = Math.max(1, Math.ceil(Math.abs(scaledW * cos) + Math.abs(scaledH * sin)));
-        const height = Math.max(1, Math.ceil(Math.abs(scaledW * sin) + Math.abs(scaledH * cos)));
-        const left = base.left + base.width / 2 - width / 2;
-        const top = base.top + base.height / 2 - height / 2;
+        const x = (point.x - pivot.x) * sx;
+        const y = (point.y - pivot.y) * sy;
+        return { x: pivot.x + x * cos - y * sin, y: pivot.y + x * sin + y * cos };
+    }
 
-        offscreen.width = width;
-        offscreen.height = height;
-        offctx.setTransform(1, 0, 0, 1, 0, 0);
-        offctx.clearRect(0, 0, width, height);
-        offctx.translate(width / 2, height / 2);
-        offctx.rotate(radians);
-        offctx.scale(sx, sy);
-        offctx.drawImage(source, -baseW / 2, -baseH / 2, baseW, baseH);
+    function transformedTrimmedCenter(sx, sy, rotation) {
+        const pivot = state.untrimmedPivot || center(state.rect);
+        const base = state.trimmedPivot || center(state.rect);
+        if (!pivot || !base) return center(state.rect);
+        return transformPoint(base, pivot, sx, sy, rotation);
+    }
 
-        return scanAlpha(offscreen, { left, top }) || { left, top, width, height };
+    function scanTransform(sx, sy, rotation) {
+        const base = state.rect;
+        const pivot = state.untrimmedPivot || center(base);
+        if (!base || !pivot) return null;
+        if (Math.abs(sx - 1) < 0.0001 && Math.abs(sy - 1) < 0.0001 && Math.abs(rotation) < 0.0001) return base;
+        const corners = [
+            { x: base.left, y: base.top },
+            { x: base.left + base.width, y: base.top },
+            { x: base.left + base.width, y: base.top + base.height },
+            { x: base.left, y: base.top + base.height }
+        ].map(point => transformPoint(point, pivot, sx, sy, rotation));
+        const xs = corners.map(point => point.x);
+        const ys = corners.map(point => point.y);
+        const left = Math.min(...xs);
+        const top = Math.min(...ys);
+        const right = Math.max(...xs);
+        const bottom = Math.max(...ys);
+        return { left, top, width: right - left, height: bottom - top };
     }
 
     function compute(input) {
@@ -371,7 +396,6 @@ window.Transfork = window.Transfork || {};
         let sx = 1;
         let sy = 1;
         let rotation = 0;
-
         if (state.mode === "width") {
             const next = signedScale(state.scale[0], dx);
             sx = Math.abs(next) / Math.max(0.01, Math.abs(state.scale[0]));
@@ -389,37 +413,31 @@ window.Transfork = window.Transfork || {};
             state.finalScale = [state.scale[0] * ratio, state.scale[1] * ratio];
         }
         else if (state.mode === "rotate") {
-            const rect = getBox()?.getBoundingClientRect() || state.rect;
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            rotation = (Math.atan2(input.clientY - centerY, input.clientX - centerX) - Math.atan2(state.my - centerY, state.mx - centerX)) * 180 / Math.PI;
+            const pivot = state.untrimmedPivot || center(state.rect);
+            rotation = (Math.atan2(input.clientY - pivot.y, input.clientX - pivot.x) - Math.atan2(state.my - pivot.y, state.mx - pivot.x)) * 180 / Math.PI;
             state.finalDirection = state.dir + rotation;
             state.finalScale = state.scale.slice();
         }
-
         return { sx, sy, rotation };
     }
 
     function runFrameSequence() {
         sequence.frameRAF = 0;
         if (!state.active || !sequence.is(MAIN.PAUSE_FOR_FRAME_LOOP) || sequence.committing) return;
-
         sequence.frame(FRAME.READ_INPUT);
         const input = sequence.latestInput;
         if (!input) {
             sequence.frame(FRAME.IDLE);
             return;
         }
-
         sequence.frame(FRAME.COMPUTE_PREVIEW);
         const preview = compute(input);
         sequence.currentPreview = preview;
-
+        state.desiredFinalCenter = transformedTrimmedCenter(preview.sx, preview.sy, preview.rotation);
         sequence.frame(FRAME.DRAW_SNAPSHOT);
         const rect = scanTransform(preview.sx, preview.sy, preview.rotation);
         state.previewRect = rect;
         applyVisibleTransform(preview.sx, preview.sy, preview.rotation);
-
         sequence.frame(FRAME.DRAW_BOX);
         placeBox(rect);
         sequence.frame(FRAME.IDLE);
@@ -431,44 +449,37 @@ window.Transfork = window.Transfork || {};
         if (!sequence.frameRAF) sequence.frameRAF = requestAnimationFrame(runFrameSequence);
     }
 
-    function captureUntrimmedSnapshot(input, mode) {
-        if (!sequence.is(MAIN.CAPTURE_UNTRIMMED_SNAPSHOT)) return false;
-
+    function captureUntrimmed(input, mode) {
+        if (!sequence.isTrim(TRIM.CAPTURE_UNTRIMMED)) return false;
         const vm = getVM();
         const canvas = getCanvas();
         if (!vm?.runtime?.renderer || !canvas || !api.snapshotLayer) return false;
-
         const target = vm.editingTarget;
         if (!target || target.isStage) return false;
-
         const drawable = vm.runtime.renderer._allDrawables[target.drawableID];
         if (!drawable?.getAABB) return false;
-
         const fullRect = api.snapshotLayer.screenRect(drawable.getAABB(), canvas, vm);
-        const source = extractDrawableCanvas(vm, target);
-        const alpha = scanAlpha(source, { left: 0, top: 0 });
-        const visibleRect = alpha ? trimRectFromAlpha(fullRect, alpha) : (api.pixelBounds?.rect?.(vm, target, drawable, canvas) || fullRect);
-        const snapshot = makeCanvasSnapshot(source, fullRect, target, 9998) || api.snapshotLayer.makeSnapshot(vm, target, drawable, canvas, visibleRect, 9998);
-        if (!snapshot || !source) return false;
-
+        const untrimmedSource = extractDrawableCanvas(vm, target);
+        if (!untrimmedSource) return false;
         Object.assign(state, {
             active: true,
             target,
             drawable,
             canvas,
-            snapshot,
-            source,
+            snapshot: null,
+            source: null,
+            untrimmedSource,
             occluders: api.snapshotLayer.createOccluders(vm, target, canvas),
             mode,
             fullRect,
-            rect: visibleRect,
-            previewRect: visibleRect,
-            desiredFinalCenter: center(visibleRect),
+            rect: fullRect,
+            previewRect: fullRect,
+            desiredFinalCenter: center(fullRect),
             measuredCenter: null,
             untrimmedPivot: null,
             trimmedPivot: null,
             pivotOffset: { x: 0, y: 0 },
-            alphaBounds: alpha,
+            alphaBounds: null,
             mx: input.clientX,
             my: input.clientY,
             dir: target.direction || 90,
@@ -477,75 +488,60 @@ window.Transfork = window.Transfork || {};
             finalScale: drawable.scale ? drawable.scale.slice() : [100, 100],
             finalDirection: target.direction || 90
         });
-
         sequence.latestInput = input;
         window.__transforkTransformActive = true;
         return true;
     }
 
-    function measureUntrimmedPivot() {
-        if (!sequence.is(MAIN.MEASURE_UNTRIMMED_PIVOT)) return;
+    function runTrimPipeline(input, mode) {
+        if (!sequence.is(MAIN.RUN_TRIM_PIPELINE)) return false;
+        sequence.trim(TRIM.CAPTURE_UNTRIMMED);
+        if (!captureUntrimmed(input, mode)) return false;
+        sequence.trim(TRIM.MEASURE_UNTRIMMED_PIVOT);
         state.untrimmedPivot = center(state.fullRect);
-    }
-
-    function trimAlphaPixels() {
-        if (!sequence.is(MAIN.TRIM_ALPHA_PIXELS)) return;
-        if (state.alphaBounds && state.fullRect) state.rect = trimRectFromAlpha(state.fullRect, state.alphaBounds);
-    }
-
-    function measureTrimmedPivot() {
-        if (!sequence.is(MAIN.MEASURE_TRIMMED_PIVOT)) return;
+        sequence.trim(TRIM.MEASURE_ALPHA);
+        state.alphaBounds = scanAlpha(state.untrimmedSource, { left: 0, top: 0 });
+        sequence.trim(TRIM.CREATE_TRIMMED_SOURCE);
+        state.rect = state.alphaBounds ? rectFromAlphaSameOrigin(state.fullRect, state.alphaBounds) : state.fullRect;
+        state.source = makeTrimmedCanvas(state.untrimmedSource, state.alphaBounds);
+        sequence.trim(TRIM.MEASURE_TRIMMED_PIVOT);
         state.trimmedPivot = center(state.rect);
-    }
-
-    function storePivotOffset() {
-        if (!sequence.is(MAIN.STORE_PIVOT_OFFSET)) return;
-        if (!state.untrimmedPivot || !state.trimmedPivot) return;
-        state.pivotOffset = {
+        state.desiredFinalCenter = state.trimmedPivot;
+        sequence.trim(TRIM.STORE_PIVOT_OFFSET);
+        state.pivotOffset = state.untrimmedPivot && state.trimmedPivot ? {
             x: state.trimmedPivot.x - state.untrimmedPivot.x,
             y: state.trimmedPivot.y - state.untrimmedPivot.y
-        };
+        } : { x: 0, y: 0 };
         window.__transforkPivotOffset = state.pivotOffset;
+        sequence.trim(TRIM.CREATE_PREVIEW_SNAPSHOT);
+        state.snapshot = makeCanvasSnapshot(state.source, state.rect, state.target, 9998) || api.snapshotLayer.makeSnapshot(getVM(), state.target, state.drawable, state.canvas, state.rect, 9998);
+        if (!state.snapshot) return false;
+        state.snapshot.style.transformOrigin = pivotOrigin();
+        state.previewRect = state.rect;
+        sequence.trim(TRIM.IDLE);
+        return true;
     }
 
     async function start(input, mode) {
         if (state.active || sequence.seq !== MAIN.IDLE || sequence.starting || sequence.committing) return false;
-
         sequence.starting = true;
         sequence.run(MAIN.WAIT_START_STABLE);
         await waitForScratchStable();
-
-        sequence.run(MAIN.CAPTURE_UNTRIMMED_SNAPSHOT);
-        if (!captureUntrimmedSnapshot(input, mode)) {
+        sequence.run(MAIN.RUN_TRIM_PIPELINE);
+        if (!runTrimPipeline(input, mode)) {
             cleanupState();
             sequence.reset();
             return false;
         }
-
-        sequence.run(MAIN.MEASURE_UNTRIMMED_PIVOT);
-        measureUntrimmedPivot();
-
-        sequence.run(MAIN.TRIM_ALPHA_PIXELS);
-        trimAlphaPixels();
-
-        sequence.run(MAIN.MEASURE_TRIMMED_PIVOT);
-        measureTrimmedPivot();
-
-        sequence.run(MAIN.STORE_PIVOT_OFFSET);
-        storePivotOffset();
-
         sequence.run(MAIN.HIDE_REAL_SPRITE);
         setVisible(getVM(), state.target, false);
-
         sequence.run(MAIN.ENTER_PREVIEW);
         applyVisibleTransform(1, 1, 0);
         placeBox(state.rect);
         api.snapshotLayer.setVisible([state.snapshot].concat(state.occluders), true);
-
         sequence.run(MAIN.PAUSE_FOR_FRAME_LOOP);
         sequence.starting = false;
         queueFrame(input);
-
         if (sequence.pendingFinish) finish(sequence.pendingCommit);
         return true;
     }
@@ -560,13 +556,11 @@ window.Transfork = window.Transfork || {};
 
     function compensateFinalCenter() {
         if (!sequence.is(MAIN.COMPENSATE_FINAL_CENTER)) return;
-        const desired = state.desiredFinalCenter || center(state.rect);
+        const desired = state.desiredFinalCenter || state.trimmedPivot || center(state.rect);
         if (!desired || !state.measuredCenter || !api.coords?.screenDeltaToScratch) return;
-
         const vm = getVM();
         const delta = api.coords.screenDeltaToScratch(desired.x - state.measuredCenter.x, desired.y - state.measuredCenter.y, state.canvas, vm);
         if (!delta) return;
-
         state.target.setXY(state.target.x + delta.x, state.target.y + delta.y);
         state.target.emitVisualChange?.();
         vm?.runtime?.requestRedraw?.();
@@ -576,13 +570,11 @@ window.Transfork = window.Transfork || {};
         if (!sequence.is(MAIN.APPLY_FINAL_TRANSFORM)) return;
         const input = sequence.latestInput || { clientX: state.mx, clientY: state.my };
         const preview = compute(input);
-        const rect = scanTransform(preview.sx, preview.sy, preview.rotation);
-        state.previewRect = rect;
-
+        state.previewRect = scanTransform(preview.sx, preview.sy, preview.rotation);
+        state.desiredFinalCenter = transformedTrimmedCenter(preview.sx, preview.sy, preview.rotation);
         if (state.mode === "rotate") state.target.setDirection(state.finalDirection);
         if (state.drawable?.updateScale) state.drawable.updateScale(state.finalScale);
         else api.drawable?.setScale?.(state.target, state.finalScale);
-
         state.target.emitVisualChange?.();
         getVM()?.runtime?.requestRedraw?.();
     }
@@ -594,46 +586,36 @@ window.Transfork = window.Transfork || {};
             return;
         }
         if (!state.active || sequence.committing) return;
-
         sequence.committing = true;
         const vm = getVM();
         const target = state.target;
         const nodes = [state.snapshot].concat(state.occluders || []);
-
         sequence.run(MAIN.STOP_FRAME_LOOP);
         if (sequence.frameRAF) cancelAnimationFrame(sequence.frameRAF);
         sequence.frameRAF = 0;
         sequence.frame(FRAME.IDLE);
-
         if (commit && vm && target && state.drawable) {
             sequence.run(MAIN.APPLY_FINAL_TRANSFORM);
             applyFinalTransform();
-
             sequence.run(MAIN.WAIT_COMMIT_STABLE);
             await waitForScratchStable();
-
             sequence.run(MAIN.MEASURE_FINAL_CENTER);
             measureFinalCenter();
-
             sequence.run(MAIN.COMPENSATE_FINAL_CENTER);
             compensateFinalCenter();
-
             sequence.run(MAIN.WAIT_COMPENSATE_STABLE);
             await waitForScratchStable();
         }
-
         if (vm && target) {
             sequence.run(MAIN.RESTORE_REAL_SPRITE);
             setVisible(vm, target, state.visible);
         }
-
         sequence.run(MAIN.REMOVE_SNAPSHOT);
         requestAnimationFrame(() => requestAnimationFrame(() => {
             nodes.forEach(node => {
                 if (node?.parentNode) node.remove();
             });
         }));
-
         cleanupState();
         sequence.reset();
     }
@@ -646,6 +628,7 @@ window.Transfork = window.Transfork || {};
             canvas: null,
             snapshot: null,
             source: null,
+            untrimmedSource: null,
             occluders: [],
             mode: "",
             fullRect: null,
@@ -664,15 +647,12 @@ window.Transfork = window.Transfork || {};
     function idleLoop() {
         requestAnimationFrame(idleLoop);
         if (state.active || sequence.seq !== MAIN.IDLE) return;
-
         const vm = getVM();
         const canvas = getCanvas();
         const target = vm?.editingTarget;
         if (!vm || !canvas || !target || target.isStage) return;
-
         const drawable = vm.runtime.renderer._allDrawables[target.drawableID];
         if (!drawable || drawable._visible === false || typeof drawable.getAABB !== "function") return;
-
         const rect = api.pixelBounds?.rect?.(vm, target, drawable, canvas) || idlePixelRect(vm, target, drawable, canvas);
         if (rect) placeBox(rect);
     }
