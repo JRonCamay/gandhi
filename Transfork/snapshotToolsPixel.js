@@ -21,8 +21,7 @@ window.Transfork = window.Transfork || {};
 
         function scanAlpha(canvas, origin){ let data; try{ data=canvas.getContext("2d").getImageData(0,0,canvas.width,canvas.height).data; }catch(_){ return null; } let minX=canvas.width,minY=canvas.height,maxX=-1,maxY=-1; for(let y=0;y<canvas.height;y++)for(let x=0;x<canvas.width;x++){ if(data[(y*canvas.width+x)*4+3]<=5)continue; if(x<minX)minX=x; if(y<minY)minY=y; if(x>maxX)maxX=x; if(y>maxY)maxY=y; } if(maxX<minX||maxY<minY)return null; return {left:origin.left+minX,top:origin.top+minY,width:maxX-minX+1,height:maxY-minY+1,raw:{minX,minY,maxX,maxY,width:canvas.width,height:canvas.height}}; }
 
-        function trimSource(source){ if(source instanceof HTMLImageElement && !source.complete)return null; const w=source.naturalWidth||source.width,h=source.naturalHeight||source.height; if(!w||!h)return null; const temp=document.createElement("canvas"); temp.width=w; temp.height=h; temp.getContext("2d").drawImage(source,0,0,w,h); const b=scanAlpha(temp,{left:0,top:0}); if(!b)return temp; const tight=document.createElement("canvas"); tight.width=Math.max(1,Math.ceil(b.width)); tight.height=Math.max(1,Math.ceil(b.height)); tight.getContext("2d").drawImage(temp,b.left,b.top,b.width,b.height,0,0,b.width,b.height); tight.__pivotOffsetX=(w/2-b.left)-tight.width/2; tight.__pivotOffsetY=(h/2-b.top)-tight.height/2; return tight; }
-        function pivotOffset(source,rect){ if(!source||!rect)return {x:0,y:0}; return {x:(source.__pivotOffsetX||0)/Math.max(1,source.width)*rect.width,y:(source.__pivotOffsetY||0)/Math.max(1,source.height)*rect.height}; }
+        function trimSource(source){ if(source instanceof HTMLImageElement && !source.complete)return null; const w=source.naturalWidth||source.width,h=source.naturalHeight||source.height; if(!w||!h)return null; const temp=document.createElement("canvas"); temp.width=w; temp.height=h; temp.getContext("2d").drawImage(source,0,0,w,h); const b=scanAlpha(temp,{left:0,top:0}); if(!b)return temp; const tight=document.createElement("canvas"); tight.width=Math.max(1,Math.ceil(b.width)); tight.height=Math.max(1,Math.ceil(b.height)); tight.getContext("2d").drawImage(temp,b.left,b.top,b.width,b.height,0,0,b.width,b.height); return tight; }
 
         function normalizeExtracted(extracted){ if(!extracted)return null; if(extracted instanceof HTMLCanvasElement)return extracted; if(typeof ImageData!=="undefined"&&extracted instanceof ImageData){ const c=document.createElement("canvas"); c.width=extracted.width; c.height=extracted.height; c.getContext("2d").putImageData(extracted,0,0); return c; } if(extracted.imageData)return normalizeExtracted(extracted.imageData); if(extracted.data&&extracted.width&&extracted.height)return normalizeExtracted(new ImageData(new Uint8ClampedArray(extracted.data),extracted.width,extracted.height)); return null; }
         function boundsToScreen(bounds,canvas,vm){ const native=vm.runtime.renderer.getNativeSize(), r=canvas.getBoundingClientRect(); const left=r.left+((bounds.left+native[0]/2)/native[0])*r.width, top=r.top+((native[1]/2-bounds.top)/native[1])*r.height, right=r.left+((bounds.right+native[0]/2)/native[0])*r.width, bottom=r.top+((native[1]/2-bounds.bottom)/native[1])*r.height; return {left,top,width:right-left,height:bottom-top}; }
@@ -30,50 +29,8 @@ window.Transfork = window.Transfork || {};
         function idlePixelRect(vm,target,drawable,canvas){ const key=cacheKey(target,drawable,canvas), cached=cache.get(key); if(cached)return cached; let source=null; try{ if(typeof vm.runtime.renderer.extractDrawableScreenSpace==="function")source=normalizeExtracted(vm.runtime.renderer.extractDrawableScreenSpace(target.drawableID)); }catch(_){} if(!source)return null; const alpha=scanAlpha(source,{left:0,top:0}); if(!alpha)return null; const full=boundsToScreen(drawable.getAABB(),canvas,vm), a=alpha.raw, minX=a.minX, minY=a.minY, maxX=a.maxX, maxY=a.maxY; const rect={left:full.left+(minX/a.width)*full.width,top:full.top+(minY/a.height)*full.height,width:((maxX-minX+1)/a.width)*full.width,height:((maxY-minY+1)/a.height)*full.height}; cache.set(key,rect); if(cache.size>80)cache.clear(); return rect; }
 
         function placeBox(rect){ const box=getBox(); if(!box||!rect||box.style.display==="none")return; box.style.left=rect.left+"px"; box.style.top=rect.top+"px"; box.style.width=rect.width+"px"; box.style.height=rect.height+"px"; api.overlayTop?.bringBoxToTop?.(); }
-        function applyVisibleTransform(sx,sy,rot){
-            if(!state.snapshot)return;
-            const o=pivotOffset(state.source,state.rect);
-            state.snapshot.style.visibility="visible";
-            state.snapshot.style.transformOrigin=
-            (state.rect.width / 2 + o.x) + "px " +
-            (state.rect.height / 2 + o.y) + "px";
-            state.snapshot.style.transform=
-            "rotate("+rot+"deg) scale("+sx+","+sy+")";
-        }
-        function scanTransform(sx,sy,rot){
-            const s=state.source,b=state.rect;
-            if(!s||!b)return null;
-            if(Math.abs(sx-1)<0.0001&&Math.abs(sy-1)<0.0001&&Math.abs(rot)<0.0001)return b;
-            const o=pivotOffset(s,b);
-            const rad=rot*Math.PI/180;
-            const cos=Math.cos(rad);
-            const sin=Math.sin(rad);
-            const scaledX=o.x*sx;
-            const scaledY=o.y*sy;
-            const rotatedX=scaledX*cos-scaledY*sin;
-            const rotatedY=scaledX*sin+scaledY*cos;
-            const deltaX=o.x-rotatedX;
-            const deltaY=o.y-rotatedY;
-            const baseW=Math.max(1,b.width);
-            const baseH=Math.max(1,b.height);
-            const sw=baseW*Math.abs(sx);
-            const sh=baseH*Math.abs(sy);
-            const w=Math.max(1,Math.ceil(Math.abs(sw*cos)+Math.abs(sh*sin)+Math.abs(deltaX)*2));
-            const h=Math.max(1,Math.ceil(Math.abs(sw*sin)+Math.abs(sh*cos)+Math.abs(deltaY)*2));
-            const cx=b.left+b.width/2+deltaX;
-            const cy=b.top+b.height/2+deltaY;
-            const left=cx-w/2;
-            const top=cy-h/2;
-            offscreen.width=w;
-            offscreen.height=h;
-            offctx.setTransform(1,0,0,1,0,0);
-            offctx.clearRect(0,0,w,h);
-            offctx.translate(w/2+deltaX,h/2+deltaY);
-            offctx.rotate(rad);
-            offctx.scale(sx,sy);
-            offctx.drawImage(s,-baseW/2-o.x,-baseH/2-o.y,baseW,baseH);
-            return scanAlpha(offscreen,{left,top}) || {left,top,width:w,height:h};
-        }
+        function applyVisibleTransform(sx,sy,rot){ if(!state.snapshot||!state.rect)return; state.snapshot.style.visibility="visible"; state.snapshot.style.transformOrigin="50% 50%"; state.snapshot.style.transform="rotate("+rot+"deg) scale("+sx+","+sy+")"; }
+        function scanTransform(sx,sy,rot){ const s=state.source,b=state.rect; if(!s||!b)return null; if(Math.abs(sx-1)<0.0001&&Math.abs(sy-1)<0.0001&&Math.abs(rot)<0.0001)return b; const rad=rot*Math.PI/180, cos=Math.cos(rad), sin=Math.sin(rad), baseW=Math.max(1,b.width), baseH=Math.max(1,b.height), sw=baseW*Math.abs(sx), sh=baseH*Math.abs(sy); const w=Math.max(1,Math.ceil(Math.abs(sw*cos)+Math.abs(sh*sin))), h=Math.max(1,Math.ceil(Math.abs(sw*sin)+Math.abs(sh*cos))); const left=b.left+b.width/2-w/2, top=b.top+b.height/2-h/2; offscreen.width=w; offscreen.height=h; offctx.setTransform(1,0,0,1,0,0); offctx.clearRect(0,0,w,h); offctx.translate(w/2,h/2); offctx.rotate(rad); offctx.scale(sx,sy); offctx.drawImage(s,-baseW/2,-baseH/2,baseW,baseH); return scanAlpha(offscreen,{left,top}) || {left,top,width:w,height:h}; }
         function compute(event){ const dx=event.clientX-state.mx, dy=event.clientY-state.my; let sx=1,sy=1,rot=0; if(state.mode==="width"){ const next=signedScale(state.scale[0],dx); sx=Math.abs(next)/Math.max(0.01,Math.abs(state.scale[0])); state.finalScale=[next,state.scale[1]]; } else if(state.mode==="height"){ const next=signedScale(state.scale[1],dy); sy=Math.abs(next)/Math.max(0.01,Math.abs(state.scale[1])); state.finalScale=[state.scale[0],next]; } else if(state.mode==="uniform"){ const r=Math.max(0.01,Math.abs(state.scale[0])+dx)/Math.max(0.01,Math.abs(state.scale[0])); sx=r; sy=r; state.finalScale=[state.scale[0]*r,state.scale[1]*r]; } else if(state.mode==="rotate"){ const r=getBox()?.getBoundingClientRect()||state.rect,cx=r.left+r.width/2,cy=r.top+r.height/2; rot=(Math.atan2(event.clientY-cy,event.clientX-cx)-Math.atan2(state.my-cy,state.mx-cx))*180/Math.PI; state.finalDirection=state.dir+rot; state.finalScale=state.scale.slice(); } return {sx,sy,rot}; }
         function drawActiveBox(){ if(!state.active||!state.lastEvent)return false; const t=compute(state.lastEvent), rect=scanTransform(t.sx,t.sy,t.rot); state.previewRect=rect; applyVisibleTransform(t.sx,t.sy,t.rot); placeBox(rect); return true; }
         function apply(event){ if(!state.active)return; state.lastEvent=event; drawActiveBox(); }
