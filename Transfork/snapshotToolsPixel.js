@@ -7,7 +7,7 @@ window.Transfork = window.Transfork || {};
         const offscreen = document.createElement("canvas");
         const offctx = offscreen.getContext("2d");
         const cache = new Map();
-        const state = { active:false,target:null,drawable:null,canvas:null,snapshot:null,source:null,occluders:[],mode:"",rect:null,previewRect:null,mx:0,my:0,lastEvent:null,dir:90,scale:[100,100],visible:true,finalScale:[100,100],finalDirection:90 };
+        const state = { active:false,target:null,drawable:null,canvas:null,snapshot:null,source:null,occluders:[],mode:"",rect:null,previewRect:null,startPixelCenter:null,mx:0,my:0,lastEvent:null,dir:90,scale:[100,100],visible:true,finalScale:[100,100],finalDirection:90 };
 
         function getVM(){ return api.vm?.getVM?.() || window.vm || window.Scratch?.vm || null; }
         function getCanvas(){ return api.coords?.getStageCanvas?.() || document.querySelector("canvas"); }
@@ -33,12 +33,10 @@ window.Transfork = window.Transfork || {};
         function applyVisibleTransform(sx,sy,rot){
             if(!state.snapshot)return;
             const o=pivotOffset(state.source,state.rect);
-
             state.snapshot.style.visibility="visible";
             state.snapshot.style.transformOrigin=
             (state.rect.width / 2 + o.x) + "px " +
             (state.rect.height / 2 + o.y) + "px";
-
             state.snapshot.style.transform=
             "rotate("+rot+"deg) scale("+sx+","+sy+")";
         }
@@ -46,53 +44,42 @@ window.Transfork = window.Transfork || {};
             const s=state.source,b=state.rect;
             if(!s||!b)return null;
             if(Math.abs(sx-1)<0.0001&&Math.abs(sy-1)<0.0001&&Math.abs(rot)<0.0001)return b;
-
             const o=pivotOffset(s,b);
             const rad=rot*Math.PI/180;
             const cos=Math.cos(rad);
             const sin=Math.sin(rad);
-
             const scaledX=o.x*sx;
             const scaledY=o.y*sy;
-
             const rotatedX=scaledX*cos-scaledY*sin;
             const rotatedY=scaledX*sin+scaledY*cos;
-
             const deltaX=o.x-rotatedX;
             const deltaY=o.y-rotatedY;
-
             const baseW=Math.max(1,b.width);
             const baseH=Math.max(1,b.height);
             const sw=baseW*Math.abs(sx);
             const sh=baseH*Math.abs(sy);
-
             const w=Math.max(1,Math.ceil(Math.abs(sw*cos)+Math.abs(sh*sin)+Math.abs(deltaX)*2));
             const h=Math.max(1,Math.ceil(Math.abs(sw*sin)+Math.abs(sh*cos)+Math.abs(deltaY)*2));
-
             const cx=b.left+b.width/2+deltaX;
             const cy=b.top+b.height/2+deltaY;
-
             const left=cx-w/2;
             const top=cy-h/2;
-
             offscreen.width=w;
             offscreen.height=h;
             offctx.setTransform(1,0,0,1,0,0);
             offctx.clearRect(0,0,w,h);
-
             offctx.translate(w/2+deltaX,h/2+deltaY);
             offctx.rotate(rad);
             offctx.scale(sx,sy);
             offctx.drawImage(s,-baseW/2-o.x,-baseH/2-o.y,baseW,baseH);
-
             return scanAlpha(offscreen,{left,top}) || {left,top,width:w,height:h};
         }
         function compute(event){ const dx=event.clientX-state.mx, dy=event.clientY-state.my; let sx=1,sy=1,rot=0; if(state.mode==="width"){ const next=signedScale(state.scale[0],dx); sx=Math.abs(next)/Math.max(0.01,Math.abs(state.scale[0])); state.finalScale=[next,state.scale[1]]; } else if(state.mode==="height"){ const next=signedScale(state.scale[1],dy); sy=Math.abs(next)/Math.max(0.01,Math.abs(state.scale[1])); state.finalScale=[state.scale[0],next]; } else if(state.mode==="uniform"){ const r=Math.max(0.01,Math.abs(state.scale[0])+dx)/Math.max(0.01,Math.abs(state.scale[0])); sx=r; sy=r; state.finalScale=[state.scale[0]*r,state.scale[1]*r]; } else if(state.mode==="rotate"){ const r=getBox()?.getBoundingClientRect()||state.rect,cx=r.left+r.width/2,cy=r.top+r.height/2; rot=(Math.atan2(event.clientY-cy,event.clientX-cx)-Math.atan2(state.my-cy,state.mx-cx))*180/Math.PI; state.finalDirection=state.dir+rot; state.finalScale=state.scale.slice(); } return {sx,sy,rot}; }
         function drawActiveBox(){ if(!state.active||!state.lastEvent)return false; const t=compute(state.lastEvent), rect=scanTransform(t.sx,t.sy,t.rot); state.previewRect=rect; applyVisibleTransform(t.sx,t.sy,t.rot); placeBox(rect); return true; }
         function apply(event){ if(!state.active)return; state.lastEvent=event; drawActiveBox(); }
-        function start(event,mode){ const vm=getVM(),canvas=getCanvas(); if(!vm?.runtime?.renderer||!canvas||!api.snapshotLayer)return false; const target=vm.editingTarget; if(!target||target.isStage)return false; const drawable=vm.runtime.renderer._allDrawables[target.drawableID]; if(!drawable?.getAABB)return false; const rect=api.pixelBounds?.rect?.(vm,target,drawable,canvas)||api.snapshotLayer.screenRect(drawable.getAABB(),canvas,vm); const snapshot=api.snapshotLayer.makeSnapshot(vm,target,drawable,canvas,rect,9998); const source=trimSource(sourceFrom(snapshot)); if(!snapshot||!source)return false; Object.assign(state,{active:true,target,drawable,canvas,snapshot,source,occluders:api.snapshotLayer.createOccluders(vm,target,canvas),mode,rect,previewRect:rect,mx:event.clientX,my:event.clientY,lastEvent:event,dir:target.direction||90,scale:drawable.scale?drawable.scale.slice():[100,100],visible:drawable._visible!==false,finalScale:drawable.scale?drawable.scale.slice():[100,100],finalDirection:target.direction||90}); window.__transforkTransformActive=true; setVisible(vm,target,false); applyVisibleTransform(1,1,0); placeBox(state.rect); requestAnimationFrame(()=>requestAnimationFrame(()=>api.snapshotLayer.setVisible([snapshot].concat(state.occluders),true))); event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation(); return true; }
-        function anchorResizeCenter(vm,target,drawable){}
-        function finish(commit){ if(!state.active)return; const vm=getVM(),target=state.target,drawable=state.drawable,nodes=[state.snapshot].concat(state.occluders||[]); if(commit&&vm&&target&&drawable){ if(state.mode==="rotate")target.setDirection(state.finalDirection); drawable.updateScale(state.finalScale); target.emitVisualChange?.(); vm.runtime.requestRedraw?.(); } if(vm&&target)setVisible(vm,target,state.visible); Object.assign(state,{active:false,target:null,drawable:null,canvas:null,snapshot:null,source:null,occluders:[],lastEvent:null,previewRect:null}); window.__transforkTransformActive=false; requestAnimationFrame(()=>requestAnimationFrame(()=>nodes.forEach(n=>n?.parentNode&&n.remove()))); }
+        function start(event,mode){ const vm=getVM(),canvas=getCanvas(); if(!vm?.runtime?.renderer||!canvas||!api.snapshotLayer)return false; const target=vm.editingTarget; if(!target||target.isStage)return false; const drawable=vm.runtime.renderer._allDrawables[target.drawableID]; if(!drawable?.getAABB)return false; const rect=api.pixelBounds?.rect?.(vm,target,drawable,canvas)||api.snapshotLayer.screenRect(drawable.getAABB(),canvas,vm); const snapshot=api.snapshotLayer.makeSnapshot(vm,target,drawable,canvas,rect,9998); const source=trimSource(sourceFrom(snapshot)); if(!snapshot||!source)return false; Object.assign(state,{active:true,target,drawable,canvas,snapshot,source,occluders:api.snapshotLayer.createOccluders(vm,target,canvas),mode,rect,previewRect:rect,startPixelCenter:center(rect),mx:event.clientX,my:event.clientY,lastEvent:event,dir:target.direction||90,scale:drawable.scale?drawable.scale.slice():[100,100],visible:drawable._visible!==false,finalScale:drawable.scale?drawable.scale.slice():[100,100],finalDirection:target.direction||90}); window.__transforkTransformActive=true; setVisible(vm,target,false); applyVisibleTransform(1,1,0); placeBox(state.rect); requestAnimationFrame(()=>requestAnimationFrame(()=>api.snapshotLayer.setVisible([snapshot].concat(state.occluders),true))); event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation(); return true; }
+        function compensateFinalCenter(vm,target,drawable){ if(!state.startPixelCenter||!api.pixelBounds?.rect||!api.coords?.screenDeltaToScratch)return; const after=center(api.pixelBounds.rect(vm,target,drawable,state.canvas)); if(!after)return; const delta=api.coords.screenDeltaToScratch(state.startPixelCenter.x-after.x,state.startPixelCenter.y-after.y,state.canvas,vm); if(!delta)return; target.setXY(target.x+delta.x,target.y+delta.y); }
+        function finish(commit){ if(!state.active)return; const vm=getVM(),target=state.target,drawable=state.drawable,nodes=[state.snapshot].concat(state.occluders||[]); if(commit&&vm&&target&&drawable){ if(state.mode==="rotate")target.setDirection(state.finalDirection); drawable.updateScale(state.finalScale); compensateFinalCenter(vm,target,drawable); target.emitVisualChange?.(); vm.runtime.requestRedraw?.(); } if(vm&&target)setVisible(vm,target,state.visible); Object.assign(state,{active:false,target:null,drawable:null,canvas:null,snapshot:null,source:null,occluders:[],lastEvent:null,previewRect:null,startPixelCenter:null}); window.__transforkTransformActive=false; requestAnimationFrame(()=>requestAnimationFrame(()=>nodes.forEach(n=>n?.parentNode&&n.remove()))); }
         function lateLoop(){ requestAnimationFrame(lateLoop); setTimeout(()=>{ if(state.active){ drawActiveBox(); return; } const vm=getVM(),canvas=getCanvas(),target=vm?.editingTarget; if(!vm||!canvas||!target||target.isStage)return; const drawable=vm.runtime.renderer._allDrawables[target.drawableID]; if(!drawable||drawable._visible===false||typeof drawable.getAABB!=="function")return; const rect=api.pixelBounds?.rect?.(vm,target,drawable,canvas)||idlePixelRect(vm,target,drawable,canvas); if(rect)placeBox(rect); },0); }
 
         window.addEventListener("mousedown",e=>{ if(e.button!==0||state.active)return; const box=getBox(); if(!box||!box.contains(e.target))return; const m=modeFrom(e.target); if(m)start(e,m); },true);
