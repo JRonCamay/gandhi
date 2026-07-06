@@ -1,3 +1,12 @@
+// ==UserScript==
+// @name         Gandhi TransforkNew Loader
+// @namespace    http://tampermonkey.net/
+// @version      0.2
+// @description  Loads TransforkNew clean architecture modules
+// @match        *://www.cocrea.world/*
+// @grant        none
+// ==/UserScript==
+
 (function () {
     "use strict";
 
