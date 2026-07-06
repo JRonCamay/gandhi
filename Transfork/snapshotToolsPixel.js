@@ -418,7 +418,6 @@ window.Transfork = window.Transfork || {};
         sequence.frame(FRAME.DRAW_SNAPSHOT);
         const rect = scanTransform(preview.sx, preview.sy, preview.rotation);
         state.previewRect = rect;
-        state.desiredFinalCenter = center(rect);
         applyVisibleTransform(preview.sx, preview.sy, preview.rotation);
 
         sequence.frame(FRAME.DRAW_BOX);
@@ -561,7 +560,7 @@ window.Transfork = window.Transfork || {};
 
     function compensateFinalCenter() {
         if (!sequence.is(MAIN.COMPENSATE_FINAL_CENTER)) return;
-        const desired = state.desiredFinalCenter || center(state.previewRect) || center(state.rect);
+        const desired = state.desiredFinalCenter || center(state.rect);
         if (!desired || !state.measuredCenter || !api.coords?.screenDeltaToScratch) return;
 
         const vm = getVM();
@@ -579,7 +578,6 @@ window.Transfork = window.Transfork || {};
         const preview = compute(input);
         const rect = scanTransform(preview.sx, preview.sy, preview.rotation);
         state.previewRect = rect;
-        state.desiredFinalCenter = center(rect);
 
         if (state.mode === "rotate") state.target.setDirection(state.finalDirection);
         if (state.drawable?.updateScale) state.drawable.updateScale(state.finalScale);
