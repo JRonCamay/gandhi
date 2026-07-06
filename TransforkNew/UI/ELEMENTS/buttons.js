@@ -15,7 +15,7 @@ window.TransforkNew.UI.elements = window.TransforkNew.UI.elements || {};
             api.UI.elements.buttons.flipHButton?.init?.();
             api.UI.elements.buttons.flipVButton?.init?.();
             api.UI.elements.buttons.resetTransformButton?.init?.();
-            api.UI.elements.buttons.alphaButton?.init?.();
+            api.UI.elements.buttons.transparencyButton?.init?.();
             api.UI.elements.buttons.sizeWButton?.init?.();
             api.UI.elements.buttons.sizeHButton?.init?.();
         }
