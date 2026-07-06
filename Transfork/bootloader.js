@@ -9,6 +9,65 @@ Loads all Transfork modules from the same Transfork folder.
     if (window.__TransforkBootLoaded) return;
     window.__TransforkBootLoaded = true;
 
+    let pendingRToggle = false;
+
+    function isEditableTarget(target) {
+        const tag = target && target.tagName;
+        return (
+            tag === 'TEXTAREA' ||
+            target?.isContentEditable ||
+            (
+                tag === 'INPUT' &&
+                !target.readOnly &&
+                !target.disabled &&
+                !target.closest?.('[class*="banner"], [class*="notice"], [class*="alert"], [class*="toast"]')
+            )
+        );
+    }
+
+    function isRKey(event) {
+        return event && (event.code === 'KeyR' || String(event.key || '').toLowerCase() === 'r');
+    }
+
+    function consumeRKey(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+    }
+
+    window.__TransforkInstallTransformToggle = function (toggle) {
+        if (typeof toggle !== 'function') return;
+        window.__TransforkToggleTransformMode = toggle;
+        if (pendingRToggle) {
+            pendingRToggle = false;
+            toggle();
+        }
+    };
+
+    window.addEventListener(
+        'keydown',
+        event => {
+            if (event.repeat || !isRKey(event) || isEditableTarget(event.target)) return;
+            consumeRKey(event);
+            if (typeof window.__TransforkToggleTransformMode === 'function') {
+                window.__TransforkToggleTransformMode();
+            }
+            else {
+                pendingRToggle = true;
+            }
+        },
+        true
+    );
+
+    window.addEventListener(
+        'keyup',
+        event => {
+            if (!isRKey(event) || isEditableTarget(event.target)) return;
+            consumeRKey(event);
+        },
+        true
+    );
+
     const BASE =
         typeof TRANSFORK_BASE === 'string'
             ? TRANSFORK_BASE
@@ -57,6 +116,14 @@ Loads all Transfork modules from the same Transfork folder.
         new Function(code + '\n//# sourceURL=' + url)();
     }
 
+    function prepareModuleCode(name, code) {
+        if (name !== 'transfork-main.js') return code;
+        return code.replace(
+            '        function waitForVM() {',
+            '        window.__TransforkInstallTransformToggle?.(toggleTransformMode);\n\n        function waitForVM() {'
+        );
+    }
+
     async function loadModule(name) {
         const url = BASE + name;
 
@@ -70,7 +137,7 @@ Loads all Transfork modules from the same Transfork folder.
                 ? TRANSFORK_RUN_CODE
                 : fallbackRun;
 
-        const code = await loadText(url);
+        const code = prepareModuleCode(name, await loadText(url));
         runCode(code, url);
     }
 
