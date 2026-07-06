@@ -1,9 +1,7 @@
 // ==UserScript==
 // @name         Gandhi Transfork Modular Loader
 // @namespace    http://tampermonkey.net/
-// @version      1.30
-const cache = "26070608";
-console.log("Gandhi Transfork modular loader active 1.30 pivot-offset-fix.");
+// @version      1.31
 // @description  Loads modular Transfork files dynamically
 // @match        *://www.cocrea.world/*
 // @grant        none
@@ -13,7 +11,7 @@ console.log("Gandhi Transfork modular loader active 1.30 pivot-offset-fix.");
     "use strict";
 
     const base = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/Transfork/";
-    const cache = "26070607";
+    const cache = "26070609";
     const modules = [
         "namespace.js",
         "state.js",
@@ -29,7 +27,6 @@ console.log("Gandhi Transfork modular loader active 1.30 pivot-offset-fix.");
         "transformSnapshotGuard.js",
         "overlayTop.js",
         "snapGuideOverlay.js",
-        // "pixelBoxSync.js", // disabled for box-owner test
         "snapshotDragPixel.js",
         "snapshotToolsPixel.js",
         "resize.js",
@@ -53,7 +50,7 @@ console.log("Gandhi Transfork modular loader active 1.30 pivot-offset-fix.");
         if (window.__gandhiTransforkDynamicLoader) return;
         window.__gandhiTransforkDynamicLoader = true;
         for (const name of modules) await loadModule(name);
-        console.log("Gandhi Transfork modular loader active 1.29 resize-hold-fix.");
+        console.log("Gandhi Transfork modular loader active 1.31 final-center-compensation.");
     }
 
     loadAll().catch(error => console.error("Gandhi Transfork loader failed", error));
