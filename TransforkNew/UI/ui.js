@@ -7,8 +7,11 @@ window.TransforkNew.UI = window.TransforkNew.UI || {};
     const api = window.TransforkNew;
 
     function start() {
+        api.SYSTEM?.vm?.init?.();
         api.UI.elements?.boundingBox?.init?.();
         api.UI.elements?.buttons?.init?.();
+        api.INPUT?.keyboard?.init?.();
+        api.INPUT?.shortcuts?.init?.();
     }
 
     api.UI.ui = {
