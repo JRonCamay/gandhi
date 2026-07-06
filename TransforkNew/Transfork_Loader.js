@@ -1,17 +1,8 @@
-// ==UserScript==
-// @name         Gandhi TransforkNew Loader
-// @namespace    http://tampermonkey.net/
-// @version      0.1
-// @description  Loads TransforkNew clean architecture modules
-// @match        *://www.cocrea.world/*
-// @grant        none
-// ==/UserScript==
-
 (function () {
     "use strict";
 
     const base = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/TransforkNew/";
-    const cache = "260706-ui-skeleton";
+    const cache = "260706-ui-buttons";
     const modules = [
         "UI/ELEMENTS/boundingBox.js",
         "UI/ELEMENTS/BOUNDINGBOX/draw.js",
@@ -34,23 +25,42 @@
         "UI/ELEMENTS/BUTTONS/MOVEBUTTON/mouseDown.js",
         "UI/ELEMENTS/BUTTONS/MOVEBUTTON/mouseMove.js",
         "UI/ELEMENTS/BUTTONS/MOVEBUTTON/mouseUp.js",
+        "UI/ELEMENTS/BUTTONS/flipHButton.js",
+        "UI/ELEMENTS/BUTTONS/FLIPHBUTTON/draw.js",
+        "UI/ELEMENTS/BUTTONS/FLIPHBUTTON/click.js",
+        "UI/ELEMENTS/BUTTONS/flipVButton.js",
+        "UI/ELEMENTS/BUTTONS/FLIPVBUTTON/draw.js",
+        "UI/ELEMENTS/BUTTONS/FLIPVBUTTON/click.js",
+        "UI/ELEMENTS/BUTTONS/resetTransformButton.js",
+        "UI/ELEMENTS/BUTTONS/CLEARBUTTON/draw.js",
+        "UI/ELEMENTS/BUTTONS/CLEARBUTTON/click.js",
+        "UI/ELEMENTS/BUTTONS/transparencyButton.js",
+        "UI/ELEMENTS/BUTTONS/TRANSPARENCYBUTTON/draw.js",
+        "UI/ELEMENTS/BUTTONS/sizeWButton.js",
+        "UI/ELEMENTS/BUTTONS/SIZEWBUTTON/draw.js",
+        "UI/ELEMENTS/BUTTONS/SIZEWBUTTON/mouseDown.js",
+        "UI/ELEMENTS/BUTTONS/SIZEWBUTTON/mouseMove.js",
+        "UI/ELEMENTS/BUTTONS/SIZEWBUTTON/mouseUp.js",
+        "UI/ELEMENTS/BUTTONS/sizeHButton.js",
+        "UI/ELEMENTS/BUTTONS/SIZEHBUTTON/draw.js",
+        "UI/ELEMENTS/BUTTONS/SIZEHBUTTON/mouseDown.js",
+        "UI/ELEMENTS/BUTTONS/SIZEHBUTTON/mouseMove.js",
+        "UI/ELEMENTS/BUTTONS/SIZEHBUTTON/mouseUp.js",
         "UI/ui.js",
         "Transfork_Main.js"
     ];
 
     async function loadModule(name) {
-        const url = base + name + "?v=" + cache;
-        const response = await fetch(url, { cache: "no-store" });
+        const response = await fetch(base + name + "?v=" + cache, { cache: "no-store" });
         if (!response.ok) throw new Error("Failed to fetch " + name + ": " + response.status);
-        const source = await response.text();
-        Function(source + "\n//# sourceURL=" + url)();
+        Function(await response.text())();
     }
 
     async function loadAll() {
         if (window.__TransforkNewLoader) return;
         window.__TransforkNewLoader = true;
         for (const name of modules) await loadModule(name);
-        console.log("TransforkNew loader active 0.1 UI skeleton.");
+        console.log("TransforkNew loader active 0.2 UI buttons.");
     }
 
     loadAll().catch(error => console.error("TransforkNew loader failed", error));
