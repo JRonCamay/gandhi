@@ -1,7 +1,9 @@
 // ==UserScript==
 // @name         Gandhi Transfork Modular Loader
 // @namespace    http://tampermonkey.net/
-// @version      1.29
+// @version      1.30
+const cache = "26070608";
+console.log("Gandhi Transfork modular loader active 1.30 pivot-offset-fix.");
 // @description  Loads modular Transfork files dynamically
 // @match        *://www.cocrea.world/*
 // @grant        none
