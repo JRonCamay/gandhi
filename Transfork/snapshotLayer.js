@@ -34,6 +34,11 @@ window.Transfork = window.Transfork || {};
             return native?.[0] ? rect.width / native[0] : 1;
         }
 
+        function alpha260706_LY1A7Q(target) {
+            const ghost = typeof target?.effects?.ghost === "number" ? target.effects.ghost : 0;
+            return String(Math.max(0, Math.min(1, 1 - ghost / 100)));
+        }
+
         function imageDataUsable260705_LY6U9F(imageData) {
             if (!imageData?.data?.length) return false;
 
@@ -206,6 +211,7 @@ window.Transfork = window.Transfork || {};
                     boxSizing: "border-box",
                     userSelect: "none",
                     background: "transparent",
+                    opacity: alpha260706_LY1A7Q(target),
                     visibility: "hidden",
                     transformOrigin: "50% 50%"
             });
@@ -228,7 +234,6 @@ window.Transfork = window.Transfork || {};
             const rotate = direction - 90;
             const flipX = scale[0] < 0 ? -1 : 1;
             const flipY = scale[1] < 0 ? -1 : 1;
-            const ghost = typeof target.effects?.ghost === "number" ? target.effects.ghost : 0;
             const wrap = document.createElement("div");
             const img = document.createElement("img");
 
@@ -244,7 +249,7 @@ window.Transfork = window.Transfork || {};
                     userSelect: "none",
                     overflow: "visible",
                     background: "transparent",
-                    opacity: String(Math.max(0, Math.min(1, 1 - ghost / 100))),
+                    opacity: alpha260706_LY1A7Q(target),
                     visibility: "hidden",
                     transformOrigin: "50% 50%"
             });
