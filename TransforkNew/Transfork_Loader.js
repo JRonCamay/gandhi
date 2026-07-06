@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gandhi TransforkNew Loader
 // @namespace    http://tampermonkey.net/
-// @version      0.2
+// @version      0.3
 // @description  Loads TransforkNew clean architecture modules
 // @match        *://www.cocrea.world/*
 // @grant        none
@@ -11,13 +11,24 @@
     "use strict";
 
     const base = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/TransforkNew/";
-    const cache = "260706-ui-buttons";
+    const cache = "260706-r-test";
     const modules = [
+        "SYSTEM/VM/find.js",
+        "SYSTEM/VM/getSelectedTarget.js",
+        "SYSTEM/VM/getDrawable.js",
+        "SYSTEM/VM/getCanvas.js",
+        "SYSTEM/vm.js",
+        "UTILS/coords.js",
+        "UTILS/COORDS/boundsToScreenRect.js",
+        "INPUT/keyboard.js",
+        "INPUT/shortcuts.js",
+        "INPUT/SHORTCUTS/registerR.js",
         "UI/ELEMENTS/boundingBox.js",
         "UI/ELEMENTS/BOUNDINGBOX/draw.js",
         "UI/ELEMENTS/BOUNDINGBOX/update.js",
         "UI/ELEMENTS/BOUNDINGBOX/show.js",
         "UI/ELEMENTS/BOUNDINGBOX/hide.js",
+        "UI/ELEMENTS/BOUNDINGBOX/refresh.js",
         "UI/ELEMENTS/buttons.js",
         "UI/ELEMENTS/BUTTONS/rotateButton.js",
         "UI/ELEMENTS/BUTTONS/ROTATEBUTTON/draw.js",
@@ -69,7 +80,7 @@
         if (window.__TransforkNewLoader) return;
         window.__TransforkNewLoader = true;
         for (const name of modules) await loadModule(name);
-        console.log("TransforkNew loader active 0.2 UI buttons.");
+        console.log("TransforkNew loader active 0.3 R test.");
     }
 
     loadAll().catch(error => console.error("TransforkNew loader failed", error));
