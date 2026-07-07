@@ -10,8 +10,9 @@
 (function () {
     "use strict";
 
-    const VERSION = ["1", "2", "5-dev"].join(".");
+    const VERSION = ["1", "2", "6-debug"].join(".");
     const base = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/TransforkNew/";
+    console.log("[TN LOADER] userscript started", { VERSION, base, url: location.href });
     const modules = [
         "KEY/KEY.js",
         "KEY/register.js",
@@ -211,10 +212,12 @@
     }
 
     async function loadModule(name, token) {
+        console.log("[TN LOADER] fetching", name);
         const response = await fetch(base + name + "?v=" + token, { cache: "no-store" });
         if (!response.ok) throw new Error("Failed to fetch " + name + ": " + response.status);
         const text = await response.text();
         Function(text + "\n//# sourceURL=" + base + name + "?v=" + token)();
+        console.log("[TN LOADER] loaded", name);
     }
 
     async function loadAll(reason) {
@@ -224,6 +227,7 @@
             if (window.__TransforkNewLoader && reason !== "hot-reload") return;
             window.__TransforkNewLoader = true;
             const token = cacheToken();
+            console.log("[TN LOADER] loadAll begin", { reason, token, moduleCount: modules.length });
             for (const name of modules) await loadModule(name, token);
             console.log("TransforkNew loader active " + VERSION + " (" + reason + ").");
             showToast("TransforkNew " + VERSION + " loaded");

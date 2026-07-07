@@ -4,6 +4,8 @@
     const previous = window.KEY;
     if (previous && typeof previous.destroy === "function") previous.destroy();
 
+    console.log("[TN LOADER] KEY/KEY.js loaded");
+
     const api = {};
     const registry = [];
     let enabled = true;
@@ -74,14 +76,29 @@
     }
 
     function dispatch(event) {
+        if (event?.key?.toLowerCase?.() === "r") {
+            console.log("[TN LOADER] KEY dispatch saw R", {
+                enabled,
+                registryCount: registry.length,
+                activeLine,
+                target: event.target,
+                activeElement: document.activeElement
+            });
+        }
         if (!enabled) return;
 
         const shortcut = typeof api.findShortcut === "function"
             ? api.findShortcut(event)
             : defaultFindShortcut(event);
 
-        if (!shortcut) return;
-        if (!focusGuard(event, shortcut)) return;
+        if (!shortcut) {
+            if (event?.key?.toLowerCase?.() === "r") console.log("[TN LOADER] KEY no shortcut matched R", registry);
+            return;
+        }
+        if (!focusGuard(event, shortcut)) {
+            if (event?.key?.toLowerCase?.() === "r") console.log("[TN LOADER] KEY R blocked by focusGuard", shortcut);
+            return;
+        }
 
         shieldEvent(event);
 
@@ -89,6 +106,7 @@
         if (!acquireLine(id)) return;
 
         try {
+            if (event?.key?.toLowerCase?.() === "r") console.log("[TN LOADER] KEY running R shortcut", shortcut);
             const result = shortcut.run(event);
             if (result && typeof result.finally === "function") {
                 result.finally(() => releaseLine(id));
@@ -130,4 +148,5 @@
 
     window.KEY = api;
     window.addEventListener("keydown", dispatch, true);
+    console.log("[TN LOADER] KEY listener attached");
 })();
