@@ -35,6 +35,7 @@
         id: "hotReload.altR",
         key: "r",
         alt: true,
+        allowInEditable: true,
         ctrl: false,
         shift: false,
         meta: false,
