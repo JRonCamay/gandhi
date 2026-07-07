@@ -17,7 +17,7 @@ window.TransforkNew.UI.elements.BOUNDINGBOX = window.TransforkNew.UI.elements.BO
             box.node.appendChild(label);
         }
 
-        label.textContent = window.TransforkNew?.SYSTEM?.version?.label || "TF " + (window.TransforkNew?.VERSION || "dev");
+        label.textContent = "TransforkNew v" + (window.TransforkNewLoader?.version || window.TransforkNew?.SYSTEM?.version?.value || window.TransforkNew?.VERSION || "dev");
 
         Object.assign(label.style, {
             position: "absolute",

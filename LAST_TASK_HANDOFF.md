@@ -49,3 +49,86 @@ Added skeleton UI objects for flip horizontal, flip vertical, reset transform, t
 
 ## Next Recommended Step
 Review the added button positions and naming, then decide whether to add labels/tooltips or start VM/selection detection.
+
+---
+
+# KEY Execution Line Update — 2026-07-07
+
+Completed feature:
+- Added KEY-owned execution line inside `TransforkNew/KEY/KEY.js`.
+- Only one KEY shortcut can run at a time through `activeLine`.
+- `KEY.js` owns the single global KEY keydown listener.
+- R transform toggle is registered through `TransforkNew/KEY/shortcuts.js` as `transform.toggle`.
+- Alt+A hot reload is registered through `TransforkNew/KEY/hotReload.js` as `hotReload.altA`.
+- Removed R shortcut event ownership from `TransforkNew/INPUT/SHORTCUTS/registerR.js`; it now exposes `toggleR()` and pending-R handling only.
+
+Repository facts:
+- `TransforkNew/Transfork_Loader.js` already loads KEY modules before system/input/ui modules.
+- `TransforkNew/KEY/KEY.js` now exposes `register`, `unregister`, `findShortcut`, `acquireLine`, `releaseLine`, `getActiveLine`, `setEnabled`, and `isEnabled`.
+
+Architectural decisions:
+- KEY shortcut registration now uses shortcut objects with `id`, `key`, modifier flags, and `run(event)`.
+- Legacy function registration is still accepted for compatibility, but TransforkNew R and hot reload now use object registration.
+
+Files changed:
+- `TransforkNew/KEY/KEY.js`
+- `TransforkNew/KEY/shortcuts.js`
+- `TransforkNew/KEY/hotReload.js`
+- `TransforkNew/INPUT/SHORTCUTS/registerR.js`
+- `LAST_TASK_HANDOFF.md`
+
+Remaining work:
+- Runtime browser test in Cocrea/Tampermonkey.
+
+Known limitations:
+- A tool-created untracked backup remains under `AGENT_BACKUPS/TransforkNew/INPUT/` because deleting that exact path was blocked by safety checks.
+- Existing unrelated untracked `MCP_TEST/*` files remain untouched.
+
+Verification results:
+- Bracket/structure verification passed for the four edited TransforkNew JS files.
+- Search confirmed `TransforkNew/KEY/KEY.js` is the only active TransforkNew KEY global keydown listener outside backups.
+
+
+---
+
+# KEY Factory-Line Shortcut Update — 2026-07-07
+
+Completed feature:
+- Programmed transform box activation shortcut through KEY using `R`.
+- Programmed hot reload shortcut through KEY using `Alt+R`.
+- KEY now acts as the shortcut entry gate: keydown → KEY.js → focus guard → registry → shortcut module → factory-line request.
+- Matched shortcuts are shielded inside KEY before other page elements can catch them.
+- KEY blocks overlap through `activeLine` before executing a shortcut.
+
+Repository facts:
+- `TransforkNew/KEY/KEY.js` owns the single TransforkNew KEY keydown listener.
+- `TransforkNew/KEY/register.js` owns registry operations: `register`, `unregister`, and `findShortcut`.
+- `TransforkNew/KEY/shortcuts.js` registers `transform.toggle` for `R`.
+- `TransforkNew/KEY/hotReload.js` registers `hotReload.altR` for `Alt+R`.
+- `TransforkNew/INPUT/SHORTCUTS/registerR.js` no longer registers a keydown listener; it only exposes the transform toggle stage and pending-R handling.
+
+Architectural decisions:
+- KEY performs matching and event shielding in capture phase so shortcut keys are not caught by unrelated screen elements such as ad/banner UI.
+- Shortcut modules only request the factory-line action; KEY owns the input pipeline and execution line.
+- Editable fields remain protected by the KEY focus guard unless a future shortcut explicitly sets `allowInEditable`.
+
+Files changed:
+- `TransforkNew/KEY/KEY.js`
+- `TransforkNew/KEY/register.js`
+- `TransforkNew/KEY/shortcuts.js`
+- `TransforkNew/KEY/hotReload.js`
+- `TransforkNew/INPUT/SHORTCUTS/registerR.js`
+- `LAST_TASK_HANDOFF.md`
+
+Remaining work:
+- Browser runtime test in Cocrea/Tampermonkey.
+
+Known limitations:
+- Tool-created backup files remain untracked under `AGENT_BACKUPS/TransforkNew/...` because some delete attempts were blocked.
+- Existing unrelated `MCP_TEST/*` untracked files remain untouched.
+
+Verification results:
+- `git diff --check` passed.
+- Active `hotReload.altR` exists in `TransforkNew/KEY/hotReload.js`.
+- The old `hotReload.altA` appears only in handoff history and backup files, not active TransforkNew code.
+- Search confirmed `window.addEventListener("keydown", dispatch, true)` exists in active `TransforkNew/KEY/KEY.js` only, plus backup files.

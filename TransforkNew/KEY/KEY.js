@@ -1,93 +1,126 @@
-((function() {
-  'use strict';
-  // Initialize KEY namespace if not already defined
-  if (window.KEY) return;
-  window.KEY = {
-    handlers: [],
-    register: function(fn) {
-      if (typeof fn === 'function') {
-        this.handlers.push(fn);
-      }
-    }
-  };
+(function () {
+    "use strict";
 
-  // Global keydown dispatcher
-  function dispatch(event) {
-    for (const handler of window.KEY.handlers) {
-      try {
-        const consumed = handler(event);
-        if (consumed) {
-          // Stop further listeners if handler consumed the event
-          if (typeof event.preventDefault === 'function') event.preventDefault();
-          if (typeof event.stopPropagation === 'function') event.stopPropagation();
-          if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
-          break;
-        }
-      } catch (_) {
-        // Ignore handler errors to avoid breaking dispatch
-      }
-    }
-  }
+    const api = window.KEY || {};
+    if (api.__transforkNewKeySystem) return;
 
-  window.addEventListener('keydown', dispatch, true);
+    const registry = api.registry || api.shortcuts || [];
+    let enabled = true;
+    let activeLine = null;
 
-  // Fallback for early shortcuts before modules register handlers
-  window.addEventListener('keydown', function(event) {
-    // Ignore repeated keydown events
-    if (event.repeat) return;
-    const key = event.key?.toLowerCase?.();
-    if (!key) return;
-
-    // R without modifiers toggles TransforkNew overlay and Transfork transform mode
-    if (!event.ctrlKey && !event.metaKey && !event.altKey && key === 'r') {
-      let consumed = false;
-      try {
-        if (window.TransforkNew?.INPUT?.SHORTCUTS?.toggleR) {
-          window.TransforkNew.INPUT.SHORTCUTS.toggleR();
-          consumed = true;
-        } else {
-          window.__TransforkNewPendingR = true;
-        }
-      } catch (_) {}
-      try {
-        if (typeof window.__TransforkToggleTransformMode === 'function') {
-          window.__TransforkToggleTransformMode();
-          consumed = true;
-        } else {
-          window.__TransforkPendingRToggle = true;
-        }
-      } catch (_) {}
-      if (consumed) {
-        if (typeof event.preventDefault === 'function') event.preventDefault();
-        if (typeof event.stopPropagation === 'function') event.stopPropagation();
-        if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
-      }
+    function normalizeKey(key) {
+        return String(key || "").toLowerCase();
     }
 
-    // Ctrl+Shift+R triggers hot reload for TransforkNew and Transfork
-    if (event.ctrlKey && event.shiftKey && key === 'r') {
-      let consumed = false;
-      try {
-        if (window.TransforkNewLoader?.hotReload) {
-          window.TransforkNewLoader.hotReload();
-          consumed = true;
-        } else {
-          window.__TransforkNewPendingHotReload = true;
-        }
-      } catch (_) {}
-      try {
-        if (typeof window.TransforkHotReload === 'function') {
-          window.TransforkHotReload();
-          consumed = true;
-        } else {
-          window.__TransforkPendingHotReload = true;
-        }
-      } catch (_) {}
-      if (consumed) {
-        if (typeof event.preventDefault === 'function') event.preventDefault();
-        if (typeof event.stopPropagation === 'function') event.stopPropagation();
-        if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
-      }
+    function modifierMatches(event, shortcut, prop, eventProp) {
+        if (typeof shortcut[prop] !== "boolean") return true;
+        return Boolean(event[eventProp]) === shortcut[prop];
     }
-  }, true);
+
+    function defaultShortcutMatches(event, shortcut) {
+        if (!shortcut || typeof shortcut.run !== "function") return false;
+        if (shortcut.disabled) return false;
+        if (event.repeat && !shortcut.repeat) return false;
+        if (shortcut.key && normalizeKey(event.key) !== normalizeKey(shortcut.key)) return false;
+        if (!modifierMatches(event, shortcut, "alt", "altKey")) return false;
+        if (!modifierMatches(event, shortcut, "ctrl", "ctrlKey")) return false;
+        if (!modifierMatches(event, shortcut, "shift", "shiftKey")) return false;
+        if (!modifierMatches(event, shortcut, "meta", "metaKey")) return false;
+        return true;
+    }
+
+    function defaultFindShortcut(event) {
+        for (const shortcut of registry) {
+            if (defaultShortcutMatches(event, shortcut)) return shortcut;
+        }
+        return null;
+    }
+
+    function isEditableTarget(target) {
+        if (!target) return false;
+        const element = target.nodeType === 1 ? target : target.parentElement;
+        if (!element) return false;
+        const tag = element.tagName;
+        return (
+            tag === "INPUT" ||
+            tag === "TEXTAREA" ||
+            tag === "SELECT" ||
+            Boolean(element.isContentEditable) ||
+            Boolean(element.closest?.("input, textarea, select, [contenteditable='true']"))
+        );
+    }
+
+    function focusGuard(event, shortcut) {
+        if (shortcut && shortcut.allowInEditable) return true;
+        return !isEditableTarget(event.target) && !isEditableTarget(document.activeElement);
+    }
+
+    function shieldEvent(event) {
+        event.preventDefault?.();
+        event.stopPropagation?.();
+        event.stopImmediatePropagation?.();
+    }
+
+    function acquireLine(id) {
+        if (activeLine) return false;
+        activeLine = id;
+        return true;
+    }
+
+    function releaseLine(id) {
+        if (activeLine !== id) return;
+        activeLine = null;
+    }
+
+    function dispatch(event) {
+        if (!enabled) return;
+
+        const shortcut = typeof api.findShortcut === "function"
+            ? api.findShortcut(event)
+            : defaultFindShortcut(event);
+
+        if (!shortcut) return;
+        if (!focusGuard(event, shortcut)) return;
+
+        shieldEvent(event);
+
+        const id = shortcut.id || "shortcut." + registry.indexOf(shortcut);
+        if (!acquireLine(id)) return;
+
+        try {
+            const result = shortcut.run(event);
+            if (result && typeof result.finally === "function") {
+                result.finally(() => releaseLine(id));
+                return;
+            }
+        } catch (error) {
+            console.error("KEY shortcut failed:", id, error);
+        }
+
+        releaseLine(id);
+    }
+
+    Object.assign(api, {
+        __transforkNewKeySystem: true,
+        registry,
+        shortcuts: registry,
+        normalizeKey,
+        modifierMatches,
+        shortcutMatches: defaultShortcutMatches,
+        defaultFindShortcut,
+        focusGuard,
+        shieldEvent,
+        acquireLine,
+        releaseLine,
+        getActiveLine: () => activeLine,
+        setEnabled(value) {
+            enabled = Boolean(value);
+        },
+        isEnabled() {
+            return enabled;
+        }
+    });
+
+    window.KEY = api;
+    window.addEventListener("keydown", dispatch, true);
 })();
