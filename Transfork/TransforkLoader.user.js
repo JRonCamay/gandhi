@@ -36,12 +36,32 @@
         "main.js"
     ];
 
+    function ensureNamespace() {
+        const api = window.Transfork = window.Transfork || {};
+        api.version = api.version || "0.1";
+        api.modules = api.modules || Object.create(null);
+
+        if (typeof api.registerModule260705_NS8Q2M !== "function") {
+            api.registerModule260705_NS8Q2M = function (name, module) {
+                if (!name || !module) return module;
+                api.modules[name] = module;
+                api[name] = module;
+                return module;
+            };
+        }
+
+        return api;
+    }
+
     async function loadModule(name) {
+        ensureNamespace();
         const url = base + name + "?v=" + cache;
         const response = await fetch(url, { cache: "no-store" });
         if (!response.ok) throw new Error("Failed to fetch " + name + ": " + response.status);
         const source = await response.text();
+        ensureNamespace();
         Function(source + "\n//# sourceURL=" + url)();
+        ensureNamespace();
     }
 
     async function loadAll() {

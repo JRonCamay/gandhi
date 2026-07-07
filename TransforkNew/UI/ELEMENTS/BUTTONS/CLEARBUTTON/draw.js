@@ -8,15 +8,16 @@ window.TransforkNew.UI.elements.buttons.CLEARBUTTON = window.TransforkNew.UI.ele
     "use strict";
 
     function draw(button) {
-        if (!button || !button.node) return null;
-        button.node.textContent = "CLEAR";
+        if (!button?.node) return null;
+        button.node.textContent = "⟲";
         Object.assign(button.node.style, {
             position: "absolute",
-            left: "-54px",
+            left: "-26px",
             top: "48px",
-            width: "48px",
+            width: "20px",
             height: "20px",
             borderRadius: "4px",
+            border: "1px solid white",
             background: "#c0392b",
             color: "white",
             display: "flex",
@@ -24,7 +25,8 @@ window.TransforkNew.UI.elements.buttons.CLEARBUTTON = window.TransforkNew.UI.ele
             justifyContent: "center",
             cursor: "pointer",
             pointerEvents: "auto",
-            fontSize: "10px"
+            fontSize: "14px",
+            fontWeight: "bold"
         });
         return button.node;
     }

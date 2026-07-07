@@ -17,6 +17,7 @@ window.TransforkNew.UI.elements.buttons.FLIPVBUTTON = window.TransforkNew.UI.ele
             width: "20px",
             height: "20px",
             borderRadius: "4px",
+            border: "1px solid white",
             background: "#16a085",
             color: "white",
             display: "flex",
@@ -24,7 +25,8 @@ window.TransforkNew.UI.elements.buttons.FLIPVBUTTON = window.TransforkNew.UI.ele
             justifyContent: "center",
             cursor: "pointer",
             pointerEvents: "auto",
-            fontSize: "14px"
+            fontSize: "14px",
+            fontWeight: "bold"
         });
         return button.node;
     }

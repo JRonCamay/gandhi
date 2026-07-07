@@ -8,11 +8,11 @@ window.TransforkNew.UI.elements.buttons.CLEARBUTTON = window.TransforkNew.UI.ele
     "use strict";
 
     function click(button) {
-        if (!button || !button.node) return null;
+        if (!button?.node) return null;
         button.node.addEventListener("click", event => {
             event.preventDefault();
             event.stopPropagation();
-        }, true);
+        });
         return button.node;
     }
 

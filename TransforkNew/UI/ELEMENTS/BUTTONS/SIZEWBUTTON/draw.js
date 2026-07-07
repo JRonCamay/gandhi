@@ -9,7 +9,8 @@ window.TransforkNew.UI.elements.buttons.SIZEWBUTTON = window.TransforkNew.UI.ele
 
     function draw(button) {
         if (!button?.node) return null;
-        button.node.textContent = "W";
+        button.node.textContent = "↔";
+        button.node.title = "Width";
         Object.assign(button.node.style, {
             position: "absolute",
             right: "-27px",
@@ -17,6 +18,7 @@ window.TransforkNew.UI.elements.buttons.SIZEWBUTTON = window.TransforkNew.UI.ele
             width: "20px",
             height: "20px",
             borderRadius: "4px",
+            border: "1px solid white",
             background: "#00A2FF",
             color: "white",
             display: "flex",
@@ -24,7 +26,8 @@ window.TransforkNew.UI.elements.buttons.SIZEWBUTTON = window.TransforkNew.UI.ele
             justifyContent: "center",
             cursor: "ew-resize",
             pointerEvents: "auto",
-            fontSize: "11px"
+            fontSize: "14px",
+            fontWeight: "bold"
         });
         return button.node;
     }

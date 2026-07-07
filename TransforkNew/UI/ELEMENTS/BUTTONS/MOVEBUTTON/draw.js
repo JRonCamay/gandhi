@@ -18,6 +18,7 @@ window.TransforkNew.UI.elements.buttons.MOVEBUTTON = window.TransforkNew.UI.elem
             height: "20px",
             marginLeft: "-10px",
             borderRadius: "4px",
+            border: "1px solid white",
             background: "#e53935",
             color: "white",
             display: "flex",
@@ -25,7 +26,8 @@ window.TransforkNew.UI.elements.buttons.MOVEBUTTON = window.TransforkNew.UI.elem
             justifyContent: "center",
             cursor: "move",
             pointerEvents: "auto",
-            fontSize: "16px"
+            fontSize: "16px",
+            fontWeight: "bold"
         });
         return button.node;
     }

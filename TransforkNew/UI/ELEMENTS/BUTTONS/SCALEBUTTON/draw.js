@@ -17,13 +17,16 @@ window.TransforkNew.UI.elements.buttons.SCALEBUTTON = window.TransforkNew.UI.ele
             width: "20px",
             height: "20px",
             borderRadius: "4px",
+            border: "1px solid white",
             background: "#00A2FF",
             color: "white",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             cursor: "nwse-resize",
-            pointerEvents: "auto"
+            pointerEvents: "auto",
+            fontSize: "14px",
+            fontWeight: "bold"
         });
         return button.node;
     }

@@ -9,6 +9,7 @@ window.TransforkNew.UI.elements.BOUNDINGBOX = window.TransforkNew.UI.elements.BO
     function hide(box) {
         if (!box?.node) return null;
         box.node.style.display = "none";
+        box.visible = false;
         return box.node;
     }
 

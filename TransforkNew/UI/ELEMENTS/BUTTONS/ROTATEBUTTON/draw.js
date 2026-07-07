@@ -9,24 +9,26 @@ window.TransforkNew.UI.elements.buttons.ROTATEBUTTON = window.TransforkNew.UI.el
 
     function draw(button) {
         if (!button?.node) return null;
-        button.node.textContent = "↻";
+        button.node.textContent = "⟳";
+        button.node.title = "Rotate";
         Object.assign(button.node.style, {
             position: "absolute",
             left: "50%",
-            top: "-44px",
-            width: "20px",
-            height: "20px",
-            marginLeft: "-10px",
+            top: "-38px",
+            width: "28px",
+            height: "28px",
+            marginLeft: "-14px",
             borderRadius: "50%",
-            background: "#ff9800",
-            color: "white",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "grab",
+            border: "2px solid #2f80ff",
+            background: "#ffffff",
+            color: "#2f80ff",
+            font: "bold 18px Arial, sans-serif",
+            lineHeight: "24px",
+            textAlign: "center",
             pointerEvents: "auto",
-            fontSize: "14px",
-            fontWeight: "bold"
+            cursor: "grab",
+            userSelect: "none",
+            boxShadow: "0 2px 8px rgba(0,0,0,.22)"
         });
         return button.node;
     }

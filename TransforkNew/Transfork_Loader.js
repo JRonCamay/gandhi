@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gandhi TransforkNew Loader
 // @namespace    http://tampermonkey.net/
-// @version      0.3
+// @version      0.4
 // @description  Loads TransforkNew clean architecture modules
 // @match        *://www.cocrea.world/*
 // @grant        none
@@ -11,8 +11,9 @@
     "use strict";
 
     const base = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/TransforkNew/";
-    const cache = "260706-r-test";
+    const cache = "260707-r-ui-test";
     const modules = [
+        "SYSTEM/MAR.js",
         "SYSTEM/VM/find.js",
         "SYSTEM/VM/getSelectedTarget.js",
         "SYSTEM/VM/getDrawable.js",
@@ -80,7 +81,7 @@
         if (window.__TransforkNewLoader) return;
         window.__TransforkNewLoader = true;
         for (const name of modules) await loadModule(name);
-        console.log("TransforkNew loader active 0.3 R test.");
+        console.log("TransforkNew loader active 0.4 R UI test.");
     }
 
     loadAll().catch(error => console.error("TransforkNew loader failed", error));
