@@ -639,7 +639,7 @@
             transformOrigin: "50% 50%"
         });
 
-        const moveHandle = makeButton("✥", "Move", {
+        const moveHandle = makeButton("âœ¥", "Move", {
             left: "50%",
             top: "-23px",
             marginLeft: "-12px",
@@ -647,28 +647,28 @@
             cursor: "move"
         }, event => beginSnapshotInteraction(event, "move", vm.editingTarget));
 
-        const rotateHandle = makeButton("↻", "Rotate", {
+        const rotateHandle = makeButton("â†»", "Rotate", {
             left: "50%",
-            top: "-46px",
+            top: "6px",
             marginLeft: "-12px",
             borderRadius: "50%",
             background: "#ff9800",
             cursor: "grab"
         }, event => beginSnapshotInteraction(event, "rotate", vm.editingTarget));
 
-        const widthHandle = makeButton("↔", "Width Scale", {
+        const widthHandle = makeButton("â†”", "Width Scale", {
             right: "-27px",
             bottom: "42px",
             cursor: "ew-resize"
         }, event => beginSnapshotInteraction(event, "width", vm.editingTarget));
 
-        const heightHandle = makeButton("↕", "Height Scale", {
+        const heightHandle = makeButton("â†•", "Height Scale", {
             right: "-27px",
             bottom: "18px",
             cursor: "ns-resize"
         }, event => beginSnapshotInteraction(event, "height", vm.editingTarget));
 
-        const uniformHandle = makeButton("◲", "Resize", {
+        const uniformHandle = makeButton("â—²", "Resize", {
             right: "-27px",
             bottom: "-6px",
             cursor: "nwse-resize"
@@ -683,27 +683,27 @@
             cursor: "nwse-resize"
         }, event => beginSnapshotInteraction(event, "uniform", vm.editingTarget));
 
-        const skewHandle = makeButton("🛠", "Skew", {
+        const skewHandle = makeButton("ðŸ› ", "Skew", {
             right: "-27px",
             bottom: "66px",
             cursor: "crosshair"
         }, event => beginSnapshotInteraction(event, "skew", vm.editingTarget));
 
-        const flipHandle = makeButton("⇋", "Flip Horizontal", {
+        const flipHandle = makeButton("â‡‹", "Flip Horizontal", {
             left: "-26px",
             top: "0px",
             background: "#8e44ad",
             cursor: "pointer"
         }, null, () => flipHorizontal(vm.editingTarget));
 
-        const flipVerticalHandle = makeButton("⇅", "Flip Vertical", {
+        const flipVerticalHandle = makeButton("â‡…", "Flip Vertical", {
             left: "-26px",
             top: "24px",
             background: "#16a085",
             cursor: "pointer"
         }, null, () => flipVertical(vm.editingTarget));
 
-        const resetHandle = makeButton("⟲", "Reset", {
+        const resetHandle = makeButton("âŸ²", "Reset", {
             left: "-26px",
             top: "48px",
             background: "#c0392b",
@@ -792,9 +792,8 @@
         versionLabel.textContent = "TF " + GANDHI_TRANSFORM_BOX_VERSION;
         Object.assign(versionLabel.style, {
             position: "absolute",
-            left: "50%",
-            top: "-94px",
-            transform: "translateX(-50%)",
+            left: "0px",
+            top: "-28px",
             background: "rgba(0, 162, 255, 0.95)",
             color: "white",
             border: "1px solid white",
@@ -805,6 +804,7 @@
             lineHeight: "12px",
             whiteSpace: "nowrap",
             pointerEvents: "none",
+            zIndex: "10000",
             boxShadow: "0 2px 6px rgba(0,0,0,0.25)"
         });
 
@@ -1034,3 +1034,4 @@
 
     waitForVM();
 })();
+
