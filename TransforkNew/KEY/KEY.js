@@ -75,6 +75,15 @@
         activeLine = null;
     }
 
+    function runRNoMatchFallback(event) {
+        if (event?.key?.toLowerCase?.() !== "r") return false;
+        console.warn("[TN LOADER] KEY R has no registered shortcut", {
+            registry,
+            registered: window.TransforkNew?.REGISTRY?.list?.() || []
+        });
+        return false;
+    }
+
     function dispatch(event) {
         if (event?.key?.toLowerCase?.() === "r") {
             console.log("[TN LOADER] KEY dispatch saw R", {
@@ -93,6 +102,7 @@
 
         if (!shortcut) {
             if (event?.key?.toLowerCase?.() === "r") console.log("[TN LOADER] KEY no shortcut matched R", registry);
+            runRNoMatchFallback(event);
             return;
         }
         if (!focusGuard(event, shortcut)) {

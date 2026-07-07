@@ -36,27 +36,10 @@
                 console.log("[R] returned from toggleR()");
                 started = true;
             } else {
-                console.warn("[R] toggleR missing, setting __TransforkNewPendingR");
-                window.__TransforkNewPendingR = true;
+                console.warn("[R] toggleR missing; no fallback executed");
             }
         } catch (error) {
             console.error("[R] toggleR crashed", error);
-        }
-
-        try {
-            console.log("[R] legacy fallback check", window.__TransforkToggleTransformMode);
-
-            if (typeof window.__TransforkToggleTransformMode === "function") {
-                console.log("[R] calling legacy __TransforkToggleTransformMode()");
-                window.__TransforkToggleTransformMode();
-                console.log("[R] returned from legacy __TransforkToggleTransformMode()");
-                started = true;
-            } else {
-                console.warn("[R] legacy fallback missing, setting __TransforkPendingRToggle");
-                window.__TransforkPendingRToggle = true;
-            }
-        } catch (error) {
-            console.error("[R] legacy fallback crashed", error);
         }
 
         console.log("[R] callback finished", { started });
@@ -65,6 +48,11 @@
     }
 
     console.log("[R] registering KEY shortcut", ownerKey);
+
+    if (window.KEY.shortcuts && window.KEY.shortcuts.some(shortcut => shortcut.id === "transform.toggle")) {
+        console.warn("[R] transform.toggle already registered, skipping duplicate");
+        return;
+    }
 
     window.KEY.register({
         id: "transform.toggle",

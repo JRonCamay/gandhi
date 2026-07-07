@@ -4,9 +4,23 @@ window.TransforkNew.FACTORY = window.TransforkNew.FACTORY || {};
 (function () {
     "use strict";
 
+    const FILE = "TransforkNew/FACTORY/08_preview.js";
+    const LINE = "MAIN";
+    const STATION = 8;
+    const ID = "FACTORY.08.preview";
+    const PURPOSE = "main factory preview readiness";
+
+    window.TransforkNew.FACTORY.MANAGER?.register?.({ id: ID, file: FILE, functionName: "preview", purpose: PURPOSE, line: LINE, station: STATION });
+
     function preview(state = {}) {
-        state.previewReady = true;
-        return state;
+        if (!window.TransforkNew.FACTORY.MANAGER?.guard?.(LINE, STATION, FILE, "preview")) return state;
+        try {
+            state.previewReady = true;
+            return state;
+        } catch (error) {
+            window.TransforkNew.SYSTEM?.debug?.error?.(FILE + " preview", error);
+            return state;
+        }
     }
 
     window.TransforkNew.FACTORY.preview = preview;

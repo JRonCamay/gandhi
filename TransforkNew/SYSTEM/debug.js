@@ -4,8 +4,9 @@ window.TransforkNew.SYSTEM = window.TransforkNew.SYSTEM || {};
 (function () {
     "use strict";
 
-    const debug = window.TransforkNew.SYSTEM.debug || {
+    const debug = window.TransforkNew.DEBUG || window.TransforkNew.SYSTEM.debug || {
         enabled: true,
+        rollcallEnabled: false,
 
         log(label, data) {
             if (!this.enabled) return;
@@ -28,8 +29,25 @@ window.TransforkNew.SYSTEM = window.TransforkNew.SYSTEM || {};
         error(label, error) {
             if (!this.enabled) return;
             console.error("[TN DEBUG] " + label, error);
+        },
+
+        setEnabled(value) {
+            this.enabled = Boolean(value);
+        },
+
+        setRollcallEnabled(value) {
+            this.rollcallEnabled = Boolean(value);
         }
     };
 
+    if (typeof debug.rollcallEnabled !== "boolean") debug.rollcallEnabled = false;
+    if (typeof debug.setEnabled !== "function") {
+        debug.setEnabled = function (value) { this.enabled = Boolean(value); };
+    }
+    if (typeof debug.setRollcallEnabled !== "function") {
+        debug.setRollcallEnabled = function (value) { this.rollcallEnabled = Boolean(value); };
+    }
+
+    window.TransforkNew.DEBUG = debug;
     window.TransforkNew.SYSTEM.debug = debug;
 })();

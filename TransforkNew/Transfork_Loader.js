@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gandhi TransforkNew Loader
 // @namespace    http://tampermonkey.net/
-// @version      1.2.5-dev
+// @version      1.2.7-manager
 // @description  Loads TransforkNew clean architecture modules
 // @match        *://www.cocrea.world/*
 // @grant        none
@@ -10,7 +10,7 @@
 (function () {
     "use strict";
 
-    const VERSION = ["1", "2", "6-debug"].join(".");
+    const VERSION = ["1", "2", "7-manager"].join(".");
     const base = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/TransforkNew/";
     console.log("[TN LOADER] userscript started", { VERSION, base, url: location.href });
     const modules = [
@@ -21,6 +21,11 @@
         "SYSTEM/MAR.js",
         "SYSTEM/version.js",
         "SYSTEM/debug.js",
+        "SYSTEM/REGISTRY/state.js",
+        "SYSTEM/REGISTRY/register.js",
+        "SYSTEM/REGISTRY/find.js",
+        "SYSTEM/REGISTRY/rollcall.js",
+        "SYSTEM/REGISTRY/index.js",
         "SYSTEM/VM/state.js",
         "SYSTEM/VM/find.js",
         "SYSTEM/VM/waitForVM.js",
@@ -64,6 +69,13 @@
         "TOOLS/factoryLine.js",
         "UTILS/coords.js",
         "UTILS/COORDS/boundsToScreenRect.js",
+        "FACTORY/MANAGER/state.js",
+        "FACTORY/MANAGER/create.js",
+        "FACTORY/MANAGER/register.js",
+        "FACTORY/MANAGER/guard.js",
+        "FACTORY/MANAGER/advance.js",
+        "FACTORY/MANAGER/run.js",
+        "FACTORY/MANAGER/index.js",
         "FACTORY/01_system.js",
         "FACTORY/02_vm.js",
         "FACTORY/03_selection.js",
@@ -217,6 +229,7 @@
         if (!response.ok) throw new Error("Failed to fetch " + name + ": " + response.status);
         const text = await response.text();
         Function(text + "\n//# sourceURL=" + base + name + "?v=" + token)();
+        window.TransforkNew?.SYSTEM?.REGISTRY?.markLoaded?.(name);
         console.log("[TN LOADER] loaded", name);
     }
 
@@ -229,6 +242,7 @@
             const token = cacheToken();
             console.log("[TN LOADER] loadAll begin", { reason, token, moduleCount: modules.length });
             for (const name of modules) await loadModule(name, token);
+            window.TransforkNew?.SYSTEM?.REGISTRY?.rollcall?.();
             console.log("TransforkNew loader active " + VERSION + " (" + reason + ").");
             showToast("TransforkNew " + VERSION + " loaded");
         }

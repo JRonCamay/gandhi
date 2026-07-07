@@ -4,29 +4,50 @@ window.TransforkNew.FACTORY = window.TransforkNew.FACTORY || {};
 (function () {
     "use strict";
 
-    const stations = ["system", "vm", "selection", "drawable", "bounds", "boundingBox", "buttons", "refresh", "exit"];
+    const FILE = "TransforkNew/FACTORY/run.js";
+
+    const stations = [
+        { station: 1, name: "system" },
+        { station: 2, name: "vm" },
+        { station: 3, name: "selection" },
+        { station: 4, name: "drawable" },
+        { station: 5, name: "bounds" },
+        { station: 6, name: "boundingBox" },
+        { station: 7, name: "buttons" },
+        { station: 8, name: "preview" },
+        { station: 9, name: "refresh" },
+        { station: 10, name: "exit" }
+    ];
+
+    window.TransforkNew.SYSTEM?.REGISTRY?.register?.({
+        id: "FACTORY.run",
+        file: FILE,
+        functionName: "run",
+        purpose: "main factory manager run loop",
+        manager: "MAIN",
+        station: 0
+    });
 
     function run(state = {}) {
-        window.TransforkNew.SYSTEM?.debug?.log?.("FACTORY run start", state);
-        for (const station of stations) {
-            const fn = window.TransforkNew.FACTORY?.[station];
-            window.TransforkNew.SYSTEM?.debug?.log?.("FACTORY before " + station, state);
-            if (typeof fn !== "function") {
-                window.TransforkNew.SYSTEM?.debug?.warn?.("FACTORY missing station " + station);
-                continue;
+        try {
+            const manager = window.TransforkNew.FACTORY.MANAGER;
+            if (!manager?.runLine) {
+                window.TransforkNew.SYSTEM?.debug?.error?.(FILE + " run", new Error("FACTORY manager missing"));
+                return state;
             }
-            try {
-                fn(state);
-            } catch (error) {
-                window.TransforkNew.SYSTEM?.debug?.error?.("FACTORY station failed " + station, error);
-                state.error = error;
-                state.failedStation = station;
-                break;
-            }
-            window.TransforkNew.SYSTEM?.debug?.log?.("FACTORY after " + station, state);
+
+            const stationList = stations.map(item => ({
+                station: item.station,
+                name: item.name,
+                fn: window.TransforkNew.FACTORY?.[item.name]
+            }));
+
+            return manager.runLine("MAIN", stationList, state);
+        } catch (error) {
+            window.TransforkNew.SYSTEM?.debug?.error?.(FILE + " run", error);
+            state.error = error;
+            return state;
         }
-        window.TransforkNew.SYSTEM?.debug?.log?.("FACTORY run end", state);
-        return state;
     }
 
     window.TransforkNew.FACTORY.run = run;

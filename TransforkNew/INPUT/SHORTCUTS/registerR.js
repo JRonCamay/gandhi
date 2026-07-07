@@ -84,18 +84,6 @@ window.TransforkNew.INPUT.SHORTCUTS = window.TransforkNew.INPUT.SHORTCUTS || {};
         api.INPUT.SHORTCUTS.toggleR = toggleR;
         debug("registered");
 
-        if (window.__TransforkNewPendingR) {
-            debug("pending R detected");
-            const check = setInterval(() => {
-                const ready = api.UI?.elements?.boundingBox && api.UI?.elements?.BOUNDINGBOX;
-                debug("pending R check", { ready: !!ready });
-                if (ready) {
-                    window.__TransforkNewPendingR = false;
-                    clearInterval(check);
-                    toggleR();
-                }
-            }, 50);
-        }
     }
 
     api.INPUT.SHORTCUTS.toggleR = toggleR;
