@@ -10,6 +10,9 @@
 (function () {
     "use strict";
 
+    const GANDHI_TRANSFORM_BOX_VERSION = "1.2.1-dev";
+    window.GANDHI_TRANSFORM_BOX_VERSION = GANDHI_TRANSFORM_BOX_VERSION;
+
     let vm = null;
     let transformMode = false;
     let overlay = null;
@@ -76,16 +79,17 @@
     }
 
     window.addEventListener("keydown", event => {
-        if (event.repeat) return;
-        const tag = event.target && event.target.tagName;
-        if (tag === "INPUT" || tag === "TEXTAREA" || (event.target && event.target.isContentEditable)) return;
+        const active = document.activeElement;
+        const tag = active?.tagName;
+        const editable = tag === "INPUT" || tag === "TEXTAREA" || active?.isContentEditable;
 
-        if (event.key.toLowerCase() === "r") {
+        if (!editable && event.key && event.key.toLowerCase() === "r") {
             event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
             toggleTransformMode();
         }
     }, true);
-
     function getDrawable(target) {
         if (!target || !vm || !vm.runtime || !vm.runtime.renderer) return null;
         return vm.runtime.renderer._allDrawables[target.drawableID] || null;
@@ -784,6 +788,27 @@
         });
         nameContainer.appendChild(nameInput);
 
+        const versionLabel = document.createElement("div");
+        versionLabel.textContent = "TF " + GANDHI_TRANSFORM_BOX_VERSION;
+        Object.assign(versionLabel.style, {
+            position: "absolute",
+            left: "50%",
+            top: "-94px",
+            transform: "translateX(-50%)",
+            background: "rgba(0, 162, 255, 0.95)",
+            color: "white",
+            border: "1px solid white",
+            borderRadius: "4px",
+            padding: "2px 6px",
+            fontSize: "10px",
+            fontWeight: "bold",
+            lineHeight: "12px",
+            whiteSpace: "nowrap",
+            pointerEvents: "none",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.25)"
+        });
+
+        overlay.appendChild(versionLabel);
         overlay.appendChild(moveHandle);
         overlay.appendChild(rotateHandle);
         overlay.appendChild(widthHandle);
