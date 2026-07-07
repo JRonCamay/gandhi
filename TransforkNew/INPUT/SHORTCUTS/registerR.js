@@ -11,7 +11,6 @@ window.TransforkNew.INPUT.SHORTCUTS = window.TransforkNew.INPUT.SHORTCUTS || {};
     function shouldIgnore(event) {
         const active = document.activeElement;
         const tag = active?.tagName;
-
         return (
             tag === "INPUT" ||
             tag === "TEXTAREA" ||
@@ -53,21 +52,49 @@ window.TransforkNew.INPUT.SHORTCUTS = window.TransforkNew.INPUT.SHORTCUTS || {};
 
         api.INPUT.SHORTCUTS.toggleR = toggleR;
 
-        window.addEventListener(
-            "keydown",
-            event => {
-                if (window.TransforkNewMAR && !window.TransforkNewMAR.isOn(ownerKey)) return;
-                if (shouldIgnore(event)) return;
-                if (event.ctrlKey || event.metaKey || event.altKey) return;
-                if (event.key?.toLowerCase() !== "r") return;
+        const handler = event => {
+            if (window.TransforkNewMAR && !window.TransforkNewMAR.isOn(ownerKey)) return false;
+            if (shouldIgnore(event)) return false;
+            if (event.ctrlKey || event.metaKey || event.altKey) return false;
+            const key = event.key?.toLowerCase?.();
+            if (key !== "r") return false;
 
-                event.preventDefault();
-                event.stopPropagation();
-                event.stopImmediatePropagation();
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+
+            const uiReady = api.UI?.elements?.boundingBox && api.UI?.elements?.BOUNDINGBOX;
+            if (uiReady) {
                 toggleR();
-            },
-            true
-        );
+            } else {
+                window.__TransforkNewPendingR = true;
+            }
+            return true;
+        };
+
+        if (window.KEY && typeof window.KEY.register === "function") {
+            window.KEY.register(handler);
+        } else {
+            window.addEventListener(
+                "keydown",
+                event => {
+                    handler(event);
+                },
+                true
+            );
+        }
+
+        // If there was a pending R key before modules loaded, consume when UI is ready
+        if (window.__TransforkNewPendingR) {
+            const check = setInterval(() => {
+                const ready = api.UI?.elements?.boundingBox && api.UI?.elements?.BOUNDINGBOX;
+                if (ready) {
+                    window.__TransforkNewPendingR = false;
+                    clearInterval(check);
+                    toggleR();
+                }
+            }, 50);
+        }
     }
 
     api.INPUT.SHORTCUTS.toggleR = toggleR;
