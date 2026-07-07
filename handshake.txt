@@ -1,0 +1,18 @@
+=========================================
+GANDHI MCP HANDSHAKE
+Version: 1.0
+=========================================
+
+Purpose
+
+This file is used only to verify that the Gandhi MCP
+can successfully read the current workspace.
+
+If this file can be read, the workspace handshake
+is considered successful.
+
+This file is intentionally static.
+
+Do not modify it.
+
+Status: OK
