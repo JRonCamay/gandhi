@@ -117,6 +117,8 @@
 
     function cleanupRuntime() {
         cleanupDOM();
+        if (window.KEY && typeof window.KEY.destroy === "function") window.KEY.destroy();
+        window.KEY = null;
         window.__TransforkNewLoader = false;
         window.TransforkNew = { VERSION };
     }

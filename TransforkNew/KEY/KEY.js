@@ -1,10 +1,11 @@
 (function () {
     "use strict";
 
-    const api = window.KEY || {};
-    if (api.__transforkNewKeySystem) return;
+    const previous = window.KEY;
+    if (previous && typeof previous.destroy === "function") previous.destroy();
 
-    const registry = api.registry || api.shortcuts || [];
+    const api = {};
+    const registry = [];
     let enabled = true;
     let activeLine = null;
 
@@ -118,6 +119,12 @@
         },
         isEnabled() {
             return enabled;
+        },
+        destroy() {
+            enabled = false;
+            activeLine = null;
+            registry.length = 0;
+            window.removeEventListener("keydown", dispatch, true);
         }
     });
 
