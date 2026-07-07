@@ -7,12 +7,7 @@ window.TransforkNew.UI.elements.BOUNDINGBOX = window.TransforkNew.UI.elements.BO
     "use strict";
 
     function update(box, rect) {
-        if (!box?.node || !rect) return null;
-        box.node.style.left = rect.left + "px";
-        box.node.style.top = rect.top + "px";
-        box.node.style.width = rect.width + "px";
-        box.node.style.height = rect.height + "px";
-        return box.node;
+        return window.TransforkNew.UI.elements.BOUNDINGBOX.DRAW?.applyRect?.(box, rect) || null;
     }
 
     window.TransforkNew.UI.elements.BOUNDINGBOX.update = update;

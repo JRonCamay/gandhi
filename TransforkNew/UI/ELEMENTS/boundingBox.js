@@ -7,17 +7,25 @@ window.TransforkNew.UI.elements = window.TransforkNew.UI.elements || {};
 
     const api = window.TransforkNew;
 
-    const boundingBox = {
+    const boundingBox = api.UI.elements.BOUNDINGBOX?.STATE?.create?.({}) || {
+        visible: false,
         node: null,
+        target: null,
+        drawable: null,
+        bounds: null,
+        screenRect: null,
+        baseLeft: 0,
+        baseTop: 0,
+        previewLeft: 0,
+        previewTop: 0,
+        width: 0,
+        height: 0
+    };
 
-        init() {
-            if (this.node) return this.node;
-            this.node = document.createElement("div");
-            this.node.id = "transfork-new-bounding-box";
-            api.UI.elements.BOUNDINGBOX?.draw?.(this);
-            document.body.appendChild(this.node);
-            return this.node;
-        }
+    boundingBox.init = function init() {
+        api.UI.elements.BOUNDINGBOX?.DRAW?.createNode?.(this);
+        api.UI.elements.BOUNDINGBOX?.drawVersionLabel?.(this);
+        return this.node;
     };
 
     api.UI.elements.boundingBox = boundingBox;

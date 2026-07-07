@@ -3,13 +3,4 @@ window.TransforkNew.UI = window.TransforkNew.UI || {};
 window.TransforkNew.UI.elements = window.TransforkNew.UI.elements || {};
 window.TransforkNew.UI.elements.buttons = window.TransforkNew.UI.elements.buttons || {};
 window.TransforkNew.UI.elements.buttons.MOVEBUTTON = window.TransforkNew.UI.elements.buttons.MOVEBUTTON || {};
-
-(function () {
-    "use strict";
-
-    function mouseUp(button) {
-        return window.TransforkNew.UI.elements.buttons.MOVEBUTTON.EVENTS?.mouseUp?.(button) || null;
-    }
-
-    window.TransforkNew.UI.elements.buttons.MOVEBUTTON.mouseUp = mouseUp;
-})();
+window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG = window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG || {};

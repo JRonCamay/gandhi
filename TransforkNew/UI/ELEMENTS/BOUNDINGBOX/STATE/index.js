@@ -2,13 +2,4 @@ window.TransforkNew = window.TransforkNew || {};
 window.TransforkNew.UI = window.TransforkNew.UI || {};
 window.TransforkNew.UI.elements = window.TransforkNew.UI.elements || {};
 window.TransforkNew.UI.elements.BOUNDINGBOX = window.TransforkNew.UI.elements.BOUNDINGBOX || {};
-
-(function () {
-    "use strict";
-
-    function hide(box) {
-        return window.TransforkNew.UI.elements.BOUNDINGBOX.VISIBILITY?.hide?.(box) || null;
-    }
-
-    window.TransforkNew.UI.elements.BOUNDINGBOX.hide = hide;
-})();
+window.TransforkNew.UI.elements.BOUNDINGBOX.STATE = window.TransforkNew.UI.elements.BOUNDINGBOX.STATE || {};

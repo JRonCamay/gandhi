@@ -18,8 +18,8 @@ window.TransforkNew.INPUT.SHORTCUTS = window.TransforkNew.INPUT.SHORTCUTS || {};
         shortcuts.rVisible = !shortcuts.rVisible;
 
         if (shortcuts.rVisible) {
-            const rect = api.UI?.elements?.BOUNDINGBOX?.refresh?.(box);
-            if (!rect) shortcuts.rVisible = false;
+            const state = api.FACTORY?.run?.({ id: "transforkNew.r" });
+            if (!state?.box?.visible) shortcuts.rVisible = false;
             return;
         }
 

@@ -8,17 +8,13 @@ window.TransforkNew.UI.elements.BOUNDINGBOX = window.TransforkNew.UI.elements.BO
 
     function drawVersionLabel(box) {
         if (!box?.node) return null;
-
         let label = box.node.querySelector("#transfork-new-version-label");
-
         if (!label) {
             label = document.createElement("div");
             label.id = "transfork-new-version-label";
             box.node.appendChild(label);
         }
-
         label.textContent = "TransforkNew v" + (window.TransforkNewLoader?.version || window.TransforkNew?.SYSTEM?.version?.value || window.TransforkNew?.VERSION || "dev");
-
         Object.assign(label.style, {
             position: "absolute",
             left: "50%",
@@ -36,26 +32,13 @@ window.TransforkNew.UI.elements.BOUNDINGBOX = window.TransforkNew.UI.elements.BO
             pointerEvents: "none",
             boxShadow: "0 2px 6px rgba(0,0,0,0.25)"
         });
-
         return label;
     }
 
     function draw(box) {
-        if (!box?.node) return null;
-
-        Object.assign(box.node.style, {
-            position: "fixed",
-            border: "2px solid #00A2FF",
-            pointerEvents: "none",
-            zIndex: "9999",
-            boxSizing: "border-box",
-            display: "none",
-            userSelect: "none",
-            cursor: "move"
-        });
-
+        window.TransforkNew.UI.elements.BOUNDINGBOX.DRAW?.createNode?.(box);
         drawVersionLabel(box);
-        return box.node;
+        return box?.node || null;
     }
 
     window.TransforkNew.UI.elements.BOUNDINGBOX.drawVersionLabel = drawVersionLabel;

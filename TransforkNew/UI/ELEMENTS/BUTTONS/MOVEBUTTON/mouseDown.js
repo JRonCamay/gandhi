@@ -8,12 +8,7 @@ window.TransforkNew.UI.elements.buttons.MOVEBUTTON = window.TransforkNew.UI.elem
     "use strict";
 
     function mouseDown(button) {
-        if (!button?.node) return null;
-        button.node.addEventListener("mousedown", event => {
-            event.preventDefault();
-            event.stopPropagation();
-        }, true);
-        return button.node;
+        return window.TransforkNew.UI.elements.buttons.MOVEBUTTON.EVENTS?.mouseDown?.(button) || null;
     }
 
     window.TransforkNew.UI.elements.buttons.MOVEBUTTON.mouseDown = mouseDown;
