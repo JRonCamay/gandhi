@@ -12,7 +12,9 @@ window.TransforkNew.UI.elements.buttons.FLIPVBUTTON = window.TransforkNew.UI.ele
         button.node.addEventListener("click", event => {
             event.preventDefault();
             event.stopPropagation();
-        });
+            event.stopImmediatePropagation();
+            window.TransforkNew.FLIP?.flipVertical?.();
+        }, true);
         return button.node;
     }
 

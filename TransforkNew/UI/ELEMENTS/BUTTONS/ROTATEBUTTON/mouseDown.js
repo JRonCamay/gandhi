@@ -12,6 +12,9 @@ window.TransforkNew.UI.elements.buttons.ROTATEBUTTON = window.TransforkNew.UI.el
         button.node.addEventListener("mousedown", event => {
             event.preventDefault();
             event.stopPropagation();
+            event.stopImmediatePropagation();
+            window.TransforkNew.TOOLS?.activate?.(window.TransforkNew.TOOLS?.state?.TOOL_ROTATE);
+            window.TransforkNew.TOOLS?.factoryLine?.run?.({ id: "rotate.factoryLine", event });
         }, true);
         return button.node;
     }

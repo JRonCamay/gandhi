@@ -132,3 +132,53 @@ Verification results:
 - Active `hotReload.altR` exists in `TransforkNew/KEY/hotReload.js`.
 - The old `hotReload.altA` appears only in handoff history and backup files, not active TransforkNew code.
 - Search confirmed `window.addEventListener("keydown", dispatch, true)` exists in active `TransforkNew/KEY/KEY.js` only, plus backup files.
+
+
+---
+
+# ROTATE and FLIP Factory-Line Update — 2026-07-08
+
+Completed feature:
+- Added ROTATE as a continuous production-line tool under `TransforkNew/TOOLS/ROTATE/`.
+- Added FLIP as one-shot commands under `TransforkNew/TOOLS/FLIP/`.
+- Added `TOOL_ROTATE` to `TransforkNew/TOOLS/state.js`.
+- Added ROTATE to the factory tool visit order between MOVE and SCALE.
+- Routed Rotate button mouse down through `TOOLS.activate(TOOL_ROTATE)` and `TOOLS.factoryLine.run(...)`.
+- Routed Flip H and Flip V button clicks through the FLIP command files.
+- Flip H and Flip V now acquire the shared factory line lock before transform/commit/refresh/release.
+
+Repository facts:
+- ROTATE mirrors the continuous tool structure: `state.js`, `01_begin.js`, `02_capture.js`, `03_simulation.js`, `04_transform.js`, `05_commit.js`, and `interrupts/cancel.js`.
+- FLIP remains a command folder, not separate FLIP_H/FLIP_V tool folders.
+- FLIP uses the same `TransforkNew.TOOLS.line` lock so flip commands cannot fight with active tools.
+- Loaders were bumped to `1.2.5-dev`.
+
+Files changed:
+- `TransforkNew/TOOLS/state.js`
+- `TransforkNew/TOOLS/factoryLine.js`
+- `TransforkNew/TOOLS/ROTATE/state.js`
+- `TransforkNew/TOOLS/ROTATE/01_begin.js`
+- `TransforkNew/TOOLS/ROTATE/02_capture.js`
+- `TransforkNew/TOOLS/ROTATE/03_simulation.js`
+- `TransforkNew/TOOLS/ROTATE/04_transform.js`
+- `TransforkNew/TOOLS/ROTATE/05_commit.js`
+- `TransforkNew/TOOLS/ROTATE/interrupts/cancel.js`
+- `TransforkNew/TOOLS/FLIP/flipHorizontal.js`
+- `TransforkNew/TOOLS/FLIP/flipVertical.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/ROTATEBUTTON/mouseDown.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/FLIPHBUTTON/click.js`
+- `TransforkNew/UI/ELEMENTS/BUTTONS/FLIPVBUTTON/click.js`
+- `TransforkNew/Transfork_Loader.js`
+- `userscripts/TransforkNew_Loader.js`
+- `Gandhi TransforkNew Loader.js`
+- `TransforkNew/SYSTEM/version.js`
+- `LAST_TASK_HANDOFF.md`
+
+Remaining work:
+- Browser runtime test in Cocrea/Tampermonkey.
+- Full live rotate math can be implemented later inside ROTATE simulation/transform stages.
+
+Verification results:
+- ROTATE folder and FLIP folder exist with requested files.
+- Loaders contain ROTATE and FLIP module entries.
+- `git diff --check` passed.

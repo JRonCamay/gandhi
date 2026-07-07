@@ -1,6 +1,7 @@
 window.TransforkNew = window.TransforkNew || {};
 window.TransforkNew.TOOLS = window.TransforkNew.TOOLS || {};
 window.TransforkNew.MOVE = window.TransforkNew.MOVE || {};
+window.TransforkNew.ROTATE = window.TransforkNew.ROTATE || {};
 window.TransforkNew.SCALE = window.TransforkNew.SCALE || {};
 window.TransforkNew.REFRESH = window.TransforkNew.REFRESH || {};
 
@@ -17,6 +18,7 @@ window.TransforkNew.REFRESH = window.TransforkNew.REFRESH || {};
 
     const tools = [
         () => window.TransforkNew.MOVE,
+        () => window.TransforkNew.ROTATE,
         () => window.TransforkNew.SCALE
     ];
 

@@ -12,7 +12,9 @@ window.TransforkNew.UI.elements.buttons.FLIPHBUTTON = window.TransforkNew.UI.ele
         button.node.addEventListener("click", event => {
             event.preventDefault();
             event.stopPropagation();
-        });
+            event.stopImmediatePropagation();
+            window.TransforkNew.FLIP?.flipHorizontal?.();
+        }, true);
         return button.node;
     }
 

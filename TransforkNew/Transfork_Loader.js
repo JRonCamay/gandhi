@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gandhi TransforkNew Loader
 // @namespace    http://tampermonkey.net/
-// @version      1.2.4-dev
+// @version      1.2.5-dev
 // @description  Loads TransforkNew clean architecture modules
 // @match        *://www.cocrea.world/*
 // @grant        none
@@ -10,7 +10,7 @@
 (function () {
     "use strict";
 
-    const VERSION = ["1", "2", "4-dev"].join(".");
+    const VERSION = ["1", "2", "5-dev"].join(".");
     const base = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/TransforkNew/";
     const modules = [
         // Load KEY subsystem first to centralize keyboard shortcuts
@@ -36,6 +36,13 @@
         "TOOLS/MOVE/04_transform.js",
         "TOOLS/MOVE/05_commit.js",
         "TOOLS/MOVE/interrupts/cancel.js",
+        "TOOLS/ROTATE/state.js",
+        "TOOLS/ROTATE/01_begin.js",
+        "TOOLS/ROTATE/02_capture.js",
+        "TOOLS/ROTATE/03_simulation.js",
+        "TOOLS/ROTATE/04_transform.js",
+        "TOOLS/ROTATE/05_commit.js",
+        "TOOLS/ROTATE/interrupts/cancel.js",
         "TOOLS/SCALE/state.js",
         "TOOLS/SCALE/01_begin.js",
         "TOOLS/SCALE/02_capture.js",
@@ -43,6 +50,8 @@
         "TOOLS/SCALE/04_transform.js",
         "TOOLS/SCALE/05_commit.js",
         "TOOLS/SCALE/interrupts/cancel.js",
+        "TOOLS/FLIP/flipHorizontal.js",
+        "TOOLS/FLIP/flipVertical.js",
         "REFRESH/state.js",
         "REFRESH/01_boundingBox.js",
         "REFRESH/02_buttons.js",
