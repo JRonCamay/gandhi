@@ -9,15 +9,32 @@ window.TransforkNew.INPUT.SHORTCUTS = window.TransforkNew.INPUT.SHORTCUTS || {};
     const ownerKey = "transforkNew.rShortcut260707_a8f4qz";
 
     function shouldIgnore(event) {
-        const target = event.target;
-        const tag = target?.tagName;
+        const active = document.activeElement;
+        const tag = active?.tagName;
 
         return (
-            event.repeat ||
             tag === "INPUT" ||
             tag === "TEXTAREA" ||
-            target?.isContentEditable
+            active?.isContentEditable
         );
+    }
+
+    function toggleR() {
+        const shortcuts = api.INPUT?.shortcuts;
+        const box = api.UI?.elements?.boundingBox;
+
+        box?.init?.();
+        api.UI?.elements?.buttons?.init?.();
+
+        shortcuts.rVisible = !shortcuts.rVisible;
+
+        if (shortcuts.rVisible) {
+            const rect = api.UI?.elements?.BOUNDINGBOX?.refresh?.(box);
+            if (!rect) shortcuts.rVisible = false;
+            return;
+        }
+
+        api.UI?.elements?.BOUNDINGBOX?.hide?.(box);
     }
 
     function registerR(shortcuts) {
@@ -27,40 +44,32 @@ window.TransforkNew.INPUT.SHORTCUTS = window.TransforkNew.INPUT.SHORTCUTS || {};
 
         window.TransforkNewMAR?.register?.({
             key: ownerKey,
-            creator: "Brenda",
+            creator: "Elric",
             purpose: "TransforkNew R shortcut toggles the UI test overlay.",
             timestamp: 2607071200,
             parent: "TransforkNew/INPUT/SHORTCUTS/registerR.js",
             on: true
         });
 
+        api.INPUT.SHORTCUTS.toggleR = toggleR;
+
         window.addEventListener(
             "keydown",
             event => {
                 if (window.TransforkNewMAR && !window.TransforkNewMAR.isOn(ownerKey)) return;
                 if (shouldIgnore(event)) return;
+                if (event.ctrlKey || event.metaKey || event.altKey) return;
                 if (event.key?.toLowerCase() !== "r") return;
 
                 event.preventDefault();
                 event.stopPropagation();
-
-                const box = api.UI?.elements?.boundingBox;
-                box?.init?.();
-                api.UI?.elements?.buttons?.init?.();
-
-                shortcuts.rVisible = !shortcuts.rVisible;
-
-                if (shortcuts.rVisible) {
-                    const rect = api.UI?.elements?.BOUNDINGBOX?.refresh?.(box);
-                    if (!rect) shortcuts.rVisible = false;
-                    return;
-                }
-
-                api.UI?.elements?.BOUNDINGBOX?.hide?.(box);
+                event.stopImmediatePropagation();
+                toggleR();
             },
             true
         );
     }
 
+    api.INPUT.SHORTCUTS.toggleR = toggleR;
     api.INPUT.SHORTCUTS.registerR = registerR;
 })();
