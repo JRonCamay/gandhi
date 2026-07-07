@@ -6,7 +6,7 @@ window.TransforkNew.SYSTEM.VM = window.TransforkNew.SYSTEM.VM || {};
     "use strict";
 
     function getSelectedTarget() {
-        const vm = window.TransforkNew.SYSTEM.vm?.get?.();
+        const vm = window.TransforkNew.SYSTEM.VM?.get?.() || window.TransforkNew.SYSTEM.VM?.waitForVM?.() || null;
         return vm?.editingTarget || null;
     }
 

@@ -13,15 +13,17 @@
     const VERSION = ["1", "2", "5-dev"].join(".");
     const base = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/TransforkNew/";
     const modules = [
-        // Load KEY subsystem first to centralize keyboard shortcuts
         "KEY/KEY.js",
         "KEY/register.js",
         "KEY/shortcuts.js",
         "KEY/hotReload.js",
-        // Then load TransforkNew system modules
         "SYSTEM/MAR.js",
         "SYSTEM/version.js",
+        "SYSTEM/VM/state.js",
         "SYSTEM/VM/find.js",
+        "SYSTEM/VM/waitForVM.js",
+        "SYSTEM/VM/get.js",
+        "SYSTEM/VM/index.js",
         "SYSTEM/VM/getSelectedTarget.js",
         "SYSTEM/VM/getDrawable.js",
         "SYSTEM/VM/getCanvas.js",
@@ -67,6 +69,7 @@
         "FACTORY/05_bounds.js",
         "FACTORY/06_boundingBox.js",
         "FACTORY/07_buttons.js",
+        "FACTORY/08_preview.js",
         "FACTORY/09_refresh.js",
         "FACTORY/10_done.js",
         "FACTORY/run.js",

@@ -7,15 +7,18 @@ window.TransforkNew.SYSTEM = window.TransforkNew.SYSTEM || {};
     const api = window.TransforkNew;
 
     const vm = {
-        value: null,
-
-        init() {
-            this.value = api.SYSTEM.VM?.find?.() || this.value;
-            return this.value;
+        init(callback) {
+            return api.SYSTEM.VM?.waitForVM?.(found => {
+                if (typeof callback === "function") callback(found);
+            }) || null;
         },
 
         get() {
-            return this.value || this.init();
+            return api.SYSTEM.VM?.get?.() || api.SYSTEM.VM?.waitForVM?.() || null;
+        },
+
+        isReady() {
+            return api.SYSTEM.VM?.isReady?.() || false;
         }
     };
 
