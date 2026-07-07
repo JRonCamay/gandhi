@@ -11,6 +11,12 @@ Loads all Transfork modules from the same Transfork folder.
 
     let pendingRToggle = false;
 
+    // if there is a pending toggle set by KEY fallback before bootloader loaded
+    if (window.__TransforkPendingRToggle) {
+        pendingRToggle = true;
+        window.__TransforkPendingRToggle = false;
+    }
+
     function isEditableTarget(target) {
         const tag = target && target.tagName;
         return (
@@ -44,20 +50,30 @@ Loads all Transfork modules from the same Transfork folder.
         }
     };
 
-    window.addEventListener(
-        'keydown',
-        event => {
-            if (event.repeat || !isRKey(event) || isEditableTarget(event.target)) return;
-            consumeRKey(event);
-            if (typeof window.__TransforkToggleTransformMode === 'function') {
-                window.__TransforkToggleTransformMode();
-            }
-            else {
-                pendingRToggle = true;
-            }
-        },
-        true
-    );
+    // register R key handler through KEY subsystem or fallback
+    const rKeyHandler = event => {
+        if (event.repeat || !isRKey(event) || isEditableTarget(event.target)) return false;
+        consumeRKey(event);
+        if (typeof window.__TransforkToggleTransformMode === 'function') {
+            window.__TransforkToggleTransformMode();
+        } else {
+            pendingRToggle = true;
+            window.__TransforkPendingRToggle = true;
+        }
+        return true;
+    };
+
+    if (window.KEY && typeof window.KEY.register === 'function') {
+        window.KEY.register(rKeyHandler);
+    } else {
+        window.addEventListener(
+            'keydown',
+            event => {
+                rKeyHandler(event);
+            },
+            true
+        );
+    }
 
     window.addEventListener(
         'keyup',
