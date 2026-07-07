@@ -4,11 +4,11 @@ window.TransforkNew.SYSTEM = window.TransforkNew.SYSTEM || {};
 (function () {
     "use strict";
 
-    const version = "1.2.1-dev";
+    const version = ["1", "2", "2-dev"].join(".");
 
     window.TransforkNew.VERSION = version;
     window.TransforkNew.SYSTEM.version = {
         value: version,
-        label: "TF " + version
+        label: "TransforkNew v" + version
     };
 })();

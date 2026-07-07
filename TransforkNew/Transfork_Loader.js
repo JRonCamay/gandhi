@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gandhi TransforkNew Loader
 // @namespace    http://tampermonkey.net/
-// @version      1.2.1-dev
+// @version      1.2.2-dev
 // @description  Loads TransforkNew clean architecture modules
 // @match        *://www.cocrea.world/*
 // @grant        none
@@ -10,7 +10,7 @@
 (function () {
     "use strict";
 
-    const VERSION = "1.2.1-dev";
+    const VERSION = ["1", "2", "2-dev"].join(".");
     const base = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/TransforkNew/";
     const modules = [
         "SYSTEM/MAR.js",
@@ -68,20 +68,18 @@
         "UI/ELEMENTS/BUTTONS/SIZEHBUTTON/mouseDown.js",
         "UI/ELEMENTS/BUTTONS/SIZEHBUTTON/mouseMove.js",
         "UI/ELEMENTS/BUTTONS/SIZEHBUTTON/mouseUp.js",
+        "UI/debugLayout.js",
         "UI/ui.js",
         "Transfork_Main.js"
     ];
 
     let loading = false;
     let pendingR = false;
+    let rDown = false;
 
     window.TransforkNew = window.TransforkNew || {};
     window.TransforkNew.VERSION = VERSION;
-    window.TransforkNewLoader = {
-        version: VERSION,
-        modules: modules.slice(),
-        hotReload
-    };
+    window.TransforkNewLoader = { version: VERSION, modules: modules.slice(), hotReload };
 
     function cacheToken() {
         return VERSION + "-" + Date.now();
@@ -90,7 +88,6 @@
     function showToast(message) {
         const old = document.querySelector("#transfork-new-loader-toast");
         if (old) old.remove();
-
         const toast = document.createElement("div");
         toast.id = "transfork-new-loader-toast";
         toast.textContent = message;
@@ -113,10 +110,7 @@
     }
 
     function cleanupDOM() {
-        [
-            "#transfork-new-bounding-box",
-            "#transfork-new-loader-toast"
-        ].forEach(selector => {
+        ["#transfork-new-bounding-box", "#transfork-new-loader-toast"].forEach(selector => {
             document.querySelectorAll(selector).forEach(node => node.remove());
         });
     }
@@ -124,19 +118,15 @@
     function cleanupRuntime() {
         cleanupDOM();
         window.__TransforkNewLoader = false;
-        window.TransforkNew = {
-            VERSION
-        };
+        window.TransforkNew = { VERSION };
     }
 
     function triggerR() {
         const toggle = window.TransforkNew?.INPUT?.SHORTCUTS?.toggleR;
-
         if (typeof toggle === "function") {
             toggle();
             return true;
         }
-
         pendingR = true;
         return false;
     }
@@ -147,31 +137,40 @@
         triggerR();
     }
 
+    function captureShortcut(event) {
+        const key = event.key?.toLowerCase?.();
+        if (key !== "r") return;
+
+        if (event.type === "keyup") {
+            rDown = false;
+            return;
+        }
+
+        if (event.ctrlKey && event.shiftKey) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+            hotReload().catch(error => console.error("TransforkNew hot reload failed", error));
+            return;
+        }
+
+        if (event.ctrlKey || event.metaKey || event.altKey) return;
+        if (rDown) return;
+        rDown = true;
+
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        triggerR();
+    }
+
     function registerEarlyShortcuts() {
         if (window.__TransforkNewEarlyShortcuts) return;
         window.__TransforkNewEarlyShortcuts = true;
-
-        window.addEventListener("keydown", event => {
-            const key = event.key?.toLowerCase?.();
-            const active = document.activeElement;
-            const tag = active?.tagName;
-            const editable = tag === "INPUT" || tag === "TEXTAREA" || active?.isContentEditable;
-
-            if (event.ctrlKey && event.shiftKey && key === "r") {
-                event.preventDefault();
-                event.stopPropagation();
-                event.stopImmediatePropagation();
-                hotReload().catch(error => console.error("TransforkNew hot reload failed", error));
-                return;
-            }
-
-            if (!editable && key === "r") {
-                event.preventDefault();
-                event.stopPropagation();
-                event.stopImmediatePropagation();
-                triggerR();
-            }
-        }, true);
+        [window, document].forEach(target => {
+            target.addEventListener("keydown", captureShortcut, true);
+            target.addEventListener("keyup", captureShortcut, true);
+        });
     }
 
     async function loadModule(name, token) {
@@ -183,14 +182,11 @@
     async function loadAll(reason) {
         if (loading) return;
         loading = true;
-
         try {
             if (window.__TransforkNewLoader && reason !== "hot-reload") return;
             window.__TransforkNewLoader = true;
-
             const token = cacheToken();
             for (const name of modules) await loadModule(name, token);
-
             consumePendingR();
             console.log("TransforkNew loader active " + VERSION + " (" + reason + ").");
             showToast("TransforkNew " + VERSION + " loaded");
