@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gandhi TransforkNew Loader
 // @namespace    http://tampermonkey.net/
-// @version      1.2.2-dev
+// @version      1.2.3-dev
 // @description  Loads TransforkNew clean architecture modules
 // @match        *://www.cocrea.world/*
 // @grant        none
@@ -10,7 +10,7 @@
 (function () {
     "use strict";
 
-    const VERSION = ["1", "2", "2-dev"].join(".");
+    const VERSION = ["1", "2", "3-dev"].join(".");
     const base = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/TransforkNew/";
     const modules = [
         "SYSTEM/MAR.js",
