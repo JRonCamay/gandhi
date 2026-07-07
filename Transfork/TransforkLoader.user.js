@@ -144,23 +144,9 @@
         await loadAll("hot-reload");
     }
 
-    function registerHotReloadShortcut() {
-        if (window.__gandhiTransforkHotReloadShortcut) return;
-        window.__gandhiTransforkHotReloadShortcut = true;
+    // Expose hotReload function globally for KEY/hotReload handler
+    window.TransforkHotReload = hotReload;
 
-        window.addEventListener("keydown", event => {
-            if (!event.ctrlKey || !event.shiftKey) return;
-            if (!event.key || event.key.toLowerCase() !== "r") return;
-
-            event.preventDefault();
-            event.stopPropagation();
-            event.stopImmediatePropagation();
-
-            hotReload().catch(error => console.error("Gandhi Transfork hot reload failed", error));
-        }, true);
-    }
-
-    registerHotReloadShortcut();
     ensureNamespace();
     loadAll("startup").catch(error => console.error("Gandhi Transfork loader failed", error));
 })();
