@@ -6,9 +6,21 @@ window.TransforkNew.FACTORY = window.TransforkNew.FACTORY || {};
 
     function boundingBox(state = {}) {
         const box = window.TransforkNew.UI?.elements?.boundingBox;
+        window.TransforkNew.SYSTEM?.debug?.log?.("FACTORY station boundingBox before", {
+            box,
+            hasInit: typeof box?.init === "function",
+            refreshApi: window.TransforkNew.UI?.elements?.BOUNDINGBOX
+        });
         box?.init?.();
-        window.TransforkNew.UI?.elements?.BOUNDINGBOX?.refresh?.(box);
+        const result = window.TransforkNew.UI?.elements?.BOUNDINGBOX?.refresh?.(box);
         state.box = box || null;
+        state.boxRefreshResult = result || null;
+        window.TransforkNew.SYSTEM?.debug?.log?.("FACTORY station boundingBox after", {
+            box: state.box,
+            result,
+            visible: box?.visible,
+            display: box?.node?.style?.display
+        });
         return state;
     }
 

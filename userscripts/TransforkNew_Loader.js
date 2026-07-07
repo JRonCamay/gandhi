@@ -19,6 +19,7 @@
         "KEY/hotReload.js",
         "SYSTEM/MAR.js",
         "SYSTEM/version.js",
+        "SYSTEM/debug.js",
         "SYSTEM/VM/state.js",
         "SYSTEM/VM/find.js",
         "SYSTEM/VM/waitForVM.js",

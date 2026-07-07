@@ -7,16 +7,64 @@ window.TransforkNew.UI.elements.BOUNDINGBOX = window.TransforkNew.UI.elements.BO
     "use strict";
 
     function refresh(box) {
+        const debug = window.TransforkNew.SYSTEM?.debug;
         const refreshApi = window.TransforkNew.UI.elements.BOUNDINGBOX.REFRESH;
-        if (!box || !refreshApi?.readTarget?.(box)) {
+
+        debug?.log?.("BOX refresh start", {
+            box,
+            refreshApi,
+            vmState: window.TransforkNew.SYSTEM?.VM?.state
+        });
+
+        if (!box) {
+            debug?.warn?.("BOX stop: missing box");
             window.TransforkNew.UI.elements.BOUNDINGBOX.VISIBILITY?.hide?.(box);
             return null;
         }
-        if (!refreshApi.readDrawable?.(box) || !refreshApi.readBounds?.(box) || !refreshApi.convertBounds?.(box)) {
+
+        const target = refreshApi?.readTarget?.(box);
+        debug?.log?.("BOX target", target);
+        if (!target) {
+            debug?.warn?.("BOX stop: target null");
             window.TransforkNew.UI.elements.BOUNDINGBOX.VISIBILITY?.hide?.(box);
             return null;
         }
-        return refreshApi.apply?.(box) || null;
+
+        const drawable = refreshApi.readDrawable?.(box);
+        debug?.log?.("BOX drawable", drawable);
+        if (!drawable) {
+            debug?.warn?.("BOX stop: drawable null");
+            window.TransforkNew.UI.elements.BOUNDINGBOX.VISIBILITY?.hide?.(box);
+            return null;
+        }
+
+        const bounds = refreshApi.readBounds?.(box);
+        debug?.log?.("BOX bounds", bounds);
+        if (!bounds) {
+            debug?.warn?.("BOX stop: bounds null");
+            window.TransforkNew.UI.elements.BOUNDINGBOX.VISIBILITY?.hide?.(box);
+            return null;
+        }
+
+        const screenRect = refreshApi.convertBounds?.(box);
+        debug?.log?.("BOX screenRect", screenRect);
+        if (!screenRect) {
+            debug?.warn?.("BOX stop: screenRect null");
+            window.TransforkNew.UI.elements.BOUNDINGBOX.VISIBILITY?.hide?.(box);
+            return null;
+        }
+
+        const applied = refreshApi.apply?.(box) || null;
+        debug?.log?.("BOX applied", {
+            applied,
+            visible: box.visible,
+            display: box.node?.style?.display,
+            left: box.node?.style?.left,
+            top: box.node?.style?.top,
+            width: box.node?.style?.width,
+            height: box.node?.style?.height
+        });
+        return applied;
     }
 
     window.TransforkNew.UI.elements.BOUNDINGBOX.refresh = refresh;
