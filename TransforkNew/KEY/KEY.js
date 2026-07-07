@@ -6,10 +6,51 @@
 
     console.log("[TN LOADER] KEY/KEY.js loaded");
 
+    const FILE = "TransforkNew/KEY/KEY.js";
     const api = {};
     const registry = [];
     let enabled = true;
     let activeLine = null;
+
+    const keyManager = {
+        line: "KEY",
+        currStation: 1,
+        setStation(station) {
+            this.currStation = station;
+        },
+        guard(station, file, functionName) {
+            const allowed = this.currStation === station;
+            if (!allowed) {
+                window.TransforkNew?.SYSTEM?.debug?.warn?.("KEY guardian blocked", {
+                    file,
+                    functionName,
+                    expectedStation: station,
+                    currStation: this.currStation
+                });
+            }
+            return allowed;
+        },
+        sleeper(error, file, functionName, station) {
+            window.TransforkNew?.SYSTEM?.debug?.error?.("KEY sleeper catch", {
+                file,
+                functionName,
+                station,
+                error
+            });
+        }
+    };
+
+    window.TransforkNew = window.TransforkNew || {};
+    window.TransforkNew.KEY_MANAGER = keyManager;
+
+    window.TransforkNew.SYSTEM?.REGISTRY?.register?.({
+        id: "KEY.dispatch",
+        file: FILE,
+        functionName: "dispatch",
+        purpose: "single global keydown dispatcher",
+        manager: "KEY",
+        station: 1
+    });
 
     function normalizeKey(key) {
         return String(key || "").toLowerCase();
@@ -85,48 +126,61 @@
     }
 
     function dispatch(event) {
-        if (event?.key?.toLowerCase?.() === "r") {
-            console.log("[TN LOADER] KEY dispatch saw R", {
-                enabled,
-                registryCount: registry.length,
-                activeLine,
-                target: event.target,
-                activeElement: document.activeElement
-            });
-        }
-        if (!enabled) return;
-
-        const shortcut = typeof api.findShortcut === "function"
-            ? api.findShortcut(event)
-            : defaultFindShortcut(event);
-
-        if (!shortcut) {
-            if (event?.key?.toLowerCase?.() === "r") console.log("[TN LOADER] KEY no shortcut matched R", registry);
-            runRNoMatchFallback(event);
-            return;
-        }
-        if (!focusGuard(event, shortcut)) {
-            if (event?.key?.toLowerCase?.() === "r") console.log("[TN LOADER] KEY R blocked by focusGuard", shortcut);
-            return;
-        }
-
-        shieldEvent(event);
-
-        const id = shortcut.id || "shortcut." + registry.indexOf(shortcut);
-        if (!acquireLine(id)) return;
+        if (!keyManager.guard(1, FILE, "dispatch")) return;
 
         try {
-            if (event?.key?.toLowerCase?.() === "r") console.log("[TN LOADER] KEY running R shortcut", shortcut);
-            const result = shortcut.run(event);
-            if (result && typeof result.finally === "function") {
-                result.finally(() => releaseLine(id));
+            if (event?.key?.toLowerCase?.() === "r") {
+                console.log("[TN LOADER] KEY dispatch saw R", {
+                    enabled,
+                    registryCount: registry.length,
+                    activeLine,
+                    target: event.target,
+                    activeElement: document.activeElement
+                });
+            }
+            if (!enabled) return;
+
+            const shortcut = typeof api.findShortcut === "function"
+                ? api.findShortcut(event)
+                : defaultFindShortcut(event);
+
+            if (!shortcut) {
+                if (event?.key?.toLowerCase?.() === "r") console.log("[TN LOADER] KEY no shortcut matched R", registry);
+                runRNoMatchFallback(event);
                 return;
             }
-        } catch (error) {
-            console.error("KEY shortcut failed:", id, error);
-        }
+            if (!focusGuard(event, shortcut)) {
+                if (event?.key?.toLowerCase?.() === "r") console.log("[TN LOADER] KEY R blocked by focusGuard", shortcut);
+                return;
+            }
 
-        releaseLine(id);
+            shieldEvent(event);
+
+            const id = shortcut.id || "shortcut." + registry.indexOf(shortcut);
+            if (!acquireLine(id)) return;
+
+            try {
+                if (event?.key?.toLowerCase?.() === "r") console.log("[TN LOADER] KEY running R shortcut", shortcut);
+                keyManager.setStation(2);
+                const result = shortcut.run(event);
+                keyManager.setStation(1);
+                if (result && typeof result.finally === "function") {
+                    result.finally(() => {
+                        keyManager.setStation(1);
+                        releaseLine(id);
+                    });
+                    return;
+                }
+            } catch (error) {
+                keyManager.sleeper(error, FILE, "dispatch.shortcutRun", 2);
+            }
+
+            keyManager.setStation(1);
+            releaseLine(id);
+        } catch (error) {
+            keyManager.setStation(1);
+            keyManager.sleeper(error, FILE, "dispatch", 1);
+        }
     }
 
     Object.assign(api, {
@@ -141,6 +195,7 @@
         shieldEvent,
         acquireLine,
         releaseLine,
+        manager: keyManager,
         getActiveLine: () => activeLine,
         setEnabled(value) {
             enabled = Boolean(value);
