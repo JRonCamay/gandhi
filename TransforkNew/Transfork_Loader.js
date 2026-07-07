@@ -13,6 +13,12 @@
     const VERSION = ["1", "2", "3-dev"].join(".");
     const base = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/TransforkNew/";
     const modules = [
+        // Load KEY subsystem first to centralize keyboard shortcuts
+        "KEY/KEY.js",
+        "KEY/register.js",
+        "KEY/shortcuts.js",
+        "KEY/hotReload.js",
+        // Then load TransforkNew system modules
         "SYSTEM/MAR.js",
         "SYSTEM/version.js",
         "SYSTEM/VM/find.js",
@@ -74,8 +80,6 @@
     ];
 
     let loading = false;
-    let pendingR = false;
-    let rDown = false;
 
     window.TransforkNew = window.TransforkNew || {};
     window.TransforkNew.VERSION = VERSION;
@@ -121,62 +125,11 @@
         window.TransforkNew = { VERSION };
     }
 
-    function triggerR() {
-        const toggle = window.TransforkNew?.INPUT?.SHORTCUTS?.toggleR;
-        if (typeof toggle === "function") {
-            toggle();
-            return true;
-        }
-        pendingR = true;
-        return false;
-    }
-
-    function consumePendingR() {
-        if (!pendingR) return;
-        pendingR = false;
-        triggerR();
-    }
-
-    function captureShortcut(event) {
-        const key = event.key?.toLowerCase?.();
-        if (key !== "r") return;
-
-        if (event.type === "keyup") {
-            rDown = false;
-            return;
-        }
-
-        if (event.ctrlKey && event.shiftKey) {
-            event.preventDefault();
-            event.stopPropagation();
-            event.stopImmediatePropagation();
-            hotReload().catch(error => console.error("TransforkNew hot reload failed", error));
-            return;
-        }
-
-        if (event.ctrlKey || event.metaKey || event.altKey) return;
-        if (rDown) return;
-        rDown = true;
-
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation();
-        triggerR();
-    }
-
-    function registerEarlyShortcuts() {
-        if (window.__TransforkNewEarlyShortcuts) return;
-        window.__TransforkNewEarlyShortcuts = true;
-        [window, document].forEach(target => {
-            target.addEventListener("keydown", captureShortcut, true);
-            target.addEventListener("keyup", captureShortcut, true);
-        });
-    }
-
     async function loadModule(name, token) {
         const response = await fetch(base + name + "?v=" + token, { cache: "no-store" });
         if (!response.ok) throw new Error("Failed to fetch " + name + ": " + response.status);
-        Function(await response.text() + "\n//# sourceURL=" + base + name + "?v=" + token)();
+        const text = await response.text();
+        Function(text + "\n//# sourceURL=" + base + name + "?v=" + token)();
     }
 
     async function loadAll(reason) {
@@ -187,7 +140,6 @@
             window.__TransforkNewLoader = true;
             const token = cacheToken();
             for (const name of modules) await loadModule(name, token);
-            consumePendingR();
             console.log("TransforkNew loader active " + VERSION + " (" + reason + ").");
             showToast("TransforkNew " + VERSION + " loaded");
         }
@@ -204,6 +156,5 @@
         await loadAll("hot-reload");
     }
 
-    registerEarlyShortcuts();
     loadAll("startup").catch(error => console.error("TransforkNew loader failed", error));
 })();
