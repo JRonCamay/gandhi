@@ -13,7 +13,7 @@ window.TransforkNew.FACTORY = window.TransforkNew.FACTORY || {};
     window.TransforkNew.FACTORY.MANAGER?.register?.({ id: ID, file: FILE, functionName: "boundingBox", purpose: PURPOSE, line: LINE, station: STATION });
 
     function boundingBox(state = {}) {
-        if (!window.TransforkNew.FACTORY.MANAGER?.guard?.(LINE, STATION, FILE, "boundingBox")) return state;
+        if (!window.TransforkNew.FACTORY.MANAGER?.guard?.(LINE, STATION, FILE, "boundingBox")) return { status: "stop", reason: "guardian blocked", station: STATION };
         try {
             const box = window.TransforkNew.UI?.elements?.boundingBox;
             window.TransforkNew.SYSTEM?.debug?.log?.("FACTORY station boundingBox before", {
@@ -31,10 +31,11 @@ window.TransforkNew.FACTORY = window.TransforkNew.FACTORY || {};
                 visible: box?.visible,
                 display: box?.node?.style?.display
             });
-            return state;
+            if (!box?.visible) return { status: "stop", reason: "box not visible", station: STATION };
+            return { status: "done", station: STATION };
         } catch (error) {
             window.TransforkNew.SYSTEM?.debug?.error?.(FILE + " boundingBox", error);
-            return state;
+            return { status: "stop", reason: "boundingBox crashed", station: STATION, error };
         }
     }
 

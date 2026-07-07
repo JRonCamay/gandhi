@@ -13,17 +13,18 @@ window.TransforkNew.FACTORY = window.TransforkNew.FACTORY || {};
     window.TransforkNew.FACTORY.MANAGER?.register?.({ id: ID, file: FILE, functionName: "vm", purpose: PURPOSE, line: LINE, station: STATION });
 
     function vm(state = {}) {
-        if (!window.TransforkNew.FACTORY.MANAGER?.guard?.(LINE, STATION, FILE, "vm")) return state;
+        if (!window.TransforkNew.FACTORY.MANAGER?.guard?.(LINE, STATION, FILE, "vm")) return { status: "stop", reason: "guardian blocked", station: STATION };
         try {
             state.vm = window.TransforkNew.SYSTEM?.vm?.get?.() || null;
             window.TransforkNew.SYSTEM?.debug?.log?.("FACTORY station vm", {
                 vm: state.vm,
                 vmState: window.TransforkNew.SYSTEM?.VM?.state
             });
-            return state;
+            if (!state.vm) return { status: "stop", reason: "vm missing", station: STATION };
+            return { status: "done", station: STATION };
         } catch (error) {
             window.TransforkNew.SYSTEM?.debug?.error?.(FILE + " vm", error);
-            return state;
+            return { status: "stop", reason: "vm crashed", station: STATION, error };
         }
     }
 

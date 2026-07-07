@@ -13,13 +13,13 @@ window.TransforkNew.FACTORY = window.TransforkNew.FACTORY || {};
     window.TransforkNew.FACTORY.MANAGER?.register?.({ id: ID, file: FILE, functionName: "preview", purpose: PURPOSE, line: LINE, station: STATION });
 
     function preview(state = {}) {
-        if (!window.TransforkNew.FACTORY.MANAGER?.guard?.(LINE, STATION, FILE, "preview")) return state;
+        if (!window.TransforkNew.FACTORY.MANAGER?.guard?.(LINE, STATION, FILE, "preview")) return { status: "stop", reason: "guardian blocked", station: STATION };
         try {
             state.previewReady = true;
-            return state;
+            return { status: "done", station: STATION };
         } catch (error) {
             window.TransforkNew.SYSTEM?.debug?.error?.(FILE + " preview", error);
-            return state;
+            return { status: "stop", reason: "preview crashed", station: STATION, error };
         }
     }
 

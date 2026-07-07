@@ -15,7 +15,7 @@ window.TransforkNew.INPUT.SHORTCUTS = window.TransforkNew.INPUT.SHORTCUTS || {};
         functionName: "toggleR",
         purpose: "R key toggles TransforkNew transform overlay",
         manager: "KEY",
-        station: 3
+        station: 5
     });
 
     function debug(label, data) {
@@ -23,7 +23,9 @@ window.TransforkNew.INPUT.SHORTCUTS = window.TransforkNew.INPUT.SHORTCUTS || {};
     }
 
     function toggleR() {
-        if (!api.KEY_MANAGER?.guard?.(3, FILE, "toggleR")) return;
+        if (!api.KEY_MANAGER?.guard?.(5, FILE, "toggleR")) {
+            return { status: "stop", reason: "KEY guardian blocked toggleR" };
+        }
 
         try {
             debug("toggle start");
@@ -46,7 +48,7 @@ window.TransforkNew.INPUT.SHORTCUTS = window.TransforkNew.INPUT.SHORTCUTS || {};
 
             if (!shortcuts) {
                 api.SYSTEM?.debug?.warn?.("R shortcuts missing");
-                return;
+                return { status: "stop", reason: "shortcuts missing" };
             }
 
             shortcuts.rVisible = !shortcuts.rVisible;
@@ -68,14 +70,17 @@ window.TransforkNew.INPUT.SHORTCUTS = window.TransforkNew.INPUT.SHORTCUTS || {};
                 if (!state?.box?.visible) {
                     debug("box not visible, resetting rVisible false");
                     shortcuts.rVisible = false;
+                    return { status: "stop", reason: "box not visible", state };
                 }
-                return;
+                return { status: "done", action: "show", state };
             }
 
             debug("hide requested");
             api.UI?.elements?.BOUNDINGBOX?.hide?.(box);
+            return { status: "done", action: "hide" };
         } catch (error) {
-            api.KEY_MANAGER?.sleeper?.(error, FILE, "toggleR", 3);
+            api.KEY_MANAGER?.sleeper?.(error, FILE, "toggleR", 5);
+            return { status: "stop", reason: "toggleR crashed", error };
         }
     }
 
@@ -99,7 +104,6 @@ window.TransforkNew.INPUT.SHORTCUTS = window.TransforkNew.INPUT.SHORTCUTS || {};
 
         api.INPUT.SHORTCUTS.toggleR = toggleR;
         debug("registered");
-
     }
 
     api.INPUT.SHORTCUTS.toggleR = toggleR;

@@ -17,11 +17,13 @@
         functionName: "requestTransformActivation",
         purpose: "R shortcut requests transform activation",
         manager: "KEY",
-        station: 2
+        station: 5
     });
 
     function requestTransformActivation(event) {
-        if (!window.TransforkNew?.KEY_MANAGER?.guard?.(2, FILE, "requestTransformActivation")) return false;
+        if (!window.TransforkNew?.KEY_MANAGER?.guard?.(5, FILE, "requestTransformActivation")) {
+            return { status: "stop", reason: "KEY guardian blocked requestTransformActivation" };
+        }
 
         try {
             console.log("[R] =================================");
@@ -30,40 +32,30 @@
 
             if (window.TransforkNewMAR && !window.TransforkNewMAR.isOn(ownerKey)) {
                 console.warn("[R] stopped: MAR owner is off", ownerKey);
-                return false;
+                return { status: "stop", reason: "MAR owner off" };
             }
-
-            let started = false;
 
             console.log("[R] TransforkNew", window.TransforkNew);
             console.log("[R] INPUT", window.TransforkNew?.INPUT);
             console.log("[R] SHORTCUTS", window.TransforkNew?.INPUT?.SHORTCUTS);
             console.log("[R] toggleR", window.TransforkNew?.INPUT?.SHORTCUTS?.toggleR);
 
-            try {
-                console.log("[R] before toggleR check");
-
-                if (typeof window.TransforkNew?.INPUT?.SHORTCUTS?.toggleR === "function") {
-                    console.log("[R] calling TransforkNew.INPUT.SHORTCUTS.toggleR()");
-                    window.TransforkNew.KEY_MANAGER?.setStation?.(3);
-                    window.TransforkNew.INPUT.SHORTCUTS.toggleR();
-                    window.TransforkNew.KEY_MANAGER?.setStation?.(2);
-                    console.log("[R] returned from toggleR()");
-                    started = true;
-                } else {
-                    console.warn("[R] toggleR missing; no fallback executed");
-                }
-            } catch (error) {
-                window.TransforkNew.KEY_MANAGER?.setStation?.(2);
-                window.TransforkNew.KEY_MANAGER?.sleeper?.(error, FILE, "requestTransformActivation.toggleR", 3);
+            if (typeof window.TransforkNew?.INPUT?.SHORTCUTS?.toggleR !== "function") {
+                console.warn("[R] toggleR missing; no fallback executed");
+                return { status: "stop", reason: "toggleR missing" };
             }
 
-            console.log("[R] callback finished", { started });
+            const report = window.TransforkNew.INPUT.SHORTCUTS.toggleR();
+            if (!report || typeof report !== "object" || !report.status) {
+                return { status: "stop", reason: "toggleR returned no report" };
+            }
+
+            console.log("[R] callback finished", report);
             console.log("[R] =================================");
-            return started;
+            return report;
         } catch (error) {
-            window.TransforkNew.KEY_MANAGER?.sleeper?.(error, FILE, "requestTransformActivation", 2);
-            return false;
+            window.TransforkNew.KEY_MANAGER?.sleeper?.(error, FILE, "requestTransformActivation", 5);
+            return { status: "stop", reason: "requestTransformActivation crashed", error };
         }
     }
 

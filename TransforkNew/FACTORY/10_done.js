@@ -13,13 +13,13 @@ window.TransforkNew.FACTORY = window.TransforkNew.FACTORY || {};
     window.TransforkNew.FACTORY.MANAGER?.register?.({ id: ID, file: FILE, functionName: "doneStation", purpose: PURPOSE, line: LINE, station: STATION });
 
     function doneStation(state = {}) {
-        if (!window.TransforkNew.FACTORY.MANAGER?.guard?.(LINE, STATION, FILE, "doneStation")) return state;
+        if (!window.TransforkNew.FACTORY.MANAGER?.guard?.(LINE, STATION, FILE, "doneStation")) return { status: "stop", reason: "guardian blocked", station: STATION };
         try {
             state.complete = true;
-            return state;
+            return { status: "done", station: STATION };
         } catch (error) {
             window.TransforkNew.SYSTEM?.debug?.error?.(FILE + " doneStation", error);
-            return state;
+            return { status: "stop", reason: "doneStation crashed", station: STATION, error };
         }
     }
 

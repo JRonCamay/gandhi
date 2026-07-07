@@ -11,15 +11,18 @@ window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG = window.TransforkNew.UI
     const FILE = "TransforkNew/UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAG/begin.js";
     const STATION = 1;
     const PURPOSE = "move drag begin captures initial box and button state";
+    const DRAG = window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG;
 
     window.TransforkNew.SYSTEM?.REGISTRY?.register?.({ id: "MOVE_DRAG.begin", file: FILE, functionName: "begin", purpose: PURPOSE, manager: "MOVE_DRAG", station: STATION });
 
-    function begin(button, event) {
-        if (!window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG.guard?.(STATION, FILE, "begin")) return false;
+    function begin(ctx) {
+        if (!DRAG.guard?.(STATION, FILE, "begin")) return DRAG.stop?.("guardian blocked begin");
 
         try {
+            const button = ctx.button;
+            const event = ctx.event;
             const box = window.TransforkNew.UI?.elements?.boundingBox;
-            if (!button?.node || !box?.node || !box.visible) return false;
+            if (!button?.node || !box?.node || !box.visible) return DRAG.stop?.("button or box not ready");
             event.preventDefault();
             event.stopPropagation();
             event.stopImmediatePropagation();
@@ -43,12 +46,13 @@ window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG = window.TransforkNew.UI
             box.previewTop = boxRect.top;
             box.width = boxRect.width;
             box.height = boxRect.height;
-            return true;
+            return DRAG.done?.({ station: STATION });
         } catch (error) {
-            window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG.sleeper?.(error, FILE, "begin", STATION);
-            return false;
+            DRAG.sleeper?.(error, FILE, "begin", STATION);
+            return DRAG.stop?.("begin crashed", { error });
         }
     }
 
-    window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG.begin = begin;
+    DRAG.begin = begin;
+    DRAG.registerStation?.(STATION, begin, { file: FILE, functionName: "begin" });
 })();

@@ -13,13 +13,13 @@ window.TransforkNew.FACTORY = window.TransforkNew.FACTORY || {};
     window.TransforkNew.FACTORY.MANAGER?.register?.({ id: ID, file: FILE, functionName: "refresh", purpose: PURPOSE, line: LINE, station: STATION });
 
     function refresh(state = {}) {
-        if (!window.TransforkNew.FACTORY.MANAGER?.guard?.(LINE, STATION, FILE, "refresh")) return state;
+        if (!window.TransforkNew.FACTORY.MANAGER?.guard?.(LINE, STATION, FILE, "refresh")) return { status: "stop", reason: "guardian blocked", station: STATION };
         try {
             window.TransforkNew.REFRESH.state.lastRefresh = state;
-            return state;
+            return { status: "done", station: STATION };
         } catch (error) {
             window.TransforkNew.SYSTEM?.debug?.error?.(FILE + " refresh", error);
-            return state;
+            return { status: "stop", reason: "refresh crashed", station: STATION, error };
         }
     }
 

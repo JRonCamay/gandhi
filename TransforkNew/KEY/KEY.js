@@ -12,12 +12,67 @@
     let enabled = true;
     let activeLine = null;
 
+    function makeReport(status, extra = {}) {
+        return Object.assign({ status }, extra);
+    }
+
     const keyManager = {
         line: "KEY",
-        currStation: 1,
-        setStation(station) {
-            this.currStation = station;
+        currStation: 0,
+        stations: {},
+        context: null,
+        lastReport: null,
+
+        register(station, fn, meta = {}) {
+            this.stations[station] = { fn, meta };
         },
+
+        start(context) {
+            this.context = context;
+            this.currStation = 1;
+            return this.process();
+        },
+
+        process() {
+            while (this.currStation > 0) {
+                const entry = this.stations[this.currStation];
+                if (!entry || typeof entry.fn !== "function") {
+                    return this.stop("missing station function");
+                }
+
+                let report = null;
+                try {
+                    report = entry.fn(this.context);
+                } catch (error) {
+                    this.sleeper(error, FILE, entry.meta?.functionName || "unknown", this.currStation);
+                    return this.stop("station crashed");
+                }
+
+                if (!report || typeof report !== "object" || !report.status) {
+                    return this.stop("station returned no report");
+                }
+
+                this.lastReport = report;
+
+                if (report.status === "done") {
+                    this.currStation += 1;
+                    continue;
+                }
+
+                if (report.status === "wait") {
+                    return report;
+                }
+
+                if (report.status === "stop") {
+                    return this.stop(report.reason || "station stopped");
+                }
+
+                return this.stop("unknown station report");
+            }
+
+            return makeReport("stop", { reason: "line inactive" });
+        },
+
         guard(station, file, functionName) {
             const allowed = this.currStation === station;
             if (!allowed) {
@@ -30,6 +85,20 @@
             }
             return allowed;
         },
+
+        done(extra = {}) {
+            return makeReport("done", extra);
+        },
+
+        wait(extra = {}) {
+            return makeReport("wait", extra);
+        },
+
+        stop(reason, extra = {}) {
+            this.currStation = 0;
+            return makeReport("stop", Object.assign({ reason }, extra));
+        },
+
         sleeper(error, file, functionName, station) {
             window.TransforkNew?.SYSTEM?.debug?.error?.("KEY sleeper catch", {
                 file,
@@ -42,15 +111,6 @@
 
     window.TransforkNew = window.TransforkNew || {};
     window.TransforkNew.KEY_MANAGER = keyManager;
-
-    window.TransforkNew.SYSTEM?.REGISTRY?.register?.({
-        id: "KEY.dispatch",
-        file: FILE,
-        functionName: "dispatch",
-        purpose: "single global keydown dispatcher",
-        manager: "KEY",
-        station: 1
-    });
 
     function normalizeKey(key) {
         return String(key || "").toLowerCase();
@@ -116,70 +176,87 @@
         activeLine = null;
     }
 
-    function runRNoMatchFallback(event) {
-        if (event?.key?.toLowerCase?.() !== "r") return false;
-        console.warn("[TN LOADER] KEY R has no registered shortcut", {
-            registry,
-            registered: window.TransforkNew?.REGISTRY?.list?.() || []
-        });
-        return false;
+    function station01_validateEnabled(ctx) {
+        if (!keyManager.guard(1, FILE, "station01_validateEnabled")) return keyManager.stop("blocked station 1");
+        if (!enabled) return keyManager.stop("key disabled");
+        if (ctx.event?.key?.toLowerCase?.() === "r") {
+            console.log("[TN LOADER] KEY dispatch saw R", {
+                enabled,
+                registryCount: registry.length,
+                activeLine,
+                target: ctx.event.target,
+                activeElement: document.activeElement
+            });
+        }
+        return keyManager.done({ station: 1 });
     }
 
-    function dispatch(event) {
-        if (!keyManager.guard(1, FILE, "dispatch")) return;
-
-        try {
-            if (event?.key?.toLowerCase?.() === "r") {
-                console.log("[TN LOADER] KEY dispatch saw R", {
-                    enabled,
-                    registryCount: registry.length,
-                    activeLine,
-                    target: event.target,
-                    activeElement: document.activeElement
+    function station02_findShortcut(ctx) {
+        if (!keyManager.guard(2, FILE, "station02_findShortcut")) return keyManager.stop("blocked station 2");
+        ctx.shortcut = typeof api.findShortcut === "function" ? api.findShortcut(ctx.event) : defaultFindShortcut(ctx.event);
+        if (!ctx.shortcut) {
+            if (ctx.event?.key?.toLowerCase?.() === "r") {
+                console.warn("[TN LOADER] KEY R has no registered shortcut", {
+                    registry,
+                    registered: window.TransforkNew?.REGISTRY?.list?.() || []
                 });
             }
-            if (!enabled) return;
+            return keyManager.stop("no shortcut matched");
+        }
+        return keyManager.done({ station: 2 });
+    }
 
-            const shortcut = typeof api.findShortcut === "function"
-                ? api.findShortcut(event)
-                : defaultFindShortcut(event);
+    function station03_focusGuard(ctx) {
+        if (!keyManager.guard(3, FILE, "station03_focusGuard")) return keyManager.stop("blocked station 3");
+        if (!focusGuard(ctx.event, ctx.shortcut)) {
+            if (ctx.event?.key?.toLowerCase?.() === "r") console.log("[TN LOADER] KEY R blocked by focusGuard", ctx.shortcut);
+            return keyManager.stop("focus blocked");
+        }
+        return keyManager.done({ station: 3 });
+    }
 
-            if (!shortcut) {
-                if (event?.key?.toLowerCase?.() === "r") console.log("[TN LOADER] KEY no shortcut matched R", registry);
-                runRNoMatchFallback(event);
-                return;
-            }
-            if (!focusGuard(event, shortcut)) {
-                if (event?.key?.toLowerCase?.() === "r") console.log("[TN LOADER] KEY R blocked by focusGuard", shortcut);
-                return;
-            }
+    function station04_acquireLine(ctx) {
+        if (!keyManager.guard(4, FILE, "station04_acquireLine")) return keyManager.stop("blocked station 4");
+        shieldEvent(ctx.event);
+        ctx.shortcutId = ctx.shortcut.id || "shortcut." + registry.indexOf(ctx.shortcut);
+        if (!acquireLine(ctx.shortcutId)) return keyManager.stop("line busy");
+        return keyManager.done({ station: 4 });
+    }
 
-            shieldEvent(event);
+    function station05_runShortcut(ctx) {
+        if (!keyManager.guard(5, FILE, "station05_runShortcut")) return keyManager.stop("blocked station 5");
+        if (ctx.event?.key?.toLowerCase?.() === "r") console.log("[TN LOADER] KEY running R shortcut", ctx.shortcut);
+        const report = ctx.shortcut.run(ctx.event);
+        if (!report || typeof report !== "object" || !report.status) {
+            return keyManager.stop("shortcut returned no report");
+        }
+        if (report.status === "done") return keyManager.done({ station: 5, shortcutReport: report });
+        if (report.status === "wait") return keyManager.wait({ station: 5, shortcutReport: report });
+        return keyManager.stop(report.reason || "shortcut stopped");
+    }
 
-            const id = shortcut.id || "shortcut." + registry.indexOf(shortcut);
-            if (!acquireLine(id)) return;
+    function station06_releaseLine(ctx) {
+        if (!keyManager.guard(6, FILE, "station06_releaseLine")) return keyManager.stop("blocked station 6");
+        releaseLine(ctx.shortcutId);
+        return keyManager.done({ station: 6 });
+    }
 
-            try {
-                if (event?.key?.toLowerCase?.() === "r") console.log("[TN LOADER] KEY running R shortcut", shortcut);
-                keyManager.setStation(2);
-                const result = shortcut.run(event);
-                keyManager.setStation(1);
-                if (result && typeof result.finally === "function") {
-                    result.finally(() => {
-                        keyManager.setStation(1);
-                        releaseLine(id);
-                    });
-                    return;
-                }
-            } catch (error) {
-                keyManager.sleeper(error, FILE, "dispatch.shortcutRun", 2);
-            }
+    keyManager.register(1, station01_validateEnabled, { functionName: "station01_validateEnabled" });
+    keyManager.register(2, station02_findShortcut, { functionName: "station02_findShortcut" });
+    keyManager.register(3, station03_focusGuard, { functionName: "station03_focusGuard" });
+    keyManager.register(4, station04_acquireLine, { functionName: "station04_acquireLine" });
+    keyManager.register(5, station05_runShortcut, { functionName: "station05_runShortcut" });
+    keyManager.register(6, station06_releaseLine, { functionName: "station06_releaseLine" });
 
-            keyManager.setStation(1);
-            releaseLine(id);
+    window.TransforkNew.SYSTEM?.REGISTRY?.register?.({ id: "KEY.dispatch", file: FILE, functionName: "dispatch", purpose: "starts KEY manager pipeline", manager: "KEY", station: 0 });
+    window.TransforkNew.SYSTEM?.REGISTRY?.register?.({ id: "KEY.station05.runShortcut", file: FILE, functionName: "station05_runShortcut", purpose: "runs matched key shortcut", manager: "KEY", station: 5 });
+
+    function dispatch(event) {
+        try {
+            return keyManager.start({ event });
         } catch (error) {
-            keyManager.setStation(1);
-            keyManager.sleeper(error, FILE, "dispatch", 1);
+            keyManager.sleeper(error, FILE, "dispatch", 0);
+            return keyManager.stop("dispatch crashed");
         }
     }
 

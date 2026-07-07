@@ -9,24 +9,28 @@ window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG = window.TransforkNew.UI
     "use strict";
 
     const FILE = "TransforkNew/UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAG/simulate.js";
-    const STATION = 4;
+    const STATION = 3;
     const PURPOSE = "move drag calculates preview delta";
+    const DRAG = window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG;
 
     window.TransforkNew.SYSTEM?.REGISTRY?.register?.({ id: "MOVE_DRAG.simulate", file: FILE, functionName: "simulate", purpose: PURPOSE, manager: "MOVE_DRAG", station: STATION });
 
-    function simulate(button) {
-        if (!window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG.guard?.(STATION, FILE, "simulate")) return null;
+    function simulate(ctx) {
+        if (!DRAG.guard?.(STATION, FILE, "simulate")) return DRAG.stop?.("guardian blocked simulate");
 
         try {
-            if (!button?.dragging) return null;
+            const button = ctx.button;
+            if (!button?.dragging) return DRAG.stop?.("button not dragging");
             button.dragDx = button.latestMouseX - button.startMouseX;
             button.dragDy = button.latestMouseY - button.startMouseY;
-            return { dx: button.dragDx, dy: button.dragDy };
+            ctx.simulation = { dx: button.dragDx, dy: button.dragDy };
+            return DRAG.done?.({ station: STATION, simulation: ctx.simulation });
         } catch (error) {
-            window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG.sleeper?.(error, FILE, "simulate", STATION);
-            return null;
+            DRAG.sleeper?.(error, FILE, "simulate", STATION);
+            return DRAG.stop?.("simulate crashed", { error });
         }
     }
 
-    window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG.simulate = simulate;
+    DRAG.simulate = simulate;
+    DRAG.registerStation?.(STATION, simulate, { file: FILE, functionName: "simulate" });
 })();

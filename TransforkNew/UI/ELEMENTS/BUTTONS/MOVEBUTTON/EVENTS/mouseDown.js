@@ -8,26 +8,34 @@ window.TransforkNew.UI.elements.buttons.MOVEBUTTON.EVENTS = window.TransforkNew.
 (function () {
     "use strict";
 
-function mouseDown(button) {
+    function mouseDown(button) {
         if (!button?.node || button.mouseDownAttached) return button?.node || null;
+
+        const DRAG = window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG;
+
         const onMouseMove = event => {
-            window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG?.setStation?.(2);
-            window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG?.capture?.(button, event);
+            if (!button.frameRequested) {
+                button.frameRequested = true;
+                requestAnimationFrame(() => {
+                    button.frameRequested = false;
+                    DRAG?.start?.({ button, event }, 2, 5);
+                });
+            }
         };
+
         const onMouseUp = event => {
-            window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG?.setStation?.(7);
-            window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG?.end?.(button, event);
+            DRAG?.start?.({ button, event }, 6, 6);
             document.removeEventListener("mousemove", onMouseMove, true);
             document.removeEventListener("mouseup", onMouseUp, true);
         };
+
         button.node.addEventListener("mousedown", event => {
-            window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG?.setStation?.(1);
-            const started = window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG?.begin?.(button, event);
-            window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG?.setStation?.(0);
-            if (!started) return;
+            const report = DRAG?.start?.({ button, event }, 1, 1);
+            if (!report || report.status !== "done") return;
             document.addEventListener("mousemove", onMouseMove, true);
             document.addEventListener("mouseup", onMouseUp, true);
         }, true);
+
         button.mouseDownAttached = true;
         return button.node;
     }

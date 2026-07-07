@@ -13,14 +13,15 @@ window.TransforkNew.FACTORY = window.TransforkNew.FACTORY || {};
     window.TransforkNew.FACTORY.MANAGER?.register?.({ id: ID, file: FILE, functionName: "bounds", purpose: PURPOSE, line: LINE, station: STATION });
 
     function bounds(state = {}) {
-        if (!window.TransforkNew.FACTORY.MANAGER?.guard?.(LINE, STATION, FILE, "bounds")) return state;
+        if (!window.TransforkNew.FACTORY.MANAGER?.guard?.(LINE, STATION, FILE, "bounds")) return { status: "stop", reason: "guardian blocked", station: STATION };
         try {
             state.bounds = state.drawable && typeof state.drawable.getAABB === "function" ? state.drawable.getAABB() : null;
             window.TransforkNew.SYSTEM?.debug?.log?.("FACTORY station bounds", state.bounds);
-            return state;
+            if (!state.bounds) return { status: "stop", reason: "bounds missing", station: STATION };
+            return { status: "done", station: STATION };
         } catch (error) {
             window.TransforkNew.SYSTEM?.debug?.error?.(FILE + " bounds", error);
-            return state;
+            return { status: "stop", reason: "bounds crashed", station: STATION, error };
         }
     }
 
