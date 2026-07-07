@@ -10,10 +10,8 @@ window.Chad = window.Chad || {};
     function clickPaintButton(label) {
         const win = paintWindow();
         if (!win) return false;
-
         const button = Array.from(win.querySelectorAll("button"))
             .find(btn => btn.textContent.trim() === label);
-
         if (!button) return false;
         button.click();
         return true;
@@ -22,11 +20,9 @@ window.Chad = window.Chad || {};
     function suppressPasteDialogs() {
         const observer = new MutationObserver(() => {
             if (!paintWindow()) return;
-
             document.querySelectorAll("body > div").forEach(node => {
                 const text = node.textContent || "";
-                const z = Number(node.style && node.style.zIndex || 0);
-
+                const z = Number((node.style && node.style.zIndex) || 0);
                 if (
                     z >= 1000008 &&
                     /Image pasted|Text pasted|pasted on canvas|You can now draw over it/i.test(text)
@@ -35,31 +31,43 @@ window.Chad = window.Chad || {};
                 }
             });
         });
-
         observer.observe(document.body, {
             childList: true,
             subtree: false
         });
     }
 
-    document.addEventListener("keydown", event => {
-        if (!paintWindow()) return;
-
-        const key = event.key.toLowerCase();
-
+    function keyHandler(event) {
+        if (!paintWindow()) return false;
+        const key = event.key?.toLowerCase?.();
         if (event.ctrlKey && !event.shiftKey && key === "z") {
             event.preventDefault();
             event.stopPropagation();
-            clickPaintButton("↶");
-            return;
+            clickPaintButton("\u21B6");
+            return true;
         }
-
         if (event.ctrlKey && event.shiftKey && key === "z") {
             event.preventDefault();
             event.stopPropagation();
-            clickPaintButton("↷");
+            clickPaintButton("\u21B7");
+            return true;
         }
-    }, true);
+        return false;
+    }
+
+    if (window.KEY && typeof window.KEY.register === "function") {
+        window.KEY.register(keyHandler);
+    } else {
+        document.addEventListener(
+            "keydown",
+            event => {
+                if (keyHandler(event)) {
+                    event.stopImmediatePropagation();
+                }
+            },
+            true
+        );
+    }
 
     suppressPasteDialogs();
 })();
