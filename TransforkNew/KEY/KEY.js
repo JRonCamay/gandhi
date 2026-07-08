@@ -53,6 +53,7 @@
         line: "KEY",
         name: "KEY",
         currStation: 0,
+        maxStation: 6,
         stations: {},
         context: null,
         lastReport: null,
@@ -89,7 +90,16 @@
                 this.lastReport = report;
 
                 if (report.status === "done") {
+                    const finishedStation = this.currStation;
                     this.submitEndSession();
+                    if (finishedStation >= this.maxStation) {
+                        this.currStation = 0;
+                        return makeReport("done", {
+                            line: this.line,
+                            station: finishedStation,
+                            reason: "line complete"
+                        });
+                    }
                     continue;
                 }
 
@@ -389,6 +399,16 @@
     window.TransforkNew.SYSTEM?.REGISTRY?.register?.({ id: "KEY.station05.runShortcut", file: FILE, functionName: "station05_runShortcut", purpose: "runs matched key shortcut", manager: "KEY", station: 5 });
     window.TransforkNew.SYSTEM?.REGISTRY?.register?.({ id: "KEY.station06.releaseLine", file: FILE, functionName: "station06_releaseLine", purpose: "releases KEY line ownership", manager: "KEY", station: 6 });
 
+    function rawKeyProbe(event) {
+        if (event?.key?.toLowerCase?.() !== "r") return;
+        console.log("[TN KEY RAW] keydown observed", {
+            enabled,
+            activeLine,
+            registryCount: registry.length,
+            managerStation: keyManager.currStation
+        });
+    }
+
     function dispatch(event) {
         try {
             if (event?.key?.toLowerCase?.() === "r") {
@@ -441,6 +461,7 @@
                 activeLine = null;
                 registry.length = 0;
                 window.removeEventListener("keydown", dispatch, true);
+                window.removeEventListener("keydown", rawKeyProbe, true);
             } catch (error) {
                 keyManager.sleeper(error, FILE, "destroy", 0);
             }
@@ -448,6 +469,7 @@
     });
 
     window.KEY = api;
+    window.addEventListener("keydown", rawKeyProbe, true);
     window.addEventListener("keydown", dispatch, true);
     console.log("[TN LOADER] KEY listener attached but disabled until loader ready");
 })();
