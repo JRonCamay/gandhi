@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gandhi TransforkNew Loader
 // @namespace    http://tampermonkey.net/
-// @version      1.2.5-dev
+// @version      1.2.7-manager
 // @description  Loads TransforkNew clean architecture modules
 // @match        *://www.cocrea.world/*
 // @grant        none
@@ -10,18 +10,27 @@
 (function () {
     "use strict";
 
-    const VERSION = ["1", "2", "5-dev"].join(".");
+    const VERSION = ["1", "2", "7-manager"].join(".");
     const base = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/TransforkNew/";
+    console.log("[TN LOADER] userscript started", { VERSION, base, url: location.href });
     const modules = [
-        // Load KEY subsystem first to centralize keyboard shortcuts
         "KEY/KEY.js",
         "KEY/register.js",
         "KEY/shortcuts.js",
         "KEY/hotReload.js",
-        // Then load TransforkNew system modules
         "SYSTEM/MAR.js",
         "SYSTEM/version.js",
+        "SYSTEM/debug.js",
+        "SYSTEM/REGISTRY/state.js",
+        "SYSTEM/REGISTRY/register.js",
+        "SYSTEM/REGISTRY/find.js",
+        "SYSTEM/REGISTRY/rollcall.js",
+        "SYSTEM/REGISTRY/index.js",
+        "SYSTEM/VM/state.js",
         "SYSTEM/VM/find.js",
+        "SYSTEM/VM/waitForVM.js",
+        "SYSTEM/VM/get.js",
+        "SYSTEM/VM/index.js",
         "SYSTEM/VM/getSelectedTarget.js",
         "SYSTEM/VM/getDrawable.js",
         "SYSTEM/VM/getCanvas.js",
@@ -60,9 +69,45 @@
         "TOOLS/factoryLine.js",
         "UTILS/coords.js",
         "UTILS/COORDS/boundsToScreenRect.js",
+        "FACTORY/MANAGER/state.js",
+        "FACTORY/MANAGER/create.js",
+        "FACTORY/MANAGER/register.js",
+        "FACTORY/MANAGER/guard.js",
+        "FACTORY/MANAGER/advance.js",
+        "FACTORY/MANAGER/run.js",
+        "FACTORY/MANAGER/index.js",
+        "FACTORY/01_system.js",
+        "FACTORY/02_vm.js",
+        "FACTORY/03_selection.js",
+        "FACTORY/04_drawable.js",
+        "FACTORY/05_bounds.js",
+        "FACTORY/06_boundingBox.js",
+        "FACTORY/07_buttons.js",
+        "FACTORY/08_preview.js",
+        "FACTORY/09_refresh.js",
+        "FACTORY/10_done.js",
+        "FACTORY/run.js",
         "INPUT/keyboard.js",
         "INPUT/shortcuts.js",
         "INPUT/SHORTCUTS/registerR.js",
+        "UI/ELEMENTS/BOUNDINGBOX/STATE/create.js",
+        "UI/ELEMENTS/BOUNDINGBOX/STATE/reset.js",
+        "UI/ELEMENTS/BOUNDINGBOX/STATE/index.js",
+        "UI/ELEMENTS/BOUNDINGBOX/DRAW/createNode.js",
+        "UI/ELEMENTS/BOUNDINGBOX/DRAW/applyRect.js",
+        "UI/ELEMENTS/BOUNDINGBOX/DRAW/index.js",
+        "UI/ELEMENTS/BOUNDINGBOX/REFRESH/readTarget.js",
+        "UI/ELEMENTS/BOUNDINGBOX/REFRESH/readDrawable.js",
+        "UI/ELEMENTS/BOUNDINGBOX/REFRESH/readBounds.js",
+        "UI/ELEMENTS/BOUNDINGBOX/REFRESH/convertBounds.js",
+        "UI/ELEMENTS/BOUNDINGBOX/REFRESH/apply.js",
+        "UI/ELEMENTS/BOUNDINGBOX/REFRESH/index.js",
+        "UI/ELEMENTS/BOUNDINGBOX/PREVIEW/applyPosition.js",
+        "UI/ELEMENTS/BOUNDINGBOX/PREVIEW/applyDelta.js",
+        "UI/ELEMENTS/BOUNDINGBOX/PREVIEW/index.js",
+        "UI/ELEMENTS/BOUNDINGBOX/VISIBILITY/show.js",
+        "UI/ELEMENTS/BOUNDINGBOX/VISIBILITY/hide.js",
+        "UI/ELEMENTS/BOUNDINGBOX/VISIBILITY/index.js",
         "UI/ELEMENTS/boundingBox.js",
         "UI/ELEMENTS/BOUNDINGBOX/draw.js",
         "UI/ELEMENTS/BOUNDINGBOX/update.js",
@@ -80,6 +125,25 @@
         "UI/ELEMENTS/BUTTONS/SCALEBUTTON/mouseDown.js",
         "UI/ELEMENTS/BUTTONS/SCALEBUTTON/mouseMove.js",
         "UI/ELEMENTS/BUTTONS/SCALEBUTTON/mouseUp.js",
+        "UI/ELEMENTS/BUTTONS/MOVEBUTTON/STATE/create.js",
+        "UI/ELEMENTS/BUTTONS/MOVEBUTTON/STATE/reset.js",
+        "UI/ELEMENTS/BUTTONS/MOVEBUTTON/STATE/index.js",
+        "UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAW/createNode.js",
+        "UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAW/applyPosition.js",
+        "UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAW/attachToBox.js",
+        "UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAW/index.js",
+        "UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAG/index.js",
+        "UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAG/begin.js",
+        "UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAG/capture.js",
+        "UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAG/simulate.js",
+        "UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAG/previewButton.js",
+        "UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAG/previewBox.js",
+        "UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAG/end.js",
+        "UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAG/run.js",
+        "UI/ELEMENTS/BUTTONS/MOVEBUTTON/EVENTS/mouseDown.js",
+        "UI/ELEMENTS/BUTTONS/MOVEBUTTON/EVENTS/mouseMove.js",
+        "UI/ELEMENTS/BUTTONS/MOVEBUTTON/EVENTS/mouseUp.js",
+        "UI/ELEMENTS/BUTTONS/MOVEBUTTON/EVENTS/index.js",
         "UI/ELEMENTS/BUTTONS/moveButton.js",
         "UI/ELEMENTS/BUTTONS/MOVEBUTTON/draw.js",
         "UI/ELEMENTS/BUTTONS/MOVEBUTTON/mouseDown.js",
@@ -156,14 +220,18 @@
         if (window.KEY && typeof window.KEY.destroy === "function") window.KEY.destroy();
         window.KEY = null;
         window.__TransforkNewLoader = false;
-        window.TransforkNew = { VERSION };
+        window.TransforkNew = window.TransforkNew || {};
+        window.TransforkNew.VERSION = VERSION;
     }
 
     async function loadModule(name, token) {
+        console.log("[TN LOADER] fetching", name);
         const response = await fetch(base + name + "?v=" + token, { cache: "no-store" });
         if (!response.ok) throw new Error("Failed to fetch " + name + ": " + response.status);
         const text = await response.text();
         Function(text + "\n//# sourceURL=" + base + name + "?v=" + token)();
+        window.TransforkNew?.SYSTEM?.REGISTRY?.markLoaded?.(name);
+        console.log("[TN LOADER] loaded", name);
     }
 
     async function loadAll(reason) {
@@ -173,7 +241,11 @@
             if (window.__TransforkNewLoader && reason !== "hot-reload") return;
             window.__TransforkNewLoader = true;
             const token = cacheToken();
+            console.log("[TN LOADER] loadAll begin", { reason, token, moduleCount: modules.length });
             for (const name of modules) await loadModule(name, token);
+            window.KEY?.setEnabled?.(true);
+            console.log("[TN LOADER] KEY enabled after full module load");
+            window.TransforkNew?.SYSTEM?.REGISTRY?.rollcall?.();
             console.log("TransforkNew loader active " + VERSION + " (" + reason + ").");
             showToast("TransforkNew " + VERSION + " loaded");
         }

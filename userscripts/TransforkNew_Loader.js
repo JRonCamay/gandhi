@@ -220,7 +220,8 @@
         if (window.KEY && typeof window.KEY.destroy === "function") window.KEY.destroy();
         window.KEY = null;
         window.__TransforkNewLoader = false;
-        window.TransforkNew = { VERSION };
+        window.TransforkNew = window.TransforkNew || {};
+        window.TransforkNew.VERSION = VERSION;
     }
 
     async function loadModule(name, token) {
@@ -242,6 +243,8 @@
             const token = cacheToken();
             console.log("[TN LOADER] loadAll begin", { reason, token, moduleCount: modules.length });
             for (const name of modules) await loadModule(name, token);
+            window.KEY?.setEnabled?.(true);
+            console.log("[TN LOADER] KEY enabled after full module load");
             window.TransforkNew?.SYSTEM?.REGISTRY?.rollcall?.();
             console.log("TransforkNew loader active " + VERSION + " (" + reason + ").");
             showToast("TransforkNew " + VERSION + " loaded");

@@ -9,7 +9,7 @@
     const FILE = "TransforkNew/KEY/KEY.js";
     const api = {};
     const registry = [];
-    let enabled = true;
+    let enabled = false;
     let activeLine = null;
 
     function makeReport(status, extra = {}) {
@@ -290,5 +290,5 @@
 
     window.KEY = api;
     window.addEventListener("keydown", dispatch, true);
-    console.log("[TN LOADER] KEY listener attached");
+    console.log("[TN LOADER] KEY listener attached but disabled until loader ready");
 })();
