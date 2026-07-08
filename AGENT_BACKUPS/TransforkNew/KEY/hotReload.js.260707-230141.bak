@@ -1,0 +1,45 @@
+(function () {
+    "use strict";
+
+    if (!window.KEY || typeof window.KEY.register !== "function") return;
+
+    window.KEY.register({
+        id: "hotReload.altA",
+        key: "a",
+        alt: true,
+        ctrl: false,
+        shift: false,
+        meta: false,
+        run(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+
+            let consumed = false;
+            const pending = [];
+
+            try {
+                if (window.TransforkNewLoader?.hotReload) {
+                    const result = window.TransforkNewLoader.hotReload();
+                    consumed = true;
+                    if (result && typeof result.finally === "function") pending.push(result);
+                } else {
+                    window.__TransforkNewPendingHotReload = true;
+                }
+            } catch (_) {}
+
+            try {
+                if (typeof window.TransforkHotReload === "function") {
+                    const result = window.TransforkHotReload();
+                    consumed = true;
+                    if (result && typeof result.finally === "function") pending.push(result);
+                } else {
+                    window.__TransforkPendingHotReload = true;
+                }
+            } catch (_) {}
+
+            if (pending.length) return Promise.allSettled(pending);
+            return consumed;
+        }
+    });
+})();

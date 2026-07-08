@@ -1,0 +1,53 @@
+(function () {
+    "use strict";
+
+    if (!window.KEY || typeof window.KEY.register !== "function") return;
+
+    function shouldIgnore(event) {
+        const active = document.activeElement;
+        const tag = active?.tagName;
+        return (
+            tag === "INPUT" ||
+            tag === "TEXTAREA" ||
+            active?.isContentEditable
+        );
+    }
+
+    window.KEY.register({
+        id: "transform.toggle",
+        key: "r",
+        alt: false,
+        ctrl: false,
+        shift: false,
+        meta: false,
+        run(event) {
+            if (shouldIgnore(event)) return;
+
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+
+            let consumed = false;
+
+            try {
+                if (window.TransforkNew?.INPUT?.SHORTCUTS?.toggleR) {
+                    window.TransforkNew.INPUT.SHORTCUTS.toggleR();
+                    consumed = true;
+                } else {
+                    window.__TransforkNewPendingR = true;
+                }
+            } catch (_) {}
+
+            try {
+                if (typeof window.__TransforkToggleTransformMode === "function") {
+                    window.__TransforkToggleTransformMode();
+                    consumed = true;
+                } else {
+                    window.__TransforkPendingRToggle = true;
+                }
+            } catch (_) {}
+
+            return consumed;
+        }
+    });
+})();

@@ -94,13 +94,16 @@
                 }
 
                 if (report.status === "wait") {
+                    this.releaseContextLine();
                     return report;
                 }
 
                 if (report.status === "stop") {
+                    this.releaseContextLine();
                     return this.stop(report.reason || "station stopped");
                 }
 
+                this.releaseContextLine();
                 return this.stop("unknown station report");
             }
 
@@ -125,6 +128,15 @@
             return this.currStation;
         },
 
+        releaseContextLine() {
+            try {
+                const ctx = this.context || {};
+                if (ctx.shortcutId) releaseLine(ctx.shortcutId);
+            } catch (error) {
+                this.sleeper(error, FILE, "releaseContextLine", this.currStation);
+            }
+        },
+
         done(extra = {}) {
             return makeReport("done", extra);
         },
@@ -134,6 +146,7 @@
         },
 
         stop(reason, extra = {}) {
+            this.releaseContextLine();
             this.currStation = 0;
             return makeReport("stop", Object.assign({ reason }, extra));
         },
@@ -378,6 +391,14 @@
 
     function dispatch(event) {
         try {
+            if (event?.key?.toLowerCase?.() === "r") {
+                console.log("[TN KEY] keydown received", {
+                    enabled,
+                    activeLine,
+                    registryCount: registry.length,
+                    currStation: keyManager.currStation
+                });
+            }
             return keyManager.start({ event });
         } catch (error) {
             keyManager.sleeper(error, FILE, "dispatch", 0);

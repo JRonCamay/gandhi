@@ -278,8 +278,14 @@
             const token = cacheToken();
             console.log("[TN LOADER] loadAll begin", { reason, token, moduleCount: modules.length });
             for (const name of modules) await loadModule(name, token);
+            window.TransforkNew?.INPUT?.keyboard?.init?.();
+            window.TransforkNew?.INPUT?.shortcuts?.init?.();
             window.KEY?.setEnabled?.(true);
-            console.log("[TN LOADER] KEY enabled after full module load");
+            console.log("[TN LOADER] KEY enabled after full module load", {
+                registryCount: window.KEY?.registry?.length || window.KEY?.shortcuts?.length || 0,
+                inputKeyboard: window.TransforkNew?.INPUT?.keyboard,
+                inputShortcuts: window.TransforkNew?.INPUT?.shortcuts
+            });
             window.TransforkNew?.SYSTEM?.REGISTRY?.rollcall?.();
             console.log("TransforkNew loader active " + VERSION + " (" + reason + ").");
             showToast("TransforkNew " + VERSION + " loaded");

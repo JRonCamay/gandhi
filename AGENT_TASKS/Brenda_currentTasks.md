@@ -1,42 +1,37 @@
-# Brenda Current Tasks
-
 Objective:
-Implement TransforkNew UI test: pressing R shows the new UI bounding box/buttons on the selected sprite. No transform operations yet.
+Implement revised Move Button drag controls box inside TransforkNew only.
 
-Status:
-Completed local implementation. Ready for Jay to push/test.
+Constraints:
+- Work only under TransforkNew/.
+- Mirror loader only to userscripts/TransforkNew_Loader.js because it is the TransforkNew userscript entry.
+- MOVE button is draggable.
+- Bounding box follows MOVE button delta.
+- Sprite must not move.
+- No target.setXY().
+- No snapshot, resize, rotate, sprite commit, or direct mousemove DOM update.
+- Keep modular folder-per-function structure.
 
-Files edited / created:
-- TransforkNew/Transfork_Loader.js
-- TransforkNew/SYSTEM/MAR.js
-- TransforkNew/SYSTEM/VM/getCanvas.js
-- TransforkNew/INPUT/SHORTCUTS/registerR.js
-- TransforkNew/UI/ELEMENTS/BOUNDINGBOX/draw.js
-- TransforkNew/UI/ELEMENTS/BOUNDINGBOX/hide.js
-- TransforkNew/UI/ELEMENTS/BOUNDINGBOX/refresh.js
-- TransforkNew/UI/ELEMENTS/BUTTONS/*/draw.js
-- TransforkNew/UI/ELEMENTS/BUTTONS/*/click.js
-- TransforkNew/DECLARATION_RECORD.md
-- TransforkNew/OMNI_GUARDIAN.md
+Files:
+- TransforkNew/...
+- userscripts/TransforkNew_Loader.js mirror only.
 
-Implementation:
-- Added TransforkNewMAR and loaded it first.
-- R shortcut now registers with MAR.
-- Pressing R toggles the UI overlay for selected sprite.
-- Refresh reads selected target, drawable AABB, renderer canvas, and converts Scratch bounds to screen rect.
-- Added UI-only button look for move/rotate/scale/flip/reset/alpha/width/height.
-- One-click buttons only suppress events for now; no transform operations.
+Pending subtasks:
+1. Add state/draw/preview/drag modules for bounding box and move button.
+2. Update loader order.
+3. Verify no setXY was introduced.
+4. Commit and push.
 
-Verification:
-- Confirmed loader contains SYSTEM/MAR.js and cache 260707-r-ui-test.
-- Confirmed status shows intended TransforkNew changes.
-- Browser test still required inside Cocrea/Gandhi.
+Engineering decisions:
+- Keep existing TransforkNew architecture.
+- Add new requested subfolders without modifying old Transfork/.
+- Mouse events owned by MOVEBUTTON/DRAG.
+- Box preview owned by BOUNDINGBOX/PREVIEW.
 
-Current stopping point:
-Jay should push/local test. Test: hard refresh, select sprite, press R. Box/buttons should appear; press R again hides.
+Stopping point:
+Implementation in progress.
 
 Questions:
 None.
 
 Timestamp:
-2026-07-07 Asia/Manila
+2026-07-08 Asia/Manila

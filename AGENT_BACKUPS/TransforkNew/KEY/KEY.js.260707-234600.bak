@@ -1,0 +1,127 @@
+(function () {
+    "use strict";
+
+    const previous = window.KEY;
+    if (previous && typeof previous.destroy === "function") previous.destroy();
+
+    const api = {};
+    const registry = [];
+    let enabled = true;
+    let activeLine = null;
+
+    function normalizeKey(key) {
+        return String(key || "").toLowerCase();
+    }
+
+    function modifierMatches(event, shortcut, prop, eventProp) {
+        if (typeof shortcut[prop] !== "boolean") return true;
+        return Boolean(event[eventProp]) === shortcut[prop];
+    }
+
+    function defaultShortcutMatches(event, shortcut) {
+        if (!shortcut || typeof shortcut.run !== "function") return false;
+        if (shortcut.disabled) return false;
+        if (event.repeat && !shortcut.repeat) return false;
+        if (shortcut.key && normalizeKey(event.key) !== normalizeKey(shortcut.key)) return false;
+        if (!modifierMatches(event, shortcut, "alt", "altKey")) return false;
+        if (!modifierMatches(event, shortcut, "ctrl", "ctrlKey")) return false;
+        if (!modifierMatches(event, shortcut, "shift", "shiftKey")) return false;
+        if (!modifierMatches(event, shortcut, "meta", "metaKey")) return false;
+        return true;
+    }
+
+    function defaultFindShortcut(event) {
+        for (const shortcut of registry) {
+            if (defaultShortcutMatches(event, shortcut)) return shortcut;
+        }
+        return null;
+    }
+
+    function isEditableTarget(target) {
+        if (!target) return false;
+        const element = target.nodeType === 1 ? target : target.parentElement;
+        if (!element) return false;
+        const tag = element.tagName;
+        return (
+            tag === "INPUT" ||
+            tag === "TEXTAREA" ||
+            tag === "SELECT" ||
+            Boolean(element.isContentEditable) ||
+            Boolean(element.closest?.("input, textarea, select, [contenteditable='true']"))
+        );
+    }
+
+    function focusGuard(event, shortcut) {
+        if (shortcut && shortcut.allowInEditable) return true;
+        return !isEditableTarget(event.target) && !isEditableTarget(document.activeElement);
+    }
+
+    function shieldEvent(event) {
+        event.preventDefault?.();
+        event.stopPropagation?.();
+        event.stopImmediatePropagation?.();
+    }
+
+    function acquireLine(id) {
+        if (activeLine) return false;
+        activeLine = id;
+        return true;
+    }
+
+    function releaseLine(id) {
+        if (activeLine !== id) return;
+        activeLine = null;
+    }
+
+    function dispatch(event) {
+        if (!enabled) return;
+
+        const shortcut = typeof api.findShortcut === "function"
+            ? api.findShortcut(event)
+            : defaultFindShortcut(event);
+
+        if (!shortcut) return;
+        if (!focusGuard(event, shortcut)) return;
+
+        shieldEvent(event);
+
+        const id = shortcut.id || "shortcut." + registry.indexOf(shortcut);
+        if (!acquireLine(id)) return;
+
+        try {
+            const result = shortcut.run(event);
+            if (result && typeof result.finally === "function") {
+                result.finally(() => releaseLine(id));
+                return;
+            }
+        } catch (error) {
+            console.error("KEY shortcut failed:", id, error);
+        }
+
+        releaseLine(id);
+    }
+
+    Object.assign(api, {
+        __transforkNewKeySystem: true,
+        registry,
+        shortcuts: registry,
+        normalizeKey,
+        modifierMatches,
+        shortcutMatches: defaultShortcutMatches,
+        defaultFindShortcut,
+        focusGuard,
+        shieldEvent,
+        acquireLine,
+        releaseLine,
+        getActiveLine: () => activeLine,
+        setEnabled(value) {
+            enabled = Boolean(value);
+        },
+        isEnabled() {
+            return enabled;
+        }
+    });
+
+    window.KEY = api;
+    window.addEventListener("keydown", dispatch, true);
+})();
