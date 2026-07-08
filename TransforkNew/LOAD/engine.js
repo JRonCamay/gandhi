@@ -9,7 +9,6 @@ window.TransforkNew.LOAD = window.TransforkNew.LOAD || {};
 
     const state = api.state || {
         managers: {},
-        activeRuns: {},
         loadedSources: [],
         token: "",
         failed: false
@@ -23,15 +22,15 @@ window.TransforkNew.LOAD = window.TransforkNew.LOAD || {};
         return String(file || "").replace(/^TransforkNew\//, "").replace(/^\/+/, "");
     }
 
-    function stationLabel(file) {
+    function fileLabel(file) {
         const clean = cleanFile(file);
         return clean.split("/").pop() || clean;
     }
 
-    function branchText(branch, station) {
-        const parts = (branch || []).slice();
-        if (station && station.file) parts.push(stationLabel(station.file));
-        if (station && station.manager) parts.push(station.manager);
+    function pathText(path, station) {
+        const parts = (path || []).slice();
+        if (station?.manager) parts.push(String(station.manager).toUpperCase());
+        if (station?.file) parts.push(fileLabel(station.file));
         return parts.join(" > ");
     }
 
@@ -41,14 +40,16 @@ window.TransforkNew.LOAD = window.TransforkNew.LOAD || {};
 
     function defineManager(definition) {
         if (!definition || !definition.id) throw new Error("defineManager requires id");
+
         const id = String(definition.id).trim().toUpperCase();
         state.managers[id] = {
             id,
             base: normalizeBase(definition.base || api.base || DEFAULT_BASE),
             stations: Array.isArray(definition.stations) ? definition.stations.slice() : [],
-            index: 0,
             status: "defined",
-            parent: null,
+            loaded: definition.loaded || loaded,
+            failed: definition.failed || failed,
+            done: definition.done || done,
             branch: [id],
             error: null
         };
@@ -56,29 +57,31 @@ window.TransforkNew.LOAD = window.TransforkNew.LOAD || {};
     }
 
     function getManager(id) {
-        const manager = state.managers[String(id || "").toUpperCase()];
+        const key = String(id || "").trim().toUpperCase();
+        const manager = state.managers[key];
         if (!manager) throw new Error("Missing manager: " + id);
         return manager;
     }
 
     function registerLoadedSource(file, source) {
-        const existing = state.loadedSources.find(record => record.name === file);
+        const clean = cleanFile(file);
+        const existing = state.loadedSources.find(record => record.name === clean);
         if (existing) {
             existing.text = source;
             existing.registered = false;
             return;
         }
-        state.loadedSources.push({ name: file, text: source, registered: false });
+        state.loadedSources.push({ name: clean, text: source, registered: false });
     }
 
     function flushRegistry() {
         const registerModuleFunctions = window.TransforkNew?.SYSTEM?.REGISTRY?.registerModuleFunctions;
-        if (typeof registerModuleFunctions === "function") {
-            for (const record of state.loadedSources) {
-                if (record.registered) continue;
-                registerModuleFunctions(record.name, record.text);
-                record.registered = true;
-            }
+        if (typeof registerModuleFunctions !== "function") return;
+
+        for (const record of state.loadedSources) {
+            if (record.registered) continue;
+            registerModuleFunctions(record.name, record.text);
+            record.registered = true;
         }
     }
 
@@ -88,74 +91,60 @@ window.TransforkNew.LOAD = window.TransforkNew.LOAD || {};
         return response.text();
     }
 
-    async function loadFile(manager, station) {
-        const file = cleanFile(station.file);
-        const path = branchText(manager.branch, station);
+    async function loadFile(file, path, index, manager) {
+        const clean = cleanFile(file);
+        const branch = pathText(path, { file: clean });
 
-        try {
-            console.log("[TN LOAD]", path);
-            const source = await fetchSource(file, manager);
-            Function(source + "\n//# sourceURL=TransforkNew/" + file + "?v=" + encodeURIComponent(state.token))();
-            registerLoadedSource(file, source);
-            window.TransforkNew?.SYSTEM?.REGISTRY?.markLoaded?.(file);
-            flushRegistry();
-            loaded(file);
-            console.log("[TN LOADED]", path);
-            return { status: "loaded", file, branch: path };
-        } catch (error) {
-            failed(file, error, manager, station);
-            throw error;
-        }
+        console.log("[TN LOAD FILE]", branch, { index, file: clean });
+
+        const source = await fetchSource(clean, manager);
+        Function(source + "\n//# sourceURL=TransforkNew/" + clean + "?v=" + encodeURIComponent(state.token))();
+
+        registerLoadedSource(clean, source);
+        window.TransforkNew?.SYSTEM?.REGISTRY?.markLoaded?.(clean);
+        flushRegistry();
+
+        console.log("[TN LOADED FILE]", branch, { index, file: clean });
+        return { status: "loaded", file: clean, branch, index };
     }
 
-    async function runChild(parent, station) {
-        const child = getManager(station.manager);
-        child.parent = parent.id;
-        child.branch = parent.branch.concat(child.id);
-        await runManager(child.id, child.branch);
-        return { status: "loaded", manager: child.id, branch: child.branch.join(" > ") };
-    }
-
-    async function loadNext(id) {
+    async function runManager(id, parentPath) {
         const manager = getManager(id);
-        const station = manager.stations[manager.index];
+        const path = (parentPath || []).concat(manager.id);
 
-        if (!station) {
-            manager.status = "complete";
-            console.log("[TN LOAD COMPLETE]", manager.branch.join(" > "));
-            return { status: "complete", manager: manager.id, branch: manager.branch.join(" > ") };
-        }
-
-        const currentIndex = manager.index;
-        const stationPath = branchText(manager.branch, station);
-        console.log("[TN LOAD STATION]", stationPath, { index: currentIndex });
-
-        if (station.file) {
-            await loadFile(manager, station);
-        } else if (station.manager) {
-            await runChild(manager, station);
-        } else {
-            const error = new Error("Invalid station entry at index " + currentIndex + " in " + manager.id);
-            failed("station[" + currentIndex + "]", error, manager, station);
-            throw error;
-        }
-
-        manager.index += 1;
-        return loadNext(manager.id);
-    }
-
-    async function runManager(id, branch) {
-        const manager = getManager(id);
-        manager.index = 0;
         manager.status = "running";
+        manager.branch = path;
         manager.error = null;
-        manager.branch = branch && branch.length ? branch.slice() : [manager.id];
+
+        console.groupCollapsed("[TN ENTER MANAGER] " + path.join(" > "));
 
         try {
-            console.groupCollapsed("[TN LOAD MANAGER] " + manager.branch.join(" > "));
-            const result = await loadNext(manager.id);
+            for (let i = 0; i < manager.stations.length; i += 1) {
+                const station = manager.stations[i];
+                const stationBranch = pathText(path, station);
+
+                console.log("[TN LOAD STATION]", stationBranch, { index: i });
+
+                try {
+                    if (station.manager) {
+                        await runManager(station.manager, path);
+                    } else if (station.file) {
+                        await loadFile(station.file, path, i, manager);
+                    } else {
+                        throw new Error("Invalid station entry at index " + i + " in " + manager.id);
+                    }
+
+                    manager.loaded(station, i, path);
+                } catch (error) {
+                    manager.failed(station, i, path, error);
+                    throw error;
+                }
+            }
+
+            manager.status = "complete";
+            manager.done(path);
             console.groupEnd();
-            return result;
+            return { status: "complete", manager: manager.id, branch: path.join(" > ") };
         } catch (error) {
             manager.status = "failed";
             manager.error = error;
@@ -164,38 +153,47 @@ window.TransforkNew.LOAD = window.TransforkNew.LOAD || {};
         }
     }
 
-    function loaded(file) {
-        return {
-            status: "loaded",
-            file: cleanFile(file),
-            at: Date.now()
-        };
+    function loadNext(id) {
+        return runManager(id);
     }
 
-    function failed(file, error, manager, station) {
-        const activeManager = manager || Object.values(state.managers).find(item => item.status === "running") || null;
-        const branch = activeManager ? branchText(activeManager.branch, station || { file }) : cleanFile(file);
+    function loaded(station, index, path) {
+        const report = {
+            status: "loaded",
+            station,
+            index,
+            branch: pathText(path, station),
+            at: Date.now()
+        };
+        console.log("[TN STATION LOADED]", report.branch, report);
+        return report;
+    }
+
+    function failed(station, index, path, error) {
+        const branch = pathText(path, station);
         const report = {
             status: "failed",
-            file: cleanFile(file),
-            branch,
             station,
+            index,
+            branch,
+            file: station?.file ? cleanFile(station.file) : null,
             message: error?.message || String(error),
             error
         };
 
         state.failed = true;
         console.error("[TN LOAD FAILED] " + branch, report);
+        return report;
+    }
 
-        if (activeManager && activeManager.parent) {
-            let parent = state.managers[activeManager.parent];
-            while (parent) {
-                parent.status = "failed";
-                parent.error = error;
-                parent = parent.parent ? state.managers[parent.parent] : null;
-            }
-        }
-
+    function done(path) {
+        const branch = (path || []).join(" > ");
+        const report = {
+            status: "complete",
+            branch,
+            at: Date.now()
+        };
+        console.log("[TN EXIT MANAGER]", branch, report);
         return report;
     }
 
@@ -203,12 +201,11 @@ window.TransforkNew.LOAD = window.TransforkNew.LOAD || {};
         state.token = token || String(Date.now());
         state.failed = false;
         state.loadedSources = [];
+
         for (const manager of Object.values(state.managers)) {
-            manager.index = 0;
             manager.status = "defined";
-            manager.error = null;
-            manager.parent = null;
             manager.branch = [manager.id];
+            manager.error = null;
         }
     }
 
@@ -217,7 +214,9 @@ window.TransforkNew.LOAD = window.TransforkNew.LOAD || {};
     api.defineManager = defineManager;
     api.runManager = runManager;
     api.loadNext = loadNext;
+    api.loadFile = loadFile;
     api.loaded = loaded;
     api.failed = failed;
+    api.done = done;
     api.resetRun = resetRun;
 })();
