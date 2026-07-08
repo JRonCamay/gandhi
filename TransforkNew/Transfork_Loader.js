@@ -26,7 +26,7 @@
     })();
 
     const VERSION = ["1", "2", "8-factory-rollcall"].join(".");
-    const base = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/TransforkNew/";
+    const base = "http://localhost:8000/gandhi/TransforkNew/";
     console.log("[TN LOADER] userscript started", { VERSION, base, url: location.href });
     const modules = [
         "KEY/KEY.js",
@@ -138,6 +138,16 @@
         "UI/ELEMENTS/BUTTONS/ROTATEBUTTON/mouseUp.js",
         "UI/ELEMENTS/BUTTONS/scaleButton.js",
         "UI/ELEMENTS/BUTTONS/SCALEBUTTON/draw.js",
+        "UI/ELEMENTS/BUTTONS/SCALEBUTTON/DRAG/index.js",
+        "UI/ELEMENTS/BUTTONS/SCALEBUTTON/DRAG/begin.js",
+        "UI/ELEMENTS/BUTTONS/SCALEBUTTON/DRAG/capture.js",
+        "UI/ELEMENTS/BUTTONS/SCALEBUTTON/DRAG/simulate.js",
+        "UI/ELEMENTS/BUTTONS/SCALEBUTTON/DRAG/previewBox.js",
+        "UI/ELEMENTS/BUTTONS/SCALEBUTTON/DRAG/previewButton.js",
+        "UI/ELEMENTS/BUTTONS/SCALEBUTTON/DRAG/end.js",
+        "UI/ELEMENTS/BUTTONS/SCALEBUTTON/DRAG/run.js",
+        "UI/ELEMENTS/BUTTONS/SCALEBUTTON/EVENTS/index.js",
+        "UI/ELEMENTS/BUTTONS/SCALEBUTTON/EVENTS/mouseDown.js",
         "UI/ELEMENTS/BUTTONS/SCALEBUTTON/mouseDown.js",
         "UI/ELEMENTS/BUTTONS/SCALEBUTTON/mouseMove.js",
         "UI/ELEMENTS/BUTTONS/SCALEBUTTON/mouseUp.js",
@@ -249,24 +259,67 @@
         window.TransforkNew.VERSION = VERSION;
     }
 
-    async function loadModule(name, token) {
-        console.log("[TN LOADER] fetching", name);
-        const response = await fetch(base + name + "?v=" + token, { cache: "no-store" });
-        if (!response.ok) throw new Error("Failed to fetch " + name + ": " + response.status);
-        const text = await response.text();
-        Function(text + "\n//# sourceURL=" + base + name + "?v=" + token)();
-        const loadedRecord = { name, text, registered: false };
-        loadedSources.push(loadedRecord);
-        window.TransforkNew?.SYSTEM?.REGISTRY?.markLoaded?.(name);
-        const registerModuleFunctions = window.TransforkNew?.SYSTEM?.REGISTRY?.registerModuleFunctions;
-        if (typeof registerModuleFunctions === "function") {
-            for (const record of loadedSources) {
-                if (record.registered) continue;
-                registerModuleFunctions(record.name, record.text);
-                record.registered = true;
+async function loadModule(name, token) {
+        console.log("[TN LOADER] loading module", name);
+        const modulesCache = window.TransforkModules || {};
+        let text = null;
+        const preferSource = name.startsWith("UI/ELEMENTS/BUTTONS/SCALEBUTTON/");
+
+        async function fetchSource() {
+            const response = await fetch(base + name + "?v=" + token, { cache: "no-store" });
+            if (!response.ok) throw new Error("HTTP " + response.status + " loading " + name);
+            return response.text();
+        }
+
+        if (preferSource) {
+            try {
+                text = await fetchSource();
+            } catch (error) {
+                text = modulesCache[name];
+                if (typeof text !== "string") throw error;
+            }
+        } else {
+            text = modulesCache[name];
+            if (typeof text !== "string") {
+                text = await fetchSource();
             }
         }
-        console.log("[TN LOADER] loaded", name);
+
+        if (typeof text !== "string") {
+            const error = new Error("Missing module: " + name);
+            console.error("[TN LOADER] module blocked line", name, {
+                message: error.message,
+                errorName: error.name
+            });
+            throw error;
+        }
+
+        try {
+            console.log("[TN LOADER] executing", name, { bytes: text.length });
+            Function(text + "\n//# sourceURL=TransforkNew/" + name + "?v=" + token)();
+
+            const loadedRecord = { name, text, registered: false };
+            loadedSources.push(loadedRecord);
+            window.TransforkNew?.SYSTEM?.REGISTRY?.markLoaded?.(name);
+
+            const registerModuleFunctions = window.TransforkNew?.SYSTEM?.REGISTRY?.registerModuleFunctions;
+            if (typeof registerModuleFunctions === "function") {
+                for (const record of loadedSources) {
+                    if (record.registered) continue;
+                    registerModuleFunctions(record.name, record.text);
+                    record.registered = true;
+                }
+            }
+
+            console.log("[TN LOADER] loaded", name);
+            return { status: "done", name };
+        } catch (error) {
+            console.error("[TN LOADER] module blocked line", name, {
+                message: error?.message || String(error),
+                errorName: error?.name || "Error"
+            });
+            throw error;
+        }
     }
 
     async function loadAll(reason) {
@@ -277,7 +330,9 @@
             window.__TransforkNewLoader = true;
             const token = cacheToken();
             console.log("[TN LOADER] loadAll begin", { reason, token, moduleCount: modules.length });
-            for (const name of modules) await loadModule(name, token);
+            for (const name of modules) {
+                await loadModule(name, token);
+            }
             window.TransforkNew?.INPUT?.keyboard?.init?.();
             window.TransforkNew?.INPUT?.shortcuts?.init?.();
             window.KEY?.setEnabled?.(true);

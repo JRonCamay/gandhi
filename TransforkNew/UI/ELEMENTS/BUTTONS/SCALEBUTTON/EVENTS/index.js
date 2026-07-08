@@ -3,6 +3,7 @@ window.TransforkNew.UI = window.TransforkNew.UI || {};
 window.TransforkNew.UI.elements = window.TransforkNew.UI.elements || {};
 window.TransforkNew.UI.elements.buttons = window.TransforkNew.UI.elements.buttons || {};
 window.TransforkNew.UI.elements.buttons.SCALEBUTTON = window.TransforkNew.UI.elements.buttons.SCALEBUTTON || {};
+window.TransforkNew.UI.elements.buttons.SCALEBUTTON.EVENTS = window.TransforkNew.UI.elements.buttons.SCALEBUTTON.EVENTS || {};
 
 (function () {
     "use strict";
@@ -11,13 +12,7 @@ window.TransforkNew.UI.elements.buttons.SCALEBUTTON = window.TransforkNew.UI.ele
         const register = window.TransforkNew?.registerProcessMember;
         if (typeof register !== "function") return;
         [
-            { id: "SCALE.local.TransforkNew.UI.ELEMENTS.BUTTONS.SCALEBUTTON.mouseDown.js.mouseDown", file: "TransforkNew/UI/ELEMENTS/BUTTONS/SCALEBUTTON/mouseDown.js", functionName: "mouseDown", purpose: "local process member registration for mouseDown", manager: "SCALE", station: 0 }
+            { id: "SCALE.local.TransforkNew.UI.ELEMENTS.BUTTONS.SCALEBUTTON.EVENTS.index.js.module", file: "TransforkNew/UI/ELEMENTS/BUTTONS/SCALEBUTTON/EVENTS/index.js", functionName: "module", purpose: "local process member registration for module", manager: "SCALE", station: 0 }
         ].forEach(register);
     })();
-
-    function mouseDown(button) {
-        return window.TransforkNew.UI.elements.buttons.SCALEBUTTON.EVENTS?.mouseDown?.(button) || null;
-    }
-
-    window.TransforkNew.UI.elements.buttons.SCALEBUTTON.mouseDown = mouseDown;
 })();
