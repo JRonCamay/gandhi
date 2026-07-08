@@ -332,6 +332,12 @@ async function loadModule(name, token) {
             console.log("[TN LOADER] loadAll begin", { reason, token, moduleCount: modules.length });
             for (const name of modules) {
                 await loadModule(name, token);
+                if (name === "KEY/hotReload.js") {
+                    window.KEY?.setEnabled?.(true);
+                    console.log("[TN LOADER] KEY enabled after KEY modules", {
+                        registryCount: window.KEY?.registry?.length || window.KEY?.shortcuts?.length || 0
+                    });
+                }
             }
             window.TransforkNew?.INPUT?.keyboard?.init?.();
             window.TransforkNew?.INPUT?.shortcuts?.init?.();
