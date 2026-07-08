@@ -113,132 +113,211 @@
     window.TransforkNew.KEY_MANAGER = keyManager;
 
     function normalizeKey(key) {
-        return String(key || "").toLowerCase();
+        try {
+            return String(key || "").toLowerCase();
+        } catch (error) {
+            keyManager.sleeper(error, FILE, "normalizeKey", 0);
+            return "";
+        }
     }
 
     function modifierMatches(event, shortcut, prop, eventProp) {
-        if (typeof shortcut[prop] !== "boolean") return true;
-        return Boolean(event[eventProp]) === shortcut[prop];
+        try {
+            if (typeof shortcut[prop] !== "boolean") return true;
+            return Boolean(event[eventProp]) === shortcut[prop];
+        } catch (error) {
+            keyManager.sleeper(error, FILE, "modifierMatches", 0);
+            return false;
+        }
     }
 
     function defaultShortcutMatches(event, shortcut) {
-        if (!shortcut || typeof shortcut.run !== "function") return false;
-        if (shortcut.disabled) return false;
-        if (event.repeat && !shortcut.repeat) return false;
-        if (shortcut.key && normalizeKey(event.key) !== normalizeKey(shortcut.key)) return false;
-        if (!modifierMatches(event, shortcut, "alt", "altKey")) return false;
-        if (!modifierMatches(event, shortcut, "ctrl", "ctrlKey")) return false;
-        if (!modifierMatches(event, shortcut, "shift", "shiftKey")) return false;
-        if (!modifierMatches(event, shortcut, "meta", "metaKey")) return false;
-        return true;
+        try {
+            if (!shortcut || typeof shortcut.run !== "function") return false;
+            if (shortcut.disabled) return false;
+            if (event.repeat && !shortcut.repeat) return false;
+            if (shortcut.key && normalizeKey(event.key) !== normalizeKey(shortcut.key)) return false;
+            if (!modifierMatches(event, shortcut, "alt", "altKey")) return false;
+            if (!modifierMatches(event, shortcut, "ctrl", "ctrlKey")) return false;
+            if (!modifierMatches(event, shortcut, "shift", "shiftKey")) return false;
+            if (!modifierMatches(event, shortcut, "meta", "metaKey")) return false;
+            return true;
+        } catch (error) {
+            keyManager.sleeper(error, FILE, "defaultShortcutMatches", 2);
+            return false;
+        }
     }
 
     function defaultFindShortcut(event) {
-        for (const shortcut of registry) {
-            if (defaultShortcutMatches(event, shortcut)) return shortcut;
+        try {
+            for (const shortcut of registry) {
+                if (defaultShortcutMatches(event, shortcut)) return shortcut;
+            }
+            return null;
+        } catch (error) {
+            keyManager.sleeper(error, FILE, "defaultFindShortcut", 2);
+            return null;
         }
-        return null;
     }
 
     function isEditableTarget(target) {
-        if (!target) return false;
-        const element = target.nodeType === 1 ? target : target.parentElement;
-        if (!element) return false;
-        const tag = element.tagName;
-        return (
-            tag === "INPUT" ||
-            tag === "TEXTAREA" ||
-            tag === "SELECT" ||
-            Boolean(element.isContentEditable) ||
-            Boolean(element.closest?.("input, textarea, select, [contenteditable='true']"))
-        );
+        try {
+            if (!target) return false;
+            const element = target.nodeType === 1 ? target : target.parentElement;
+            if (!element) return false;
+            const tag = element.tagName;
+            return (
+                tag === "INPUT" ||
+                tag === "TEXTAREA" ||
+                tag === "SELECT" ||
+                Boolean(element.isContentEditable) ||
+                Boolean(element.closest?.("input, textarea, select, [contenteditable='true']"))
+            );
+        } catch (error) {
+            keyManager.sleeper(error, FILE, "isEditableTarget", 3);
+            return false;
+        }
     }
 
     function focusGuard(event, shortcut) {
-        if (shortcut && shortcut.allowInEditable) return true;
-        return !isEditableTarget(event.target) && !isEditableTarget(document.activeElement);
+        try {
+            if (shortcut && shortcut.allowInEditable) return true;
+            return !isEditableTarget(event.target) && !isEditableTarget(document.activeElement);
+        } catch (error) {
+            keyManager.sleeper(error, FILE, "focusGuard", 3);
+            return false;
+        }
     }
 
     function shieldEvent(event) {
-        event.preventDefault?.();
-        event.stopPropagation?.();
-        event.stopImmediatePropagation?.();
+        try {
+            event.preventDefault?.();
+            event.stopPropagation?.();
+            event.stopImmediatePropagation?.();
+        } catch (error) {
+            keyManager.sleeper(error, FILE, "shieldEvent", 4);
+        }
     }
 
     function acquireLine(id) {
-        if (activeLine) return false;
-        activeLine = id;
-        return true;
+        try {
+            if (activeLine) return false;
+            activeLine = id;
+            return true;
+        } catch (error) {
+            keyManager.sleeper(error, FILE, "acquireLine", 4);
+            return false;
+        }
     }
 
     function releaseLine(id) {
-        if (activeLine !== id) return;
-        activeLine = null;
+        try {
+            if (activeLine !== id) return;
+            activeLine = null;
+        } catch (error) {
+            keyManager.sleeper(error, FILE, "releaseLine", 6);
+        }
     }
 
     function station01_validateEnabled(ctx) {
         if (!keyManager.guard(1, FILE, "station01_validateEnabled")) return keyManager.stop("blocked station 1");
-        if (!enabled) return keyManager.stop("key disabled");
-        if (ctx.event?.key?.toLowerCase?.() === "r") {
-            console.log("[TN LOADER] KEY dispatch saw R", {
-                enabled,
-                registryCount: registry.length,
-                activeLine,
-                target: ctx.event.target,
-                activeElement: document.activeElement
-            });
+
+        try {
+            if (!enabled) return keyManager.stop("key disabled");
+            if (ctx.event?.key?.toLowerCase?.() === "r") {
+                console.log("[TN LOADER] KEY dispatch saw R", {
+                    enabled,
+                    registryCount: registry.length,
+                    activeLine,
+                    target: ctx.event.target,
+                    activeElement: document.activeElement
+                });
+            }
+            return keyManager.done({ station: 1 });
+        } catch (error) {
+            keyManager.sleeper(error, FILE, "station01_validateEnabled", 1);
+            return keyManager.stop("station01_validateEnabled crashed", { error });
         }
-        return keyManager.done({ station: 1 });
     }
 
     function station02_findShortcut(ctx) {
         if (!keyManager.guard(2, FILE, "station02_findShortcut")) return keyManager.stop("blocked station 2");
-        ctx.shortcut = typeof api.findShortcut === "function" ? api.findShortcut(ctx.event) : defaultFindShortcut(ctx.event);
-        if (!ctx.shortcut) {
-            if (ctx.event?.key?.toLowerCase?.() === "r") {
-                console.warn("[TN LOADER] KEY R has no registered shortcut", {
-                    registry,
-                    registered: window.TransforkNew?.REGISTRY?.list?.() || []
-                });
+
+        try {
+            ctx.shortcut = typeof api.findShortcut === "function" ? api.findShortcut(ctx.event) : defaultFindShortcut(ctx.event);
+            if (!ctx.shortcut) {
+                if (ctx.event?.key?.toLowerCase?.() === "r") {
+                    console.warn("[TN LOADER] KEY R has no registered shortcut", {
+                        registry,
+                        registered: window.TransforkNew?.REGISTRY?.list?.() || []
+                    });
+                }
+                return keyManager.stop("no shortcut matched");
             }
-            return keyManager.stop("no shortcut matched");
+            return keyManager.done({ station: 2 });
+        } catch (error) {
+            keyManager.sleeper(error, FILE, "station02_findShortcut", 2);
+            return keyManager.stop("station02_findShortcut crashed", { error });
         }
-        return keyManager.done({ station: 2 });
     }
 
     function station03_focusGuard(ctx) {
         if (!keyManager.guard(3, FILE, "station03_focusGuard")) return keyManager.stop("blocked station 3");
-        if (!focusGuard(ctx.event, ctx.shortcut)) {
-            if (ctx.event?.key?.toLowerCase?.() === "r") console.log("[TN LOADER] KEY R blocked by focusGuard", ctx.shortcut);
-            return keyManager.stop("focus blocked");
+
+        try {
+            if (!focusGuard(ctx.event, ctx.shortcut)) {
+                if (ctx.event?.key?.toLowerCase?.() === "r") console.log("[TN LOADER] KEY R blocked by focusGuard", ctx.shortcut);
+                return keyManager.stop("focus blocked");
+            }
+            return keyManager.done({ station: 3 });
+        } catch (error) {
+            keyManager.sleeper(error, FILE, "station03_focusGuard", 3);
+            return keyManager.stop("station03_focusGuard crashed", { error });
         }
-        return keyManager.done({ station: 3 });
     }
 
     function station04_acquireLine(ctx) {
         if (!keyManager.guard(4, FILE, "station04_acquireLine")) return keyManager.stop("blocked station 4");
-        shieldEvent(ctx.event);
-        ctx.shortcutId = ctx.shortcut.id || "shortcut." + registry.indexOf(ctx.shortcut);
-        if (!acquireLine(ctx.shortcutId)) return keyManager.stop("line busy");
-        return keyManager.done({ station: 4 });
+
+        try {
+            shieldEvent(ctx.event);
+            ctx.shortcutId = ctx.shortcut.id || "shortcut." + registry.indexOf(ctx.shortcut);
+            if (!acquireLine(ctx.shortcutId)) return keyManager.stop("line busy");
+            return keyManager.done({ station: 4 });
+        } catch (error) {
+            keyManager.sleeper(error, FILE, "station04_acquireLine", 4);
+            return keyManager.stop("station04_acquireLine crashed", { error });
+        }
     }
 
     function station05_runShortcut(ctx) {
         if (!keyManager.guard(5, FILE, "station05_runShortcut")) return keyManager.stop("blocked station 5");
-        if (ctx.event?.key?.toLowerCase?.() === "r") console.log("[TN LOADER] KEY running R shortcut", ctx.shortcut);
-        const report = ctx.shortcut.run(ctx.event);
-        if (!report || typeof report !== "object" || !report.status) {
-            return keyManager.stop("shortcut returned no report");
+
+        try {
+            if (ctx.event?.key?.toLowerCase?.() === "r") console.log("[TN LOADER] KEY running R shortcut", ctx.shortcut);
+            const report = ctx.shortcut.run(ctx.event);
+            if (!report || typeof report !== "object" || !report.status) {
+                return keyManager.stop("shortcut returned no report");
+            }
+            if (report.status === "done") return keyManager.done({ station: 5, shortcutReport: report });
+            if (report.status === "wait") return keyManager.wait({ station: 5, shortcutReport: report });
+            return keyManager.stop(report.reason || "shortcut stopped");
+        } catch (error) {
+            keyManager.sleeper(error, FILE, "station05_runShortcut", 5);
+            return keyManager.stop("station05_runShortcut crashed", { error });
         }
-        if (report.status === "done") return keyManager.done({ station: 5, shortcutReport: report });
-        if (report.status === "wait") return keyManager.wait({ station: 5, shortcutReport: report });
-        return keyManager.stop(report.reason || "shortcut stopped");
     }
 
     function station06_releaseLine(ctx) {
         if (!keyManager.guard(6, FILE, "station06_releaseLine")) return keyManager.stop("blocked station 6");
-        releaseLine(ctx.shortcutId);
-        return keyManager.done({ station: 6 });
+
+        try {
+            releaseLine(ctx.shortcutId);
+            return keyManager.done({ station: 6 });
+        } catch (error) {
+            keyManager.sleeper(error, FILE, "station06_releaseLine", 6);
+            return keyManager.stop("station06_releaseLine crashed", { error });
+        }
     }
 
     keyManager.register(1, station01_validateEnabled, { functionName: "station01_validateEnabled" });
@@ -249,7 +328,12 @@
     keyManager.register(6, station06_releaseLine, { functionName: "station06_releaseLine" });
 
     window.TransforkNew.SYSTEM?.REGISTRY?.register?.({ id: "KEY.dispatch", file: FILE, functionName: "dispatch", purpose: "starts KEY manager pipeline", manager: "KEY", station: 0 });
+    window.TransforkNew.SYSTEM?.REGISTRY?.register?.({ id: "KEY.station01.validateEnabled", file: FILE, functionName: "station01_validateEnabled", purpose: "validates KEY line is enabled", manager: "KEY", station: 1 });
+    window.TransforkNew.SYSTEM?.REGISTRY?.register?.({ id: "KEY.station02.findShortcut", file: FILE, functionName: "station02_findShortcut", purpose: "finds matched key shortcut", manager: "KEY", station: 2 });
+    window.TransforkNew.SYSTEM?.REGISTRY?.register?.({ id: "KEY.station03.focusGuard", file: FILE, functionName: "station03_focusGuard", purpose: "blocks shortcuts inside text inputs", manager: "KEY", station: 3 });
+    window.TransforkNew.SYSTEM?.REGISTRY?.register?.({ id: "KEY.station04.acquireLine", file: FILE, functionName: "station04_acquireLine", purpose: "acquires KEY line ownership", manager: "KEY", station: 4 });
     window.TransforkNew.SYSTEM?.REGISTRY?.register?.({ id: "KEY.station05.runShortcut", file: FILE, functionName: "station05_runShortcut", purpose: "runs matched key shortcut", manager: "KEY", station: 5 });
+    window.TransforkNew.SYSTEM?.REGISTRY?.register?.({ id: "KEY.station06.releaseLine", file: FILE, functionName: "station06_releaseLine", purpose: "releases KEY line ownership", manager: "KEY", station: 6 });
 
     function dispatch(event) {
         try {
@@ -275,16 +359,29 @@
         manager: keyManager,
         getActiveLine: () => activeLine,
         setEnabled(value) {
-            enabled = Boolean(value);
+            try {
+                enabled = Boolean(value);
+            } catch (error) {
+                keyManager.sleeper(error, FILE, "setEnabled", 0);
+            }
         },
         isEnabled() {
-            return enabled;
+            try {
+                return enabled;
+            } catch (error) {
+                keyManager.sleeper(error, FILE, "isEnabled", 0);
+                return false;
+            }
         },
         destroy() {
-            enabled = false;
-            activeLine = null;
-            registry.length = 0;
-            window.removeEventListener("keydown", dispatch, true);
+            try {
+                enabled = false;
+                activeLine = null;
+                registry.length = 0;
+                window.removeEventListener("keydown", dispatch, true);
+            } catch (error) {
+                keyManager.sleeper(error, FILE, "destroy", 0);
+            }
         }
     });
 
