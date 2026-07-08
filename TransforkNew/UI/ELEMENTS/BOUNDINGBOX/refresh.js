@@ -6,6 +6,14 @@ window.TransforkNew.UI.elements.BOUNDINGBOX = window.TransforkNew.UI.elements.BO
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "UI.local.TransforkNew.UI.ELEMENTS.BOUNDINGBOX.refresh.js.refresh", file: "TransforkNew/UI/ELEMENTS/BOUNDINGBOX/refresh.js", functionName: "refresh", purpose: "local process member registration for refresh", manager: "UI", station: 0 }
+        ].forEach(register);
+    })();
+
     function refresh(box) {
         const debug = window.TransforkNew.SYSTEM?.debug;
         const refreshApi = window.TransforkNew.UI.elements.BOUNDINGBOX.REFRESH;

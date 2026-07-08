@@ -8,6 +8,15 @@ window.TransforkNew.REFRESH = window.TransforkNew.REFRESH || {};
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "MAIN.local.TransforkNew.TOOLS.factoryLine.js.visitTools", file: "TransforkNew/TOOLS/factoryLine.js", functionName: "visitTools", purpose: "local process member registration for visitTools", manager: "MAIN", station: 0 },
+            { id: "MAIN.local.TransforkNew.TOOLS.factoryLine.js.run", file: "TransforkNew/TOOLS/factoryLine.js", functionName: "run", purpose: "local process member registration for run", manager: "MAIN", station: 0 }
+        ].forEach(register);
+    })();
+
     const stages = [
         ["01 TOOL STAGE", "begin"],
         ["02 CAPTURE STAGE", "capture"],

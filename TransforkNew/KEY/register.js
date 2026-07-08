@@ -1,6 +1,17 @@
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "KEY.local.TransforkNew.KEY.register.js.manager", file: "TransforkNew/KEY/register.js", functionName: "manager", purpose: "local process member registration for manager", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.register.js.register", file: "TransforkNew/KEY/register.js", functionName: "register", purpose: "local process member registration for register", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.register.js.unregister", file: "TransforkNew/KEY/register.js", functionName: "unregister", purpose: "local process member registration for unregister", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.register.js.findShortcut", file: "TransforkNew/KEY/register.js", functionName: "findShortcut", purpose: "local process member registration for findShortcut", manager: "KEY", station: 0 }
+        ].forEach(register);
+    })();
+
     const FILE = "TransforkNew/KEY/register.js";
     const api = window.KEY || {};
     const registry = api.registry || api.shortcuts || [];

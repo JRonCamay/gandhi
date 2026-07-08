@@ -8,6 +8,14 @@ window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAW = window.TransforkNew.UI
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "MOVE.local.TransforkNew.UI.ELEMENTS.BUTTONS.MOVEBUTTON.DRAW.attachToBox.js.attachToBox", file: "TransforkNew/UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAW/attachToBox.js", functionName: "attachToBox", purpose: "local process member registration for attachToBox", manager: "MOVE", station: 0 }
+        ].forEach(register);
+    })();
+
     function attachToBox(button, box) {
         if (!button || !box?.visible) return null;
         window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAW.createNode?.(button);

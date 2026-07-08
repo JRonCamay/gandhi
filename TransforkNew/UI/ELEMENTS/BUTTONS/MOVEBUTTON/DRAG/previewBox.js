@@ -8,6 +8,14 @@ window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG = window.TransforkNew.UI
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "MOVE.local.TransforkNew.UI.ELEMENTS.BUTTONS.MOVEBUTTON.DRAG.previewBox.js.previewBox", file: "TransforkNew/UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAG/previewBox.js", functionName: "previewBox", purpose: "local process member registration for previewBox", manager: "MOVE", station: 0 }
+        ].forEach(register);
+    })();
+
     const FILE = "TransforkNew/UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAG/previewBox.js";
     const STATION = 5;
     const PURPOSE = "move drag previews bounding box position";

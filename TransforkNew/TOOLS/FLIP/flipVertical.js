@@ -4,6 +4,17 @@ window.TransforkNew.FLIP = window.TransforkNew.FLIP || {};
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "MAIN.local.TransforkNew.TOOLS.FLIP.flipVertical.js.normalizeDirection", file: "TransforkNew/TOOLS/FLIP/flipVertical.js", functionName: "normalizeDirection", purpose: "local process member registration for normalizeDirection", manager: "MAIN", station: 0 },
+            { id: "MAIN.local.TransforkNew.TOOLS.FLIP.flipVertical.js.transform", file: "TransforkNew/TOOLS/FLIP/flipVertical.js", functionName: "transform", purpose: "local process member registration for transform", manager: "MAIN", station: 0 },
+            { id: "MAIN.local.TransforkNew.TOOLS.FLIP.flipVertical.js.commit", file: "TransforkNew/TOOLS/FLIP/flipVertical.js", functionName: "commit", purpose: "local process member registration for commit", manager: "MAIN", station: 0 },
+            { id: "MAIN.local.TransforkNew.TOOLS.FLIP.flipVertical.js.flipVertical", file: "TransforkNew/TOOLS/FLIP/flipVertical.js", functionName: "flipVertical", purpose: "local process member registration for flipVertical", manager: "MAIN", station: 0 }
+        ].forEach(register);
+    })();
+
     function normalizeDirection(degrees) {
         let value = Number(degrees) || 0;
         while (value > 180) value -= 360;

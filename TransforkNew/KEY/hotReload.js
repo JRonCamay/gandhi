@@ -1,6 +1,16 @@
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "KEY.local.TransforkNew.KEY.hotReload.js.manager", file: "TransforkNew/KEY/hotReload.js", functionName: "manager", purpose: "local process member registration for manager", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.hotReload.js.requestHotReload", file: "TransforkNew/KEY/hotReload.js", functionName: "requestHotReload", purpose: "local process member registration for requestHotReload", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.hotReload.js.run", file: "TransforkNew/KEY/hotReload.js", functionName: "run", purpose: "local process member registration for run", manager: "KEY", station: 0 }
+        ].forEach(register);
+    })();
+
     if (!window.KEY || typeof window.KEY.register !== "function") return;
 
     const FILE = "TransforkNew/KEY/hotReload.js";

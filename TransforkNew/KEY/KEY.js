@@ -1,6 +1,39 @@
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.makeReport", file: "TransforkNew/KEY/KEY.js", functionName: "makeReport", purpose: "local process member registration for makeReport", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.normalizeKey", file: "TransforkNew/KEY/KEY.js", functionName: "normalizeKey", purpose: "local process member registration for normalizeKey", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.modifierMatches", file: "TransforkNew/KEY/KEY.js", functionName: "modifierMatches", purpose: "local process member registration for modifierMatches", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.defaultShortcutMatches", file: "TransforkNew/KEY/KEY.js", functionName: "defaultShortcutMatches", purpose: "local process member registration for defaultShortcutMatches", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.defaultFindShortcut", file: "TransforkNew/KEY/KEY.js", functionName: "defaultFindShortcut", purpose: "local process member registration for defaultFindShortcut", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.isEditableTarget", file: "TransforkNew/KEY/KEY.js", functionName: "isEditableTarget", purpose: "local process member registration for isEditableTarget", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.focusGuard", file: "TransforkNew/KEY/KEY.js", functionName: "focusGuard", purpose: "local process member registration for focusGuard", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.shieldEvent", file: "TransforkNew/KEY/KEY.js", functionName: "shieldEvent", purpose: "local process member registration for shieldEvent", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.acquireLine", file: "TransforkNew/KEY/KEY.js", functionName: "acquireLine", purpose: "local process member registration for acquireLine", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.releaseLine", file: "TransforkNew/KEY/KEY.js", functionName: "releaseLine", purpose: "local process member registration for releaseLine", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.station01_validateEnabled", file: "TransforkNew/KEY/KEY.js", functionName: "station01_validateEnabled", purpose: "local process member registration for station01_validateEnabled", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.station02_findShortcut", file: "TransforkNew/KEY/KEY.js", functionName: "station02_findShortcut", purpose: "local process member registration for station02_findShortcut", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.station03_focusGuard", file: "TransforkNew/KEY/KEY.js", functionName: "station03_focusGuard", purpose: "local process member registration for station03_focusGuard", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.station04_acquireLine", file: "TransforkNew/KEY/KEY.js", functionName: "station04_acquireLine", purpose: "local process member registration for station04_acquireLine", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.station05_runShortcut", file: "TransforkNew/KEY/KEY.js", functionName: "station05_runShortcut", purpose: "local process member registration for station05_runShortcut", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.station06_releaseLine", file: "TransforkNew/KEY/KEY.js", functionName: "station06_releaseLine", purpose: "local process member registration for station06_releaseLine", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.dispatch", file: "TransforkNew/KEY/KEY.js", functionName: "dispatch", purpose: "local process member registration for dispatch", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.register", file: "TransforkNew/KEY/KEY.js", functionName: "register", purpose: "local process member registration for register", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.start", file: "TransforkNew/KEY/KEY.js", functionName: "start", purpose: "local process member registration for start", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.process", file: "TransforkNew/KEY/KEY.js", functionName: "process", purpose: "local process member registration for process", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.done", file: "TransforkNew/KEY/KEY.js", functionName: "done", purpose: "local process member registration for done", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.wait", file: "TransforkNew/KEY/KEY.js", functionName: "wait", purpose: "local process member registration for wait", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.stop", file: "TransforkNew/KEY/KEY.js", functionName: "stop", purpose: "local process member registration for stop", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.setEnabled", file: "TransforkNew/KEY/KEY.js", functionName: "setEnabled", purpose: "local process member registration for setEnabled", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.isEnabled", file: "TransforkNew/KEY/KEY.js", functionName: "isEnabled", purpose: "local process member registration for isEnabled", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.KEY.js.destroy", file: "TransforkNew/KEY/KEY.js", functionName: "destroy", purpose: "local process member registration for destroy", manager: "KEY", station: 0 }
+        ].forEach(register);
+    })();
+
     const previous = window.KEY;
     if (previous && typeof previous.destroy === "function") previous.destroy();
 
@@ -18,6 +51,7 @@
 
     const keyManager = {
         line: "KEY",
+        name: "KEY",
         currStation: 0,
         stations: {},
         context: null,
@@ -55,7 +89,7 @@
                 this.lastReport = report;
 
                 if (report.status === "done") {
-                    this.currStation += 1;
+                    this.submitEndSession();
                     continue;
                 }
 
@@ -86,6 +120,11 @@
             return allowed;
         },
 
+        submitEndSession() {
+            this.currStation += 1;
+            return this.currStation;
+        },
+
         done(extra = {}) {
             return makeReport("done", extra);
         },
@@ -111,6 +150,8 @@
 
     window.TransforkNew = window.TransforkNew || {};
     window.TransforkNew.KEY_MANAGER = keyManager;
+    window.TransforkNew.MANAGERS = window.TransforkNew.MANAGERS || {};
+    window.TransforkNew.MANAGERS.KEY = keyManager;
 
     function normalizeKey(key) {
         try {

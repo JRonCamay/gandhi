@@ -6,6 +6,15 @@ window.TransforkNew.UI.elements.BOUNDINGBOX = window.TransforkNew.UI.elements.BO
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "UI.local.TransforkNew.UI.ELEMENTS.BOUNDINGBOX.draw.js.drawVersionLabel", file: "TransforkNew/UI/ELEMENTS/BOUNDINGBOX/draw.js", functionName: "drawVersionLabel", purpose: "local process member registration for drawVersionLabel", manager: "UI", station: 0 },
+            { id: "UI.local.TransforkNew.UI.ELEMENTS.BOUNDINGBOX.draw.js.draw", file: "TransforkNew/UI/ELEMENTS/BOUNDINGBOX/draw.js", functionName: "draw", purpose: "local process member registration for draw", manager: "UI", station: 0 }
+        ].forEach(register);
+    })();
+
     function drawVersionLabel(box) {
         if (!box?.node) return null;
         let label = box.node.querySelector("#transfork-new-version-label");

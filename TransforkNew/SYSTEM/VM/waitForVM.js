@@ -5,6 +5,18 @@ window.TransforkNew.SYSTEM.VM = window.TransforkNew.SYSTEM.VM || {};
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "VM.local.TransforkNew.SYSTEM.VM.waitForVM.js.log", file: "TransforkNew/SYSTEM/VM/waitForVM.js", functionName: "log", purpose: "local process member registration for log", manager: "VM", station: 0 },
+            { id: "VM.local.TransforkNew.SYSTEM.VM.waitForVM.js.warn", file: "TransforkNew/SYSTEM/VM/waitForVM.js", functionName: "warn", purpose: "local process member registration for warn", manager: "VM", station: 0 },
+            { id: "VM.local.TransforkNew.SYSTEM.VM.waitForVM.js.resolve", file: "TransforkNew/SYSTEM/VM/waitForVM.js", functionName: "resolve", purpose: "local process member registration for resolve", manager: "VM", station: 0 },
+            { id: "VM.local.TransforkNew.SYSTEM.VM.waitForVM.js.poll", file: "TransforkNew/SYSTEM/VM/waitForVM.js", functionName: "poll", purpose: "local process member registration for poll", manager: "VM", station: 0 },
+            { id: "VM.local.TransforkNew.SYSTEM.VM.waitForVM.js.waitForVM", file: "TransforkNew/SYSTEM/VM/waitForVM.js", functionName: "waitForVM", purpose: "local process member registration for waitForVM", manager: "VM", station: 0 }
+        ].forEach(register);
+    })();
+
     function log(label, data) {
         window.TransforkNew.SYSTEM?.debug?.log?.("VM " + label, data);
     }

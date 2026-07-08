@@ -7,6 +7,14 @@ window.TransforkNew.UI.elements.BOUNDINGBOX.REFRESH = window.TransforkNew.UI.ele
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "RENDER.local.TransforkNew.UI.ELEMENTS.BOUNDINGBOX.REFRESH.convertBounds.js.convertBounds", file: "TransforkNew/UI/ELEMENTS/BOUNDINGBOX/REFRESH/convertBounds.js", functionName: "convertBounds", purpose: "local process member registration for convertBounds", manager: "RENDER", station: 0 }
+        ].forEach(register);
+    })();
+
     function convertBounds(box) {
         const vm = window.TransforkNew.SYSTEM?.vm?.get?.();
         const canvas = window.TransforkNew.SYSTEM?.VM?.getCanvas?.();

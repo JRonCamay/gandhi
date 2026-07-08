@@ -5,6 +5,17 @@ window.TransforkNew.FACTORY.MANAGER = window.TransforkNew.FACTORY.MANAGER || {};
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "MAIN.local.TransforkNew.FACTORY.MANAGER.run.js.makeReport", file: "TransforkNew/FACTORY/MANAGER/run.js", functionName: "makeReport", purpose: "local process member registration for makeReport", manager: "MAIN", station: 0 },
+            { id: "MAIN.local.TransforkNew.FACTORY.MANAGER.run.js.stopLine", file: "TransforkNew/FACTORY/MANAGER/run.js", functionName: "stopLine", purpose: "local process member registration for stopLine", manager: "MAIN", station: 0 },
+            { id: "MAIN.local.TransforkNew.FACTORY.MANAGER.run.js.process", file: "TransforkNew/FACTORY/MANAGER/run.js", functionName: "process", purpose: "local process member registration for process", manager: "MAIN", station: 0 },
+            { id: "MAIN.local.TransforkNew.FACTORY.MANAGER.run.js.runLine", file: "TransforkNew/FACTORY/MANAGER/run.js", functionName: "runLine", purpose: "local process member registration for runLine", manager: "MAIN", station: 0 }
+        ].forEach(register);
+    })();
+
     function makeReport(status, extra = {}) {
         return Object.assign({ status }, extra);
     }
@@ -65,8 +76,12 @@ window.TransforkNew.FACTORY.MANAGER = window.TransforkNew.FACTORY.MANAGER || {};
             line.lastReport = report;
 
             if (report.status === "done") {
-                line.completed[line.currStation] = true;
-                line.currStation += 1;
+                if (typeof line.submitEndSession === "function") {
+                    line.submitEndSession();
+                } else {
+                    line.completed[line.currStation] = true;
+                    line.currStation += 1;
+                }
                 continue;
             }
 

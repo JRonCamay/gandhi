@@ -4,6 +4,14 @@ window.TransforkNew.FACTORY = window.TransforkNew.FACTORY || {};
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "MAIN.local.TransforkNew.FACTORY.09.refresh.js.refresh", file: "TransforkNew/FACTORY/09_refresh.js", functionName: "refresh", purpose: "local process member registration for refresh", manager: "MAIN", station: 9 }
+        ].forEach(register);
+    })();
+
     const FILE = "TransforkNew/FACTORY/09_refresh.js";
     const LINE = "MAIN";
     const STATION = 9;

@@ -4,6 +4,14 @@ window.TransforkNew.MOVE = window.TransforkNew.MOVE || {};
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "MOVE.local.TransforkNew.TOOLS.MOVE.state.js.module", file: "TransforkNew/TOOLS/MOVE/state.js", functionName: "module", purpose: "local process member registration for module", manager: "MOVE", station: 0 }
+        ].forEach(register);
+    })();
+
     const state = {
         active: false,
         start: null,

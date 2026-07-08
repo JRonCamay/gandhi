@@ -4,6 +4,15 @@ window.TransforkNew.INPUT = window.TransforkNew.INPUT || {};
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "KEY.local.TransforkNew.INPUT.keyboard.js.manager", file: "TransforkNew/INPUT/keyboard.js", functionName: "manager", purpose: "local process member registration for manager", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.INPUT.keyboard.js.init", file: "TransforkNew/INPUT/keyboard.js", functionName: "init", purpose: "local process member registration for init", manager: "KEY", station: 0 }
+        ].forEach(register);
+    })();
+
     const FILE = "TransforkNew/INPUT/keyboard.js";
     const api = window.TransforkNew;
 

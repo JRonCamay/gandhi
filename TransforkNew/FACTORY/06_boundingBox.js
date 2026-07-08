@@ -4,6 +4,14 @@ window.TransforkNew.FACTORY = window.TransforkNew.FACTORY || {};
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "MAIN.local.TransforkNew.FACTORY.06.boundingBox.js.boundingBox", file: "TransforkNew/FACTORY/06_boundingBox.js", functionName: "boundingBox", purpose: "local process member registration for boundingBox", manager: "MAIN", station: 6 }
+        ].forEach(register);
+    })();
+
     const FILE = "TransforkNew/FACTORY/06_boundingBox.js";
     const LINE = "MAIN";
     const STATION = 6;

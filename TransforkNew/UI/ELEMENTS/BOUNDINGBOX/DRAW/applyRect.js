@@ -7,6 +7,14 @@ window.TransforkNew.UI.elements.BOUNDINGBOX.DRAW = window.TransforkNew.UI.elemen
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "UI.local.TransforkNew.UI.ELEMENTS.BOUNDINGBOX.DRAW.applyRect.js.applyRect", file: "TransforkNew/UI/ELEMENTS/BOUNDINGBOX/DRAW/applyRect.js", functionName: "applyRect", purpose: "local process member registration for applyRect", manager: "UI", station: 0 }
+        ].forEach(register);
+    })();
+
     function applyRect(box, rect) {
         if (!box?.node || !rect) return null;
         box.screenRect = rect;

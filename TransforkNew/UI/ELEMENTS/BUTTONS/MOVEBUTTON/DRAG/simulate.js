@@ -8,6 +8,14 @@ window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG = window.TransforkNew.UI
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "MOVE.local.TransforkNew.UI.ELEMENTS.BUTTONS.MOVEBUTTON.DRAG.simulate.js.simulate", file: "TransforkNew/UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAG/simulate.js", functionName: "simulate", purpose: "local process member registration for simulate", manager: "MOVE", station: 0 }
+        ].forEach(register);
+    })();
+
     const FILE = "TransforkNew/UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAG/simulate.js";
     const STATION = 3;
     const PURPOSE = "move drag calculates preview delta";

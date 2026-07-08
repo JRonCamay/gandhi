@@ -5,6 +5,16 @@ window.TransforkNew.INPUT.SHORTCUTS = window.TransforkNew.INPUT.SHORTCUTS || {};
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "KEY.local.TransforkNew.INPUT.SHORTCUTS.registerR.js.debug", file: "TransforkNew/INPUT/SHORTCUTS/registerR.js", functionName: "debug", purpose: "local process member registration for debug", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.INPUT.SHORTCUTS.registerR.js.toggleR", file: "TransforkNew/INPUT/SHORTCUTS/registerR.js", functionName: "toggleR", purpose: "local process member registration for toggleR", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.INPUT.SHORTCUTS.registerR.js.registerR", file: "TransforkNew/INPUT/SHORTCUTS/registerR.js", functionName: "registerR", purpose: "local process member registration for registerR", manager: "KEY", station: 0 }
+        ].forEach(register);
+    })();
+
     const FILE = "TransforkNew/INPUT/SHORTCUTS/registerR.js";
     const api = window.TransforkNew;
     const ownerKey = "transforkNew.rShortcut260707_a8f4qz";

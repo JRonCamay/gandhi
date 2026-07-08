@@ -7,6 +7,14 @@ window.TransforkNew.UI.elements.buttons.SIZEHBUTTON = window.TransforkNew.UI.ele
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "SCALE.local.TransforkNew.UI.ELEMENTS.BUTTONS.SIZEHBUTTON.mouseUp.js.mouseUp", file: "TransforkNew/UI/ELEMENTS/BUTTONS/SIZEHBUTTON/mouseUp.js", functionName: "mouseUp", purpose: "local process member registration for mouseUp", manager: "SCALE", station: 0 }
+        ].forEach(register);
+    })();
+
     function mouseUp(button) {
         if (!button || !button.node) return null;
         return button.node;

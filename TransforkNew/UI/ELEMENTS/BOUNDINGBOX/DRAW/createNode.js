@@ -7,6 +7,14 @@ window.TransforkNew.UI.elements.BOUNDINGBOX.DRAW = window.TransforkNew.UI.elemen
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "UI.local.TransforkNew.UI.ELEMENTS.BOUNDINGBOX.DRAW.createNode.js.createNode", file: "TransforkNew/UI/ELEMENTS/BOUNDINGBOX/DRAW/createNode.js", functionName: "createNode", purpose: "local process member registration for createNode", manager: "UI", station: 0 }
+        ].forEach(register);
+    })();
+
     function createNode(box) {
         if (!box) return null;
         if (box.node) return box.node;

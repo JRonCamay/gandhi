@@ -7,6 +7,14 @@ window.TransforkNew.UI.elements.BOUNDINGBOX.PREVIEW = window.TransforkNew.UI.ele
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "UI.local.TransforkNew.UI.ELEMENTS.BOUNDINGBOX.PREVIEW.applyDelta.js.applyDelta", file: "TransforkNew/UI/ELEMENTS/BOUNDINGBOX/PREVIEW/applyDelta.js", functionName: "applyDelta", purpose: "local process member registration for applyDelta", manager: "UI", station: 0 }
+        ].forEach(register);
+    })();
+
     function applyDelta(box, dx, dy) {
         if (!box) return null;
         return window.TransforkNew.UI.elements.BOUNDINGBOX.PREVIEW.applyPosition?.(box, box.baseLeft + dx, box.baseTop + dy);

@@ -5,6 +5,14 @@ window.TransforkNew.UTILS.COORDS = window.TransforkNew.UTILS.COORDS || {};
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "MAIN.local.TransforkNew.UTILS.COORDS.boundsToScreenRect.js.boundsToScreenRect", file: "TransforkNew/UTILS/COORDS/boundsToScreenRect.js", functionName: "boundsToScreenRect", purpose: "local process member registration for boundsToScreenRect", manager: "MAIN", station: 0 }
+        ].forEach(register);
+    })();
+
     function boundsToScreenRect(bounds, canvas, vm) {
         if (!bounds || !canvas || !vm?.runtime?.renderer) return null;
 

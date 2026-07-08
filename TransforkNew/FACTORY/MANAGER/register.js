@@ -5,6 +5,14 @@ window.TransforkNew.FACTORY.MANAGER = window.TransforkNew.FACTORY.MANAGER || {};
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "MAIN.local.TransforkNew.FACTORY.MANAGER.register.js.register", file: "TransforkNew/FACTORY/MANAGER/register.js", functionName: "register", purpose: "local process member registration for register", manager: "MAIN", station: 0 }
+        ].forEach(register);
+    })();
+
     function register(meta) {
         const manager = window.TransforkNew.FACTORY.MANAGER;
         const line = manager.create?.(meta.line || "MAIN", { maxStation: meta.maxStation || meta.station || 0 });

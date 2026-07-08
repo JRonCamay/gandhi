@@ -8,6 +8,14 @@ window.TransforkNew.UI.elements.buttons.MOVEBUTTON.STATE = window.TransforkNew.U
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "MOVE.local.TransforkNew.UI.ELEMENTS.BUTTONS.MOVEBUTTON.STATE.create.js.create", file: "TransforkNew/UI/ELEMENTS/BUTTONS/MOVEBUTTON/STATE/create.js", functionName: "create", purpose: "local process member registration for create", manager: "MOVE", station: 0 }
+        ].forEach(register);
+    })();
+
     function create(existing = {}) {
         return Object.assign(existing, {
             node: existing.node || null,

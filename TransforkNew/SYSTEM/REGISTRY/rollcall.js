@@ -5,6 +5,14 @@ window.TransforkNew.SYSTEM.REGISTRY = window.TransforkNew.SYSTEM.REGISTRY || {};
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "MAIN.local.TransforkNew.SYSTEM.REGISTRY.rollcall.js.rollcall", file: "TransforkNew/SYSTEM/REGISTRY/rollcall.js", functionName: "rollcall", purpose: "local process member registration for rollcall", manager: "MAIN", station: 0 }
+        ].forEach(register);
+    })();
+
 function rollcall(options = {}) {
         const debug = window.TransforkNew.DEBUG || window.TransforkNew.SYSTEM?.debug;
         const registry = window.TransforkNew.SYSTEM.REGISTRY;

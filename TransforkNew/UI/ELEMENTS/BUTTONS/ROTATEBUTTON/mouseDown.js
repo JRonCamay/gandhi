@@ -7,6 +7,14 @@ window.TransforkNew.UI.elements.buttons.ROTATEBUTTON = window.TransforkNew.UI.el
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "ROTATE.local.TransforkNew.UI.ELEMENTS.BUTTONS.ROTATEBUTTON.mouseDown.js.mouseDown", file: "TransforkNew/UI/ELEMENTS/BUTTONS/ROTATEBUTTON/mouseDown.js", functionName: "mouseDown", purpose: "local process member registration for mouseDown", manager: "ROTATE", station: 0 }
+        ].forEach(register);
+    })();
+
     function mouseDown(button) {
         if (!button?.node) return null;
         button.node.addEventListener("mousedown", event => {

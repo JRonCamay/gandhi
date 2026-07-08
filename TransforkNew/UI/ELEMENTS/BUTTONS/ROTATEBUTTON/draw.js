@@ -7,6 +7,14 @@ window.TransforkNew.UI.elements.buttons.ROTATEBUTTON = window.TransforkNew.UI.el
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "ROTATE.local.TransforkNew.UI.ELEMENTS.BUTTONS.ROTATEBUTTON.draw.js.draw", file: "TransforkNew/UI/ELEMENTS/BUTTONS/ROTATEBUTTON/draw.js", functionName: "draw", purpose: "local process member registration for draw", manager: "ROTATE", station: 0 }
+        ].forEach(register);
+    })();
+
     function draw(button) {
         if (!button?.node) return null;
         button.node.textContent = "⟳";

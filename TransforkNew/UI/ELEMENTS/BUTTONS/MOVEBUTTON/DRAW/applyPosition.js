@@ -8,6 +8,14 @@ window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAW = window.TransforkNew.UI
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "MOVE.local.TransforkNew.UI.ELEMENTS.BUTTONS.MOVEBUTTON.DRAW.applyPosition.js.applyPosition", file: "TransforkNew/UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAW/applyPosition.js", functionName: "applyPosition", purpose: "local process member registration for applyPosition", manager: "MOVE", station: 0 }
+        ].forEach(register);
+    })();
+
     function applyPosition(button, left, top) {
         if (!button?.node) return null;
         button.previewButtonLeft = left;

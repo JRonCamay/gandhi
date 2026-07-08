@@ -5,6 +5,15 @@ window.TransforkNew.SYSTEM.VM = window.TransforkNew.SYSTEM.VM || {};
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "VM.local.TransforkNew.SYSTEM.VM.find.js.log", file: "TransforkNew/SYSTEM/VM/find.js", functionName: "log", purpose: "local process member registration for log", manager: "VM", station: 0 },
+            { id: "VM.local.TransforkNew.SYSTEM.VM.find.js.find", file: "TransforkNew/SYSTEM/VM/find.js", functionName: "find", purpose: "local process member registration for find", manager: "VM", station: 0 }
+        ].forEach(register);
+    })();
+
     function log(label, data) {
         window.TransforkNew.SYSTEM?.debug?.log?.("VM find " + label, data);
     }

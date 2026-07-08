@@ -4,6 +4,14 @@ window.TransforkNew.ROTATE = window.TransforkNew.ROTATE || {};
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "ROTATE.local.TransforkNew.TOOLS.ROTATE.02.capture.js.capture", file: "TransforkNew/TOOLS/ROTATE/02_capture.js", functionName: "capture", purpose: "local process member registration for capture", manager: "ROTATE", station: 2 }
+        ].forEach(register);
+    })();
+
     function capture(lineState = {}) {
         if (window.TransforkNew.MAR?.tool !== window.TransforkNew.TOOLS?.state?.TOOL_ROTATE) return;
 

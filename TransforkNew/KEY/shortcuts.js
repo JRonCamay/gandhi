@@ -1,6 +1,15 @@
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "KEY.local.TransforkNew.KEY.shortcuts.js.requestTransformActivation", file: "TransforkNew/KEY/shortcuts.js", functionName: "requestTransformActivation", purpose: "local process member registration for requestTransformActivation", manager: "KEY", station: 0 },
+            { id: "KEY.local.TransforkNew.KEY.shortcuts.js.run", file: "TransforkNew/KEY/shortcuts.js", functionName: "run", purpose: "local process member registration for run", manager: "KEY", station: 0 }
+        ].forEach(register);
+    })();
+
     console.log("[R] KEY/shortcuts.js loaded");
 
     if (!window.KEY || typeof window.KEY.register !== "function") {

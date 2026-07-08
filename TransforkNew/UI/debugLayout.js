@@ -4,6 +4,16 @@ window.TransforkNew.UI = window.TransforkNew.UI || {};
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "UI.local.TransforkNew.UI.debugLayout.js.set", file: "TransforkNew/UI/debugLayout.js", functionName: "set", purpose: "local process member registration for set", manager: "UI", station: 0 },
+            { id: "UI.local.TransforkNew.UI.debugLayout.js.apply", file: "TransforkNew/UI/debugLayout.js", functionName: "apply", purpose: "local process member registration for apply", manager: "UI", station: 0 },
+            { id: "UI.local.TransforkNew.UI.debugLayout.js.start", file: "TransforkNew/UI/debugLayout.js", functionName: "start", purpose: "local process member registration for start", manager: "UI", station: 0 }
+        ].forEach(register);
+    })();
+
     function set(id, styles) {
         const node = document.getElementById(id);
         if (!node) return;

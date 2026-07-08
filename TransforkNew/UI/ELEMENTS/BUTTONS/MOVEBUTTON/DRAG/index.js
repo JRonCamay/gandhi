@@ -8,6 +8,20 @@ window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG = window.TransforkNew.UI
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "MOVE.local.TransforkNew.UI.ELEMENTS.BUTTONS.MOVEBUTTON.DRAG.index.js.makeReport", file: "TransforkNew/UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAG/index.js", functionName: "makeReport", purpose: "local process member registration for makeReport", manager: "MOVE", station: 0 },
+            { id: "MOVE.local.TransforkNew.UI.ELEMENTS.BUTTONS.MOVEBUTTON.DRAG.index.js.register", file: "TransforkNew/UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAG/index.js", functionName: "register", purpose: "local process member registration for register", manager: "MOVE", station: 0 },
+            { id: "MOVE.local.TransforkNew.UI.ELEMENTS.BUTTONS.MOVEBUTTON.DRAG.index.js.start", file: "TransforkNew/UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAG/index.js", functionName: "start", purpose: "local process member registration for start", manager: "MOVE", station: 0 },
+            { id: "MOVE.local.TransforkNew.UI.ELEMENTS.BUTTONS.MOVEBUTTON.DRAG.index.js.process", file: "TransforkNew/UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAG/index.js", functionName: "process", purpose: "local process member registration for process", manager: "MOVE", station: 0 },
+            { id: "MOVE.local.TransforkNew.UI.ELEMENTS.BUTTONS.MOVEBUTTON.DRAG.index.js.done", file: "TransforkNew/UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAG/index.js", functionName: "done", purpose: "local process member registration for done", manager: "MOVE", station: 0 },
+            { id: "MOVE.local.TransforkNew.UI.ELEMENTS.BUTTONS.MOVEBUTTON.DRAG.index.js.wait", file: "TransforkNew/UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAG/index.js", functionName: "wait", purpose: "local process member registration for wait", manager: "MOVE", station: 0 },
+            { id: "MOVE.local.TransforkNew.UI.ELEMENTS.BUTTONS.MOVEBUTTON.DRAG.index.js.stop", file: "TransforkNew/UI/ELEMENTS/BUTTONS/MOVEBUTTON/DRAG/index.js", functionName: "stop", purpose: "local process member registration for stop", manager: "MOVE", station: 0 }
+        ].forEach(register);
+    })();
+
     const DRAG = window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG;
 
     function makeReport(status, extra = {}) {
@@ -16,6 +30,7 @@ window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG = window.TransforkNew.UI
 
     const manager = DRAG.manager || {
         line: "MOVE_DRAG",
+        name: "MOVE_DRAG",
         currStation: 0,
         endStation: 0,
         stations: {},
@@ -55,7 +70,7 @@ window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG = window.TransforkNew.UI
                 this.lastReport = report;
 
                 if (report.status === "done") {
-                    this.currStation += 1;
+                    this.submitEndSession();
                     continue;
                 }
 
@@ -79,6 +94,11 @@ window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG = window.TransforkNew.UI
                 });
             }
             return allowed;
+        },
+
+        submitEndSession() {
+            this.currStation += 1;
+            return this.currStation;
         },
 
         done(extra = {}) {
@@ -105,6 +125,8 @@ window.TransforkNew.UI.elements.buttons.MOVEBUTTON.DRAG = window.TransforkNew.UI
     };
 
     DRAG.manager = manager;
+    window.TransforkNew.MANAGERS = window.TransforkNew.MANAGERS || {};
+    window.TransforkNew.MANAGERS.MOVE_DRAG = manager;
     DRAG.report = makeReport;
     DRAG.start = (context, startStation, endStation) => manager.start(context, startStation, endStation);
     DRAG.registerStation = (station, fn, meta) => manager.register(station, fn, meta);

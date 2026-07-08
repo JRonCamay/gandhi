@@ -5,6 +5,16 @@ window.TransforkNew.TOOLS = window.TransforkNew.TOOLS || {};
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "MAIN.local.TransforkNew.TOOLS.activate.js.activate", file: "TransforkNew/TOOLS/activate.js", functionName: "activate", purpose: "local process member registration for activate", manager: "MAIN", station: 0 },
+            { id: "MAIN.local.TransforkNew.TOOLS.activate.js.deactivate", file: "TransforkNew/TOOLS/activate.js", functionName: "deactivate", purpose: "local process member registration for deactivate", manager: "MAIN", station: 0 },
+            { id: "MAIN.local.TransforkNew.TOOLS.activate.js.current", file: "TransforkNew/TOOLS/activate.js", functionName: "current", purpose: "local process member registration for current", manager: "MAIN", station: 0 }
+        ].forEach(register);
+    })();
+
     function activate(tool) {
         window.TransforkNew.MAR.tool = tool || window.TransforkNew.TOOLS.state?.TOOL_NONE || "NONE";
         return window.TransforkNew.MAR.tool;

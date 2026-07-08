@@ -7,6 +7,14 @@ window.TransforkNew.UI.elements.BOUNDINGBOX.VISIBILITY = window.TransforkNew.UI.
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "UI.local.TransforkNew.UI.ELEMENTS.BOUNDINGBOX.VISIBILITY.hide.js.hide", file: "TransforkNew/UI/ELEMENTS/BOUNDINGBOX/VISIBILITY/hide.js", functionName: "hide", purpose: "local process member registration for hide", manager: "UI", station: 0 }
+        ].forEach(register);
+    })();
+
     function hide(box) {
         if (!box?.node) return null;
         box.node.style.display = "none";

@@ -6,6 +6,14 @@ window.TransforkNew.UI.elements.buttons = window.TransforkNew.UI.elements.button
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "UI.local.TransforkNew.UI.ELEMENTS.BUTTONS.rotateButton.js.init", file: "TransforkNew/UI/ELEMENTS/BUTTONS/rotateButton.js", functionName: "init", purpose: "local process member registration for init", manager: "UI", station: 0 }
+        ].forEach(register);
+    })();
+
     const api = window.TransforkNew;
 
     const rotateButton = {

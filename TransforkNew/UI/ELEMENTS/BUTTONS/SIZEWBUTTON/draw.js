@@ -7,6 +7,14 @@ window.TransforkNew.UI.elements.buttons.SIZEWBUTTON = window.TransforkNew.UI.ele
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "SCALE.local.TransforkNew.UI.ELEMENTS.BUTTONS.SIZEWBUTTON.draw.js.draw", file: "TransforkNew/UI/ELEMENTS/BUTTONS/SIZEWBUTTON/draw.js", functionName: "draw", purpose: "local process member registration for draw", manager: "SCALE", station: 0 }
+        ].forEach(register);
+    })();
+
     function draw(button) {
         if (!button?.node) return null;
         button.node.textContent = "↔";

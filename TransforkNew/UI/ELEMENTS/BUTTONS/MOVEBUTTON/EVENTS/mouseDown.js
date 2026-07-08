@@ -8,6 +8,14 @@ window.TransforkNew.UI.elements.buttons.MOVEBUTTON.EVENTS = window.TransforkNew.
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "MOVE.local.TransforkNew.UI.ELEMENTS.BUTTONS.MOVEBUTTON.EVENTS.mouseDown.js.mouseDown", file: "TransforkNew/UI/ELEMENTS/BUTTONS/MOVEBUTTON/EVENTS/mouseDown.js", functionName: "mouseDown", purpose: "local process member registration for mouseDown", manager: "MOVE", station: 0 }
+        ].forEach(register);
+    })();
+
     function mouseDown(button) {
         if (!button?.node || button.mouseDownAttached) return button?.node || null;
 

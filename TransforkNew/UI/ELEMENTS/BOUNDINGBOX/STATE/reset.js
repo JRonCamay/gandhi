@@ -7,6 +7,14 @@ window.TransforkNew.UI.elements.BOUNDINGBOX.STATE = window.TransforkNew.UI.eleme
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "UI.local.TransforkNew.UI.ELEMENTS.BOUNDINGBOX.STATE.reset.js.module", file: "TransforkNew/UI/ELEMENTS/BOUNDINGBOX/STATE/reset.js", functionName: "module", purpose: "local process member registration for module", manager: "UI", station: 0 }
+        ].forEach(register);
+    })();
+
     function reset(box) {
         if (!box) return null;
         const node = box.node || null;

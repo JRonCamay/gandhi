@@ -5,6 +5,14 @@ window.TransforkNew.UI.elements = window.TransforkNew.UI.elements || {};
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "UI.local.TransforkNew.UI.ELEMENTS.buttons.js.init", file: "TransforkNew/UI/ELEMENTS/buttons.js", functionName: "init", purpose: "local process member registration for init", manager: "UI", station: 0 }
+        ].forEach(register);
+    })();
+
     const api = window.TransforkNew;
 
     const buttons = {

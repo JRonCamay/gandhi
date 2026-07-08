@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Gandhi TransforkNew Loader
 // @namespace    http://tampermonkey.net/
-// @version      1.2.7-manager
+// @version      1.2.8-factory-rollcall
 // @description  Loads TransforkNew clean architecture modules
 // @match        *://www.cocrea.world/*
 // @grant        none
@@ -10,7 +10,22 @@
 (function () {
     "use strict";
 
-    const VERSION = ["1", "2", "7-manager"].join(".");
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "MAIN.local.TransforkNew.Transfork.Loader.js.registerProcessMember", file: "TransforkNew/Transfork_Loader.js", functionName: "registerProcessMember", purpose: "local process member registration for registerProcessMember", manager: "MAIN", station: 0 },
+            { id: "MAIN.local.TransforkNew.Transfork.Loader.js.cacheToken", file: "TransforkNew/Transfork_Loader.js", functionName: "cacheToken", purpose: "local process member registration for cacheToken", manager: "MAIN", station: 0 },
+            { id: "MAIN.local.TransforkNew.Transfork.Loader.js.showToast", file: "TransforkNew/Transfork_Loader.js", functionName: "showToast", purpose: "local process member registration for showToast", manager: "MAIN", station: 0 },
+            { id: "MAIN.local.TransforkNew.Transfork.Loader.js.cleanupDOM", file: "TransforkNew/Transfork_Loader.js", functionName: "cleanupDOM", purpose: "local process member registration for cleanupDOM", manager: "MAIN", station: 0 },
+            { id: "MAIN.local.TransforkNew.Transfork.Loader.js.cleanupRuntime", file: "TransforkNew/Transfork_Loader.js", functionName: "cleanupRuntime", purpose: "local process member registration for cleanupRuntime", manager: "MAIN", station: 0 },
+            { id: "MAIN.local.TransforkNew.Transfork.Loader.js.loadModule", file: "TransforkNew/Transfork_Loader.js", functionName: "loadModule", purpose: "local process member registration for loadModule", manager: "MAIN", station: 0 },
+            { id: "MAIN.local.TransforkNew.Transfork.Loader.js.loadAll", file: "TransforkNew/Transfork_Loader.js", functionName: "loadAll", purpose: "local process member registration for loadAll", manager: "MAIN", station: 0 },
+            { id: "MAIN.local.TransforkNew.Transfork.Loader.js.hotReload", file: "TransforkNew/Transfork_Loader.js", functionName: "hotReload", purpose: "local process member registration for hotReload", manager: "MAIN", station: 0 }
+        ].forEach(register);
+    })();
+
+    const VERSION = ["1", "2", "8-factory-rollcall"].join(".");
     const base = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/TransforkNew/";
     console.log("[TN LOADER] userscript started", { VERSION, base, url: location.href });
     const modules = [
@@ -21,6 +36,7 @@
         "SYSTEM/MAR.js",
         "SYSTEM/version.js",
         "SYSTEM/debug.js",
+        "DebugManager.js",
         "SYSTEM/REGISTRY/state.js",
         "SYSTEM/REGISTRY/register.js",
         "SYSTEM/REGISTRY/find.js",
@@ -176,9 +192,18 @@
     ];
 
     let loading = false;
+    const loadedSources = [];
 
     window.TransforkNew = window.TransforkNew || {};
+    window.TransforkNew.__pendingRegistryEntries = window.TransforkNew.__pendingRegistryEntries || [];
+    window.TransforkNew.registerProcessMember = function registerProcessMember(meta) {
+        const registry = window.TransforkNew?.SYSTEM?.REGISTRY;
+        if (registry && typeof registry.register === "function") return registry.register(meta);
+        if (meta && meta.id) window.TransforkNew.__pendingRegistryEntries.push(meta);
+        return null;
+    };
     window.TransforkNew.VERSION = VERSION;
+    window.TransforkNew.registerProcessMember({ id: "MAIN.local.TransforkNew.Transfork.Loader.js.self", file: "TransforkNew/Transfork_Loader.js", functionName: "loader", purpose: "local process member registration for loader bootstrap", manager: "MAIN", station: 0 });
     window.TransforkNewLoader = { version: VERSION, modules: modules.slice(), hotReload };
 
     function cacheToken() {
@@ -230,7 +255,17 @@
         if (!response.ok) throw new Error("Failed to fetch " + name + ": " + response.status);
         const text = await response.text();
         Function(text + "\n//# sourceURL=" + base + name + "?v=" + token)();
+        const loadedRecord = { name, text, registered: false };
+        loadedSources.push(loadedRecord);
         window.TransforkNew?.SYSTEM?.REGISTRY?.markLoaded?.(name);
+        const registerModuleFunctions = window.TransforkNew?.SYSTEM?.REGISTRY?.registerModuleFunctions;
+        if (typeof registerModuleFunctions === "function") {
+            for (const record of loadedSources) {
+                if (record.registered) continue;
+                registerModuleFunctions(record.name, record.text);
+                record.registered = true;
+            }
+        }
         console.log("[TN LOADER] loaded", name);
     }
 

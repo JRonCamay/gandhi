@@ -4,6 +4,14 @@ window.TransforkNew.SCALE = window.TransforkNew.SCALE || {};
 (function () {
     "use strict";
 
+    (function registerTransforkNewProcessMembers() {
+        const register = window.TransforkNew?.registerProcessMember;
+        if (typeof register !== "function") return;
+        [
+            { id: "SCALE.local.TransforkNew.TOOLS.SCALE.state.js.module", file: "TransforkNew/TOOLS/SCALE/state.js", functionName: "module", purpose: "local process member registration for module", manager: "SCALE", station: 0 }
+        ].forEach(register);
+    })();
+
     const state = {
         active: false,
         start: null,
