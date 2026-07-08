@@ -287,7 +287,9 @@
         if (!keyManager.guard(1, FILE, "station01_validateEnabled")) return keyManager.stop("blocked station 1");
 
         try {
-            if (!enabled) return keyManager.stop("key disabled");
+            if (!enabled) {
+                return keyManager.stop("key disabled");
+            }
             if (ctx.event?.key?.toLowerCase?.() === "r") {
                 console.log("[TN LOADER] KEY dispatch saw R", {
                     enabled,
