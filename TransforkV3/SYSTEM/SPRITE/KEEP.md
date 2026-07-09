@@ -1,0 +1,1 @@
+SPRITE subsystem folder placeholder.
