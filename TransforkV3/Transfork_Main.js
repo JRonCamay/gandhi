@@ -3,14 +3,18 @@
     "use strict";
 
     const ROOT = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/TransforkV3";
+    const VERSION = "0.0.2-ui-layout";
     const MODULES = [
-        "SYSTEM/MOVE/index.js",
-        "SYSTEM/SCALE/index.js",
+        "SYSTEM/KEY/index.js",
+        "SYSTEM/UI/index.js",
         "SYSTEM/TRANSFORM_BOX/index.js",
-        "SYSTEM/UI/index.js"
+        "SYSTEM/RENDER/index.js",
+        "SYSTEM/MOVE/index.js",
+        "SYSTEM/SCALE/index.js"
     ];
 
     const app = window.TransforkV3 = window.TransforkV3 || {};
+    app.VERSION = VERSION;
     app.systems = app.systems || {};
     app.runtime = app.runtime || {};
     app.runtime.root = ROOT;
@@ -41,11 +45,19 @@
             app.runtime.loadedSystems.push(path);
         }
 
-        ["UI", "TRANSFORM_BOX", "MOVE", "SCALE"].forEach(function (name) {
+        ["UI", "TRANSFORM_BOX", "RENDER", "KEY", "MOVE", "SCALE"].forEach(function (name) {
             const system = app.systems[name];
             if (system && typeof system.start === "function") system.start();
         });
     }
+
+    app.reload = function () {
+        app.runtime.started = false;
+        const script = document.createElement("script");
+        script.src = ROOT + "/Transfork_Main.js?t=" + Date.now();
+        script.async = false;
+        document.head.appendChild(script);
+    };
 
     app.start = start;
     start().catch(function (error) {
