@@ -54,7 +54,7 @@
     app.reload = function () {
         app.runtime.started = false;
         const script = document.createElement("script");
-        script.src = ROOT + "/Transfork_Main.js?v=" + Date.now();
+        script.src = ROOT + "/TF3_Main.js?v=" + Date.now();
         script.async = false;
         document.head.appendChild(script);
     };
