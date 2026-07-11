@@ -599,7 +599,7 @@ A TransforkV3 implementation task is complete only when:
 2. Required systems register successfully.
 3. Required APIs are exposed.
 4. Runtime behavior is tested when possible.
-5. No unrelated TransforkNew/protected files were touched.
+5. No unrelated TransforkV3/protected files were touched.
 6. The implementation matches the requested scope.
 
 Do not report TransforkV3 work complete from memory or intention.
