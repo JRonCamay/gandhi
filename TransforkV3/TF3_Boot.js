@@ -3,7 +3,7 @@
 (function () {
     "use strict";
 
-    const ROOT = "https://cdn.jsdelivr.net/gh/JRonCamay/gandhi@main/TransforkV3";
+    const ROOT = "https://raw.githubusercontent.com/JRonCamay/gandhi/main/TransforkV3";
     const MAIN_URL = ROOT + "/TF3_Main.js";
     window.TransforkV3 = window.TransforkV3 || {};
     window.TransforkV3.runtime = window.TransforkV3.runtime || {};

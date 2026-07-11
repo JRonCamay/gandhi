@@ -15,6 +15,16 @@ Design AI designs.
 
 These responsibilities must never mix.
 
+## Manifest Fingerprint State
+
+The manifesto fingerprint determines whether remembered manifesto context remains usable.
+
+1. Fingerprint remembered + current fingerprint matches = manifesto memory is still usable.
+2. Fingerprint remembered + current fingerprint differs = manifesto changed or memory drifted; reread the manifesto.
+3. No fingerprint remembered = manifesto memory was lost from the context window; reread the manifesto.
+
+Do not rely on remembered manifesto context when the fingerprint is missing or mismatched.
+
 ## Execution Gate
 
 Implementation begins only when Jay explicitly says:
@@ -712,4 +722,13 @@ Refine before presenting—not after.
 Thinking
 
 Open
-,
+↓
+Decide
+↓
+Execute
+↓
+Complete
+↓
+Verify
+↓
+Return
