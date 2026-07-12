@@ -1,0 +1,300 @@
+// 							[VarSet, slRecordingF, [IGetFlags, Stroke:Inventory:Record]]
+// 							[If, (slRecordingF == 9) || (slRecordingF == 11) ,
+// 								 [IUnPress, Stroke:Inventory:Record]
+// 								 [IPress, Stroke:Inventory:Record]
+// 							,
+// 								 [IPress, Stroke:Inventory:Record]
+// 							]
+// 							[VarSet, gClipUndo, [IGet, Edit:Tool:UndoCounter]]
+// 
+// 							[VarSet, slHasClippedStroke, 1]
+// 						
+// 						]
+// 						
+// 						[SleepAgain,.001, 4]
+// 					,
+// 						[SleepAgain,.001, 4]
+// 					]
+// 				]
+// 			
+// 			]
+// 			
+// 			
+// 		
+// 		,4 ]
+// 		
+// 		[NoteBar, "Hold SHIFT + CTRL Keys to activate the ClipRect brush and drag the box. This will determine where to put the hole."]
+// 	] // End of LOOP
+// 	[If, slHasError == 1,
+// 		[Note, slErrorToDisplay]
+// 	,]
+// 	[IShowActions, 1]
+// 	
+// ]
+// 
+// 
+// [ISwitch, FromCenter, 0, "",
+// 	[IShowActions, 0]
+// 	[IFreeze,
+// 		[IKeyPress, CTRL + SHIFT,
+// 			[IPRess, Stroke:Center]
+// 		]
+// 	]
+// 	
+// 	[IShowActions, 1]
+// ,	
+// 	[IShowActions, 0]
+// 	[IFreeze,
+// 		[IKeyPress, CTRL + SHIFT,
+// 			[IUnPRess, Stroke:Center]
+// 		]
+// 	]
+// 	[IShowActions, 1]
+// , 1]
+// 
+// [ISwitch, Proportional, 0, "",
+// 	[IShowActions, 0]
+// 	[IFreeze,
+// 		[IKeyPress, CTRL + SHIFT,
+// 			
+// 			[IPRess, Stroke:Square]
+// 		]
+// 	]
+// 	[IShowActions, 1]
+// ,	
+// 	[IShowActions, 0]
+// 	[IFreeze,
+// 		[IKeyPress, CTRL + SHIFT,
+// 			[IUnPRess, Stroke:Square]
+// 		]
+// 	]
+// 	[IShowActions, 1]
+// , 1]
+// 
+// 
+// [RoutineDef, J_MakeHole,
+// 	
+// 	[IShowActions, 0]
+// 	[VarSet, slHasError, 0]
+// 	[VarSet, slErrorToDisplay, ""]
+// 	[IFreeze,
+// 		[VarSet, slIsCamPlacement, [IGetFlags, "Edit:Tool:Restore Placement"]]
+// 		[Loop, 1 ,
+// 			//Checks if it is still in edit mode.
+// 			[VarSet, slEditFlags, [IGetFlags, Transform:Edit]]
+// 			[If, (slEditFlags == 8) || (slEditFlags == 10),
+// 				[VarSet, slRePF, [IGetFlags, Edit:Tool:Restore Placement]]
+// 				[If, (slRePF == 9) || (slRePF == 11) ,
+// 					[IUnPress, Edit:Tool:Restore Placement]
+// 					
+// 				,]
+// 				[ISet, Edit:Tool:UndoCounter, (gHoleUndo - 1)]
+// 				
+// 				[IPress, Edit:Tool:Store]
+// 				[IPress, Tool:Masking:Clear]
+// 				[ISet, Edit:Tool:UndoCounter, ([IGEt, Edit:Tool:UndoCounter] - 1)]
+// 				[VarSet, slHasError, 1]
+// 				[VarSet, slErrorToDisplay, "You toggled off the Transform:Edit button . Action cancelled."]
+// 				[LoopExit]
+// 			,]
+// 			//...continue
+// 			//Checks if the Tool is the same.
+// 			[VarSet, slToolNewID, [ToolGetActiveIndex]]
+// 			[If, gHoleToolID == slToolNewID,
+// 			, // It means it is not the same Tool
+// 				[VarSet, slRePF, [IGetFlags, Edit:Tool:Restore Placement]]
+// 				[If, (slRePF == 9) || (slRePF == 11) ,
+// 					[IUnPress, Edit:Tool:Restore Placement]
+// 					
+// 				,]
+// 				[ISet, Edit:Tool:UndoCounter, (gHoleUndo - 1)]
+// 				[IPress, Edit:Tool:Store]
+// 				[IPress, Tool:Masking:Clear]
+// 				[ISet, Edit:Tool:UndoCounter, ([IGEt, Edit:Tool:UndoCounter] - 1)]
+// 				[VarSet, slHasError, 1]
+// 				[VarSet, slErrorToDisplay, "You switched to different tool. Action cancelled."]
+// 				[LoopExit]
+// 			]
+// 			
+// 			//...continue
+// 			//Checks if the subtool is the same.
+// 			[VarSet, slSubToolNewID, [SubToolGetActiveIndex]]
+// 			[If, gHoleSubToolID == slSubToolNewID,
+// 			, // It means it is not the same Tool
+// 				[VarSet, slRePF, [IGetFlags, Edit:Tool:Restore Placement]]
+// 				[If, (slRePF == 9) || (slRePF == 11) ,
+// 					[IUnPress, Edit:Tool:Restore Placement]
+// 					
+// 				,]
+// 				[ISet, Edit:Tool:UndoCounter, (gHoleUndo-1)]
+// 				[IPress, Edit:Tool:Store]
+// 				[IPress, Tool:Masking:Clear]
+// 				[ISet, Edit:Tool:UndoCounter, ([IGEt, Edit:Tool:UndoCounter] - 1)]
+// 				[VarSet, slHasError, 1]
+// 				[VarSet, slErrorToDisplay, "You switched to a different subtool. Action cancelled."]
+// 				[LoopExit]
+// 			]
+// 			
+// 			//..continue
+// 			[VarSet, slCurrentUndo, [IGet, Edit:Tool:UndoCounter]]
+// 			[If, slCurrentUndo <= gClipUndo ,
+// 				[VarSet, slRePF, [IGetFlags, Edit:Tool:Restore Placement]]
+// 				[If, (slRePF == 9) || (slRePF == 11) ,
+// 					[IUnPress, Edit:Tool:Restore Placement]
+// 					
+// 				,]
+// 				[ISet, Edit:Tool:UndoCounter, (gHoleUndo - 1)]
+// 				[IPress, Edit:Tool:Store]
+// 				[IPress, Tool:Masking:Clear]
+// 				[ISet, Edit:Tool:UndoCounter, ([IGEt, Edit:Tool:UndoCounter] - 1)]
+// 				[VarSet, slHasError, 1]
+// 				[LoopExit]
+// 			,]
+// 			//..continue
+// 			
+// 			[VarSet, slMeshClippedVol, ([IGet, Tool:Geometry:X Size] * [IGet, Tool:Geometry:Y Size] * [IGet, Tool:Geometry:Z Size])]
+// 			[If, gMeshVol <= slMeshClippedVol,
+// 				[VarSet, slRePF, [IGetFlags, Edit:Tool:Restore Placement]]
+// 				[If, (slRePF == 9) || (slRePF == 11) ,
+// 					[IUnPress, Edit:Tool:Restore Placement]
+// 					
+// 				,]
+// 				[ISet, Edit:Tool:UndoCounter, (gHoleUndo - 1)]
+// 				[IPress, Edit:Tool:Store]
+// 				[IPress, Tool:Masking:Clear]
+// 				[ISet, Edit:Tool:UndoCounter, ([IGEt, Edit:Tool:UndoCounter] - 1)]
+// 				[VarSet, slHasError, 1]
+// 				
+// 				[LoopExit]
+// 			
+// 			,]
+// 			//..continue
+// 			[VarSet, slDynamicsFlags, [IGetFlags, Tool:Geometry:s.Dynamic]]
+// 			[If, (slDynamicsFlags == 9) || (slDynamicsFlags == 11) ,
+// 				[VarSet, slRePF, [IGetFlags, Edit:Tool:Restore Placement]]
+// 				[If, (slRePF == 9) || (slRePF == 11) ,
+// 					[IUnPress, Edit:Tool:Restore Placement]
+// 					
+// 				,]
+// 				[ISet, Edit:Tool:UndoCounter, (gHoleUndo-1)]
+// 				[IPress, Edit:Tool:Store]
+// 				[IPress, Tool:Masking:Clear]
+// 				[ISet, Edit:Tool:UndoCounter, ([IGEt, Edit:Tool:UndoCounter] - 1)]
+// 				[VarSet, slHasError, 1]
+// 				[VarSet, slErrorToDisplay, "Dynamic subdivisions has been toggled on. Action cancelled."]
+// 				[LoopExit]
+// 			,]
+// 			
+// 			//..continue
+// 			[VarSet, slStrokeCount, [IGet, "Stroke:Inventory:Strokes Count"]]
+// 			[If, slStrokeCount == 0,// IF there is no stroke then exit
+// 				[VarSet, slRePF, [IGetFlags, Edit:Tool:Restore Placement]]
+// 				[If, (slRePF == 9) || (slRePF == 11) ,
+// 					[IUnPress, Edit:Tool:Restore Placement]
+// 					
+// 				,]
+// 				[ISet, Edit:Tool:UndoCounter, (gHoleUndo - 1)]
+// 				[IPress, Edit:Tool:Store]
+// 				[IPress, Tool:Masking:Clear]
+// 				[ISet, Edit:Tool:UndoCounter, ([IGEt, Edit:Tool:UndoCounter] - 1)]
+// 				[VarSet, slHasError, 1]
+// 				[LoopExit]
+// 			,]
+// 			
+// 			//.. continue
+// 			[If, slStrokeCount > 1,// IF there is more than 1 stroke then exit
+// 				[VarSet, slRePF, [IGetFlags, Edit:Tool:Restore Placement]]
+// 				[If, (slRePF == 9) || (slRePF == 11) ,
+// 					[IUnPress, Edit:Tool:Restore Placement]
+// 					
+// 				,]
+// 				[ISet, Edit:Tool:UndoCounter, (gHoleUndo -1) ]
+// 				[IPress, Edit:Tool:Store]
+// 				[IPress, Tool:Masking:Clear]
+// 				[ISet, Edit:Tool:UndoCounter, ([IGet, Edit:Tool:UndoCounter] - 1)]
+// 				[VarSet, slHasError, 1]
+// 				[LoopExit]
+// 			,]
+// 			//.. continue
+// 			
+// 			[NOte, "Creating the hole. Please wait..."]
+// 			[IUnPress, Transform:Edit] // Exit edit mode
+// 			//[IPress, Layer:Bake]
+// 			[IHide, 1011]
+// 			[VarSet, slSoloF, [IGetFlags, Transform:Solo]]
+// 			[If, (slSoloF == 8) || (slSoloF == 10) ,
+// 				[IPress, Transform:Solo]
+// 			,]
+// 			//Disables the Restore Placement button
+// 			[If,(slIsCamPlacement == 9) || (slIsCamPlacement == 11),
+// 				[IUnPress, "Edit:Tool:Restore Placement"]
+// 			,]
+// 			
+// 			
+// 			
+// 			[VarSet, slDynaFlag, [IGetFlags, Tool:Geometry:DynaMesh]] // Get if the DynaMesh button is on or off.
+// 			[If, (slDynaFlag == 8) || (slDynaFlag == 10), // Toggle on the dynamesh if off.
+// 				[IPress, Tool:Geometry:Copy] // Copy the original mesh
+// 				[VarSet, slDynRes, [IGet, Tool:Geometry:Resolution]] // Get the dynamesh resolution so we can set it back later.
+// 				
+// 				// This resizes the mesh to 2 if the mesh is too small to prevent dynamesh error
+// 				[VarSet, slXYZSize2, [IGet, Tool:Geometry:XYZ Size ]]
+// 				[VarSet, slDifXYZ, (2 / slXYZSize2)]
+// 				[If, slDifXYZ >= 1,
+// 					[ISet, Tool:Geometry:XYZ Size, (slXYZSize2 * slDifXYZ)]
+// 				,]
+// 				
+// 				
+// 				[ISet, Tool:Geometry:Resolution, 16]//Changes the dynamesh resolution so we can turn on Dynamesh mode.
+// 				[IPress, Transform:Edit] // Enter edit mode so dynamesh would work again
+// 				[IPress, Tool:Geometry:DynaMesh]
+// 				[IUnPress, Transform:Edit]
+// 				[IPress, Layer:Bake] // Bake it to make it faster
+// 				[IPress, Tool:Geometry:Paste Replace]
+// 				[IPress, Tool:Initialize:QCube] // Memory optimization
+// 				[IPress, Tool:Geometry:Copy] // Memory optimization
+// 				[ISet, Edit:Tool:UndoCounter, ([IGet, Edit:Tool:UndoCounter] - 1)] // Go back one step after memory optimization
+// 			,]
+// 					
+// 			[VarSet, slDynOnUndo, [IGet, Edit:Tool:UndoCounter]] // This is the clipped mesh with DynaMesh mode on.
+// 				
+// 						
+// 			// TurnOff the stroke recording
+// 			[VarSet, slIsStrokeRecording, [IGetFlags, Stroke:Inventory:Record]]
+// 			[If, (slIsStrokeRecording == 9) || (slIsStrokeRecording == 11),
+// 				[IUnpress, Stroke:Inventory:Record]
+// 			,]
+// 			
+// 			// Get the positions for later use. This is the position of the clipped mesh
+// 			[VarSet, slPosX, [IGet, "Tool:Geometry:X Position"]] 
+// 			[VarSet, slPosY, [IGet, "Tool:Geometry:Y Position"]]
+// 			[VarSet, slPosZ, [IGet, "Tool:Geometry:Z Position"]]
+// 			
+// 			[ISet, Edit:Tool:UndoCounter,gHoleUndo] // Undo to the original mesh
+// 			
+// 			
+// 			// Get the scale size for later use.This is the xyz of the clipped mesh
+// 			[VarSet, slScaleXYZ, [IGet, "Tool:Geometry:XYZ Size"]]
+// 			[IPress, Tool:Geometry:Copy] // Copy the original mesh...
+// 			[ISet, Edit:Tool:UndoCounter, slDynOnUndo]//...go back to the clipped mesh with DynaMesh mode on
+// 			[IPress, Tool:Geometry:Paste Replace]// Paste the original mesh over the clipped mesh.
+// 			[VarSet, slOrigCopyUndo, [IGet, Edit:Tool:UndoCounter]]
+// 			// Save the low count of the result for later use
+// 			[VarSet, slXYZSize2, [IGet, Tool:Geometry:XYZ Size ]]
+// 			[VarSet, slDifXYZ, (2 / slXYZSize2)]
+// 			[If, slDifXYZ >= 1,
+// 				[ISet, Tool:Geometry:XYZ Size, (slXYZSize2 * slDifXYZ)]
+// 			,]
+// 			
+// 			
+// 			[VarSet, slPolyGroups, [IGetFlags, Tool:Geometry:Groups]]
+// 			[If, (slPolyGroups == 9) || (slPolyGroups == 11),
+// 				[IUnPress, Tool:Geometry:Groups]
+// 			,]
+// 			[VarSet, slProj, [IGetFlags, Tool:Geometry:Project]]
+// 			[If, (slProj == 9) || (slProj == 11),
+// 				[IUnPress, Tool:Geometry:Project]
+// 			,]
+// 			[VarSet, slPolish, [IGetFlags, Tool:Geometry:Polish]]
+// 			[If, (slPolish == 9) || (slPolish == 11),
+// 				[IUnPress, Tool:Geometry:Polish]

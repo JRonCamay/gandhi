@@ -1,0 +1,300 @@
+							[VarSet, slErrorToDisplay, "Projection successful."]
+							[LoopExit]
+						]
+					,
+						[If, #slSelSubTool == 1 ,
+							[SubToolSelect, 1]
+						,]
+						[VarSet, slHasError, 1]
+						[VarSet, slErrorToDisplay, "You must click FixProjq first.Action cancelled."]
+						[LoopExit]
+					]
+					
+					
+				,]
+				[If, #slSelSubTool == 1 ,
+					[SubToolSelect, 1]
+				,]
+				[VarSet, slHasError, 1]
+				[VarSet, slErrorToDisplay, "You must click FixProjq first.Action cancelled."]
+				[LoopExit]
+				
+			,]
+			
+			//..continue
+			[If, #slSubToolCount > 2 ,
+				[VarSet, slToolID, [ToolGetActiveIndex]]
+				[VarSet, slShadRes,[IGet, "Tool:Geometry:Res"]]
+				[VarSet, slShadPolish,[IGet, "Tool:Geometry:Polish"]]
+				[If, (#slShadRes == 995) && (#slShadPolish == 64) ,
+					[VarSet, slIsVisible, 0]
+					[VarSet, slPolDisp, [IGet, "Tool:Display Properties:Polygons Draw Size"]]
+					[If, #slPolDisp == .5 ,
+						[VArSet, slTheID, 0]
+						[RoutineCall, J_SubToolListGetSelected2, slTheID]
+						[VarSet, slIsVisible, -1]
+						[RoutineCall, J_SubToolVisibility, #slTheID, slIsVisible]
+						[If, !#slIsVisible ,
+							[VarSet, slHasError, 1]
+							[VarSet, slErrorToDisplay, "You must click FixProjq first.Action cancelled."]
+							[LoopExit]
+						,
+							
+							[IPress, "Tool:Clone"]
+							[SubToolSelect, ([SubToolGetActiveIndex]+1)]
+							[IPress, Tool:Geometry:Copy]
+							[ToolSelect, ([ToolGetCount] - 1)]
+							[MergeUndo]
+							[IUnPress, Tool:Polypaint:Colorize]
+							[IPress, Tool:SubTool:Insert]
+							[IPress, PopUp:PolyMesh3D]
+							[IPress, "Tool:Geometry:Paste Replace"]
+							[MergeUndo]
+							[IUnPress, Tool:Polypaint:Colorize]
+							[IPress, Edit:Tool:DelUH]
+							[ISet, Tool:SubTool:Mean, 25]
+							[ISet, "Tool:SubTool:PA Blur", 2]
+							[IModSet, Tool:SubTool:ProjectionShell, 7]
+							[VarSet, slFarthest, [IGetFlags, Tool:SubTool:Farthest]]
+							[VarSet, slInnerFlags, [IGetFlags, Tool:SubTool:Inner]]
+							[IPress, Tool:SubTool:Farthest]
+// 							[If, (#slFarthest == 9) || (#slFarthest == 11) || (#slFarthest == 13) || (#slFarthest == 1),
+// 								[IUnPress, Tool:SubTool:Farthest]
+// 							,]
+							[IUnPress, Tool:SubTool:Inner]
+							[IUnPress, Tool:SubTool:Outer]
+							[ISet, Tool:SubTool:Dist, .25]
+							[ISet, Tool:SubTool:ProjectionShell, .025]
+							[Note, #slProjectMessage]
+							[IShow, 1011]
+							[IKeyPress,'2',
+								[MergeUndo]
+								[IPress, Tool:SubTool:ProjectAll]
+							]
+							[IHide, 1011]
+							[IPress, Tool:Geometry:Copy]
+							[IKeyPress, '2',
+								[IPress, "Tool:SubTool:Del All"]
+							]
+							[ToolSelect, #slToolID]
+							[IPress, "Tool:Geometry:Paste Replace"]
+							[VarSet, slHasError, 1]
+							[VarSet, slErrorToDisplay, "Projection successful."]
+							[LoopExit]
+							
+						
+							[VarSet, slHasError, 1]
+							[VarSet, slErrorToDisplay, "Projection successful."]
+							[LoopExit]
+						
+						]
+					,
+						[VarSet, slHasError, 1]
+						[VarSet, slErrorToDisplay, "You must click FixProjq first.Action cancelled."]
+						[LoopExit]
+					]
+						
+					
+				,
+					[SubToolSelect, (#slSelSubTool - 1)]
+					[VarSet, slShadRes,[IGet, "Tool:Geometry:Res"]]
+					[VarSet, slShadPolish,[IGet, "Tool:Geometry:Polish"]]
+					
+					[If, (#slShadRes == 995) && (#slShadPolish == 64) ,
+						[VarSet, slIsVisible, 0]
+						[VarSet, slPolDisp, [IGet, "Tool:Display Properties:Polygons Draw Size"]]
+						
+						[If, #slPolDisp == .5 ,
+							[VArSet, slTheID, 0]
+							[RoutineCall, J_SubToolListGetSelected2, slTheID]
+							[VarSet, slIsVisible, -1]
+							[RoutineCall, J_SubToolVisibility, #slTheID, slIsVisible]
+							
+							[If, !#slIsVisible ,
+								[SubToolSelect, #slSelSubTool]
+								[VarSet, slHasError, 1]
+								[VarSet, slErrorToDisplay, "You must click FixProjq first.Action cancelled."]
+								[LoopExit]
+							,
+							[IPress, "Tool:Clone"]
+							[SubToolSelect, ([SubToolGetActiveIndex]+1)]
+							[IPress, Tool:Geometry:Copy]
+							[ToolSelect, ([ToolGetCount] - 1)]
+							[MergeUndo]
+							[IUnPress, Tool:Polypaint:Colorize]
+							[IPress, Tool:SubTool:Insert]
+							[IPress, PopUp:PolyMesh3D]
+							[IPress, "Tool:Geometry:Paste Replace"]
+							[MergeUndo]
+							[IUnPress, Tool:Polypaint:Colorize]
+							[IPress, Edit:Tool:DelUH]
+							[ISet, Tool:SubTool:Mean, 25]
+							[ISet, "Tool:SubTool:PA Blur", 2]
+							[IModSet, Tool:SubTool:ProjectionShell, 7]
+							[VarSet, slFarthest, [IGetFlags, Tool:SubTool:Farthest]]
+							[IPress, Tool:SubTool:Farthest]
+// 							[If, (#slFarthest == 9) || (#slFarthest == 11) || (#slFarthest == 13) || (#slFarthest == 1),
+// 								[IUnPress, Tool:SubTool:Farthest]
+// 							,]
+							[IUnPress, Tool:SubTool:Inner]
+							[IUnPress, Tool:SubTool:Outer]
+							[IPress, Edit:Tool:DelUH]
+							[ISet, Tool:SubTool:Dist, .25]
+							[ISet, Tool:SubTool:ProjectionShell, .025]
+							[Note, #slProjectMessage]
+							[IShow, 1011]
+							[IKeyPress,'2',
+								[MergeUndo]
+								[IPress, Tool:SubTool:ProjectAll]
+							]
+							[IHide, 1011]
+							
+							[IPress, Tool:Geometry:Copy]
+							[IPress, Edit:Tool:DelUH]
+							[IKeyPress, '2',
+								[IPress, "Tool:SubTool:Del All"]
+							]
+							[ToolSelect, #slToolID]
+							[IPress, "Tool:Geometry:Paste Replace"]
+							[VarSet, slHasError, 1]
+							[VarSet, slErrorToDisplay, "Projection successful."]
+							[LoopExit]
+								
+								[VarSet, slHasError, 1]
+								[VarSet, slErrorToDisplay, "Projection successful."]
+								[LoopExit]
+							
+							]
+						,	
+							[SubToolSelect, #slSelSubTool]
+							[VarSet, slHasError, 1]
+							[VarSet, slErrorToDisplay, "You must click FixProjq first.Action cancelled."]
+							[LoopExit]
+						]
+						
+					,
+						[SubToolSelect, #slSelSubTool]
+						[VarSet, slHasError, 1]
+						[VarSet, slErrorToDisplay, "You must click FixProjq first.Action cancelled."]
+						[LoopExit]
+					]
+				]
+			,]
+			
+			
+			
+		]// END OF MAIN LOOP
+		[If, #slAutoCollapseFlags > -1 ,
+			[RoutineCall, J_RestoreUndoHistoryMax]
+			[RoutineCall, J_CanvasClickInsertMesh]
+			[RoutineCall, J_RestoreCameraCanvas]
+			[RoutineCall, J_SoloRestore]
+			[RoutineCall, J_RestoreScrollBarStatus]
+			[IShow, 1011]
+			
+		,]
+	
+	]// END OF IFREEZE
+	
+	[If, #slHasError ,
+		[NoteBar, ""]
+		[Note, #slErrorToDisplay]
+	,]
+	
+	[IShowActions, 1]
+	[IUpdate, 1, 1]
+]
+
+[IButton, ProjQ, "",
+	[IkeyPress, '1',
+		[RoutineCall, J_ProjQ]
+	
+	]
+
+]
+
+
+[RoutineDef, J_DelZMeshQ,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VarSet, slErrorToDisplay, ""]
+	[VarSet, slAutoCollapseFlags, -1]
+	[IFreeze,
+		[Loop, 1,
+			[RoutineCall, J_CatchValidityError,slHasError, slErrorToDisplay]
+			//..continue
+			
+			[Note, "Deleting. Please wait..."]
+			[VarSet, slScrollBarPos, [IGetSecondary, Tool:SubTool:Subtool Scrollbar]]
+			[RoutineCall, J_SetSaveScrollBarStatus]
+			[RoutineCall, J_GetAutoCollapseFlags, slAutoCollapseFlags]
+			[IUnPress, Transform:Edit]
+			[IHide, 1011]
+			[RoutineCall, J_StoreCameraCanvas]
+			[RoutineCall, J_SoloOn]
+			[RoutineCall, J_HideCanvas]
+			
+			[VarSet, slSelSubTool, [SubToolGetActiveIndex]]
+			
+			//Check if it is the clone
+			[VArSet, slSubToolCount, [SubToolGetCount]]
+			[If,  #slSubToolCount < 2,
+				[VarSet, slHasError, 1]
+				[VarSet, slErrorToDisplay, "The ZTool has only 1 subtool.Action cancelled."]
+				[LoopExit]
+			,]
+				
+			[If, #slSubToolCount == 2 ,
+				[SubToolSelect, 0]
+				[VarSet, slShadRes,[IGet, "Tool:Geometry:Res"]]
+				[VarSet, slShadPolish,[IGet, "Tool:Geometry:Polish"]]
+				[If, (#slShadRes == 995) && (#slShadPolish == 64) ,
+					[IKeyPress, '2', 
+						[IPress, "Tool:SubTool:Delete"]
+					]
+					[VarSet, slHasError, 1]
+					[VarSet, slErrorToDisplay, "1 subtool has been deleted."]
+					[LoopExit]
+					
+				,
+					[If, #slSelSubTool == 1 ,
+						[SubToolSelect, 1]
+					,]
+					[VarSet, slHasError, 1]
+					[VarSet, slErrorToDisplay,  "Nothing has been deleted."]
+					
+					[LoopExit]
+				]
+				
+				
+			,]
+			[If, #slSubToolCount > 2 ,
+				[VarSet, slShadRes,[IGet, "Tool:Geometry:Res"]]
+				[VarSet, slShadPolish,[IGet, "Tool:Geometry:Polish"]]
+				[If, (#slShadRes == 995) && (#slShadPolish == 64) ,
+					[IKeyPress, '2', 
+						[IPress, "Tool:SubTool:Delete"]
+					]
+					[VarSet, slHasError, 1]
+					[VarSet, slErrorToDisplay, "1 subtool has been deleted."]
+					[LoopExit]
+				,
+					[SubToolSelect, (#slSelSubTool - 1)]
+					[VarSet, slShadRes,[IGet, "Tool:Geometry:Res"]]
+					[VarSet, slShadPolish,[IGet, "Tool:Geometry:Polish"]]
+					
+					[If, (#slShadRes == 995) && (#slShadPolish == 64) ,
+						[IKeyPRess, '2', 
+							[IPress, "Tool:SubTool:Delete"]
+						]
+						[SubToolSelect, (#slSelSubTool - 1)]
+						[VarSet, slHasError, 1]
+						[VarSet, slErrorToDisplay, "1 subtool has been deleted."]
+						[LoopExit]
+					,
+						[SubToolSelect, #slSelSubTool]
+						[VarSet, slHasError, 1]
+						[VarSet, slErrorToDisplay,  "Nothing has been deleted."]
+					
+						[LoopExit]
+					]

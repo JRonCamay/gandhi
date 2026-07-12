@@ -1,0 +1,300 @@
+			[SubToolSelect, (#slActiveTool+1)]
+			[RoutineCall, J_MemoryOptimize, 0]
+		
+		]// END LOOP
+		[If, #slAutoCollapseFlags > -1,
+			[RoutineCall, J_RestoreUndoHistoryMax]
+			[RoutineCall, J_CanvasClickInsertMesh] // Need to doublecehck other script for the restore placement
+			[RoutineCall, J_RestoreCameraCanvas]
+			[RoutineCall, J_SoloRestore]
+			[RoutineCall, J_RestoreScrollBarStatus]
+			[If, #slErrorToDisplay == 0 ,
+				[If, ((FRAC(#slMrgbFlag / 2)) > 0), [IPress,Draw:Mrgb], [IUnPress,Draw:Mrgb]]
+				[If, ((FRAC(#slRgbFlag / 2)) > 0), [IPress,Draw:Rgb], [IUnPress,Draw:Rgb]]
+				[If, ((FRAC(#slMFlag / 2)) > 0), [IPress,Draw:M], [IUnPress,Draw:M]]
+			]
+			
+		]	
+		
+	]//END FREEZE
+	
+	[If, #slHasError,
+		[VarSet, slErrorStrLength, [StrLength, #slErrorToDisplay]]
+		[If, #slErrorStrLength > 0,
+			[Note, #slErrorToDisplay]
+		]
+	]
+	[IShowActions, 1]
+	[IUpdate, 1,1]
+	[If, #slErrorToDisplay == 0 ,
+		[IFreeze,
+			[SubToolSelect, ([SubtoolGetActiveIndex] - 1)]
+			[VarSet, slSubToolName, ""]
+			[RoutineCall,J_SubToolNameGet, slSubToolName]
+			[VarSet,slNewName,[StrMerge, "FPTM||", #slSubToolName]]
+			[VarSet,slButtonPath,"Tool:SubTool:Rename"]
+			[FileExecute, [Var, gFileUtilsPath], RenameSetNext, slNewName]
+			[IPress, "Tool:SubTool:Rename"]
+			[SubToolSelect, ([SubtoolGetActiveIndex] + 1)]
+		]
+	]
+	
+	
+
+]
+
+[IButton, ReMeshq, "",
+	[IkeyPress, '1',
+		[RoutineCall, J_RemeshQ]
+	]
+	
+]
+[Loop,1,
+	[RoutineCall, J_DeclareVarQuiet, "jmemSDivNoteToggle",1,0]
+	[If, [MVarGet, jmemSDivNoteToggle,0] < 0,
+		[MVarGet, jmemSDivNoteToggle,0,0]
+	,]
+]
+
+[RoutineDef, J_ZMeshq,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VarSet, slErrorToDisplay, ""]
+	[VarSet, slAutoCollapseFlags, -1]
+	[VarSet, slMrgbFlag, [IGetFlags,Draw:Mrgb]]
+	[VarSet, slRgbFlag, [IGetFlags,Draw:Rgb]]
+	[VarSet, slMFlag, [IGetFlags,Draw:M]]
+	[IFreeze,
+		[Loop, 1,
+				
+			[RoutineCall, J_CatchValidityError, slHasError, slErrorToDisplay]
+			//...continue
+			[RoutineCall, J_CatchGeometryError, slHasError, slErrorToDisplay,1, 1, 1, 1, 1]
+			//...continue
+			
+			[NOTE, "Please wait..."]
+			[VarSet, slAltPressed, 0]
+			[VarSet, slAltFlags, [IgetFlags, "ZScript:AltRemeshing"]]
+			[If, ((FRAC(#slAltFlags/2)) > 0), [VarSet, slAltPressed, 1]]
+			
+			[RoutineCall, J_SetSaveScrollBarStatus]
+			[RoutineCall, J_GetAutoCollapseFlags, slAutoCollapseFlags]
+			[RoutineCall, J_StoreCameraCanvas]
+			[RoutineCall, J_SoloOn]
+			[RoutineCall, J_HideCanvas]
+			
+			//...continue
+			[VarSet, slCurveDelStat, [IGetStatus, "Stroke:Delete"]]
+			[VarSet, slAdaptResFlags,[IGetFlags,"ZScript:AdaptRes"]]
+			[VarSet, slAdaptRes, 0]
+			[If, ((FRAC(#slAdaptResFlags/2)) > 0), [VarSet, slAdaptRes, 1]]
+			
+			[IPress,Draw:Mrgb]
+			[IUnPress, Transform:Edit]
+			[RoutineCall, J_SaveUndoPoint]
+			[RoutineCall, J_SetUndoHistoryMax]
+			[VarSet, slToolIndex, [ToolGetActiveIndex]]	//Save first the index of the active ztool
+			//Check if thereis subdiv then bake
+			[VArSet, slDynamicFlags,[IGetFlags, "Tool:Geometry:s.Dynamic"]]
+			[VArSet,slHasSDynamic, 0]
+			[If, ((FRAC(#slDynamicFlags/2)) > 0), [VArSet,slHasSDynamic, 1]]
+			
+			[If, #slHasSDynamic ,
+				[If, [MVarGet, jmemSDivNoteToggle,0] == 1 ,
+					[Ipress, "Tool:Geometry:s.Apply"]
+					[MergeUndo]
+					[VarSet,slDelLowerStat, [IGetStatus, "Tool:Geometry:Del Lower"]]
+					[If, #slDelLowerStat ,
+						 [IPress, "Tool:Geometry:Del Lower"]
+					]
+				,
+					[VarSet,slFlatDiv,[IGet, "Tool:Geometry:s.FlatSubdiv"]]
+					[VarSet,slSmtDiv,[IGet, "Tool:Geometry:s.SmoothSubdiv"]]
+					[VarSet, slDivCnt, #slFlatDiv]
+					[If, #slSmtDiv > #slFlatDiv ,
+						[VarSet, slDivCnt, #slSmtDiv]
+					]
+					// Get the points of the mesh
+					[VarSet, slMeshInfo, [IGetInfo, "Tool:Current Tool"]]
+					[VarSet, slPointsId, [StrFind, "Points=", #slMeshInfo]]
+					[VarSet, slHiddenPolys,[StrFind, "HiddenPolys=", #slMeshInfo]]
+					[VarSet, slOrigPoints, [StrExtract, slMeshInfo, (#slPointsId + 7), (#slHiddenPolys - 2)]]
+					[VarSet,slPointsLog,(LOG10(#slOrigPoints * .001))]
+					[VArSet, slLogConst,(.60205999132798 * #slDivCnt )]
+					[VarSet, slSubDivPoints,(10^^(#slPointsLog + #slLogConst))]
+					
+					[VArSet,slTheRoundedPoints, 0]
+					[VarSet,slTheMessage, ""]
+					[If, #slSubDivPoints >= 1000 ,
+						[VArSet,slTheRoundedPoints, (#slSubDivPoints * .001)]
+						[If, #slSubDivPoints <= 3000 ,
+							[VarSet,slTheMessage,[StrMerge,"The output polys will be around ", #slTheRoundedPoints, " million because Dynamic Subdivision is on. Would you like it to be turned off before proceeding?"]]
+							[NoteIButton, "OK"]
+							[NoteIButton, "NO"]
+							[NoteIButton, "Always OK(skip this note until bext restart)"]
+						,
+							[VarSet,slTheMessage,"The output polys will be more than 3 million because Dynamic Subdivision is on. Action is going to be canceled."]
+							[NoteIButton, "OK"]
+						]
+						
+					,
+						[VArSet,slTheRoundedPoints, (#slSubDivPoints * 1000)]
+						[VarSet,slTheMessage,[StrMerge,"The output polys will be around ", #slTheRoundedPoints, " because Dynamic Subdivision is on. Would you like it to be turned off before proceeding?"]]
+						[NoteIButton, "OK"]
+						[NoteIButton, "NO"]
+						[NoteIButton, "Always OK(skip this note until bext restart)"]
+					]
+					
+					
+					[VarSet, slDynamicNote,[NOte, #slTheMessage]]
+					[If, #slDynamicNote == 1 ,
+						[If, #slSubDivPoints > 3000,
+							[VaRSet, slHasError, 1]
+							[LoopExit]
+						,
+							[IUnPress, "Tool:Geometry:s.Dynamic"]
+						]
+						
+					]
+					[If,  #slDynamicNote == 2 ,
+						[Ipress, "Tool:Geometry:s.Apply"]
+						[MergeUndo]
+						[VarSet,slDelLowerStat, [IGetStatus, "Tool:Geometry:Del Lower"]]
+						[If, #slDelLowerStat ,
+							 [IPress, "Tool:Geometry:Del Lower"]
+						]
+					]
+					[If,  #slDynamicNote == 3 ,
+						[MVarSet, jmemSDivNoteToggle,0, 1]
+						[Ipress, "Tool:Geometry:s.Apply"]
+						[MergeUndo]
+						[VarSet,slDelLowerStat, [IGetStatus, "Tool:Geometry:Del Lower"]]
+						[If, #slDelLowerStat ,
+							 [IPress, "Tool:Geometry:Del Lower"]
+						]
+					]
+				
+				]
+				
+				
+			,]
+			[IPress, Tool:Clone]
+			[VarSet, slToolLast, ([ToolGetCount] - 1)]
+			
+			//Get the area of the bounding box
+			[VArSet, slBoxWidthBefore, [IGet, "Tool:Geometry:X Size"]]
+			[VArSet, slBoxHeightBefore, [IGet, "Tool:Geometry:Y Size"]]
+			[VArSet, slBoxLengthBefore, [IGet, "Tool:Geometry:Z Size"]]
+			[VarSet, slBoxAreaBefore, (#slBoxWidthBefore * #slBoxHeightBefore * #slBoxLengthBefore)]
+			//Check for any symmetry
+			
+			[VarSet, slSymmetryOn, 0]
+			[VarSet, slXMirFlags, [IGetFlags, "Transform:Activate Symmetry"]]
+			[If, ((FRAC(#slXMirFlags/2)) > 0),
+				[VarSet, slSymmetryOn, 1]
+			]
+			// Get the flags of these buttons
+			[VarSet, slUsePP,[IGetFlags, "Tool:Geometry:Use Polypaint"]]
+			[VarSet, slFreezeBorder, [IGetFlags, Tool:Geometry:FreezeBorder]]
+			[VarSet, slFreezeGroups, [IGetFlags, Tool:Geometry:FreezeGroups]]
+			[VarSet, slKeepGroups, [IGetFlags, Tool:Geometry:KeepGroups]]
+			[VarSet, slTgtPolyCount, [IGet, Tool:Geometry:Target Polygons Count]]
+			[VarSet, slAdapt, [IGetFlags, Tool:Geometry:Adapt]]
+			[VarSet, slHalf, [IGetFlags, Tool:Geometry:Half]]
+			[VarSet, slSame, [IGetFlags, Tool:Geometry:Same]]
+			[VarSet, slDouble, [IGetFlags, Tool:Geometry:Double]]
+			[VarSet, slAdaptSize, [IGet, Tool:Geometry:AdaptiveSize]]
+			[VarSet, slCurveStrength, [IGet, Tool:Geometry:Curves Strength]]
+			[VarSet, slSmoothGrps, [IGet, Tool:Geometry:SmoothGroups]]
+			// Now set the settings
+			[If, ((FRAC(#slFreezeBorder/2)) > 0),
+				[IUnPress, Tool:Geometry:FreezeBorder]
+			]
+			
+			[If, ((FRAC(#slFreezeGroups/2)) > 0),[IUnPress, Tool:Geometry:FreezeGroups]]
+			[If, ((FRAC(#slUsePP/2)) > 0),[IUnPress, "Tool:Geometry:Use Polypaint"]]
+			[VarSet, slHasPolyGorups, 0]
+			[VarSet, slHasCurves, 0]
+			[If, #slCurveDelStat,[VarSet, slHasCurves, 1]]
+			[VarSet, slMaskingBorder, [IGetFlags, "Tool:Masking:Border"]]
+			[If, ((FRAC(#slMaskingBorder/2)) > 0),[IUnPress, "Tool:Masking:Border"]]
+			[VarSet, slMaskingCrease, [IGetFlags, "Tool:Masking:Crease"]]
+			[If, ((FRAC(#slMaskingCrease/2)) > 0),[IUnPress,  "Tool:Masking:Crease"]]
+			[VarSet, slMaskingGroups, [IGetFlags, "Tool:Masking:Groups"]]
+			[If, ((FRAC(#slMaskingGroups/2)) == 0),[IPress, "Tool:Masking:Groups"]]
+			[VarSet, slUndoStep, [IGet, Edit:Tool:UndoCounter]]
+			[IPress,"Tool:Masking:MaskByFeature"]
+			[VarSet, slUndoStepAfter, [IGet, Edit:Tool:UndoCounter]]
+			[If, #slUndoStepAfter >  #slUndoStep,
+				[IPress, Edit:Tool:Undo]
+				[VarSet, slHasPolyGorups, 1]
+			]
+			[If, ((FRAC(#slMaskingBorder/2)) > 0),[IPress, "Tool:Masking:Border"]]
+			[If, ((FRAC(#slMaskingCrease/2)) > 0),[IPress, "Tool:Masking:Crease"]]
+			[If, ((FRAC(#slMaskingGroups/2)) == 0),[IUnPress, "Tool:Masking:Groups"]]
+			[If, #slHasPolyGorups,
+				[If, ((FRAC(#slKeepGroups/2)) == 0),
+					[IPress, Tool:Geometry:KeepGroups]
+				]
+			,
+				[If, ((FRAC(#slKeepGroups/2)) > 0),
+					[IUnPress, Tool:Geometry:KeepGroups]
+				]
+			]
+			
+			[If, ((FRAC(#slAdapt/2)) > 0), [IUnPress, Tool:Geometry:Adapt]]
+			[If, ((FRAC(#slHalf/2)) > 0), [IUnPress, Tool:Geometry:Half]]
+			[If, ((FRAC(#slSame/2)) > 0), [IUnPress, Tool:Geometry:Same]]
+			[If, ((FRAC(#slDouble/2)) > 0), [IUnPress, Tool:Geometry:Double]]
+			
+			[ISet, Tool:Geometry:AdaptiveSize, 50]
+			[If, #slHasCurves,
+				[ISet, "Tool:Geometry:Curves Strength", 100]
+			,
+				[ISet, "Tool:Geometry:Curves Strength", 0]
+			]
+			[ISet,Tool:Geometry:SmoothGroups, 1]
+			//..Continue
+			
+			// Get the points of the mesh
+			[VarSet, slMeshInfo, [IGetInfo, "Tool:Current Tool"]]
+			[VarSet, slPointsId, [StrFind, "Points=", #slMeshInfo]]
+			[VarSet, slHiddenPolys,[StrFind, "HiddenPolys=", #slMeshInfo]]
+			[VarSet, slOrigPoints, [StrExtract, slMeshInfo, (#slPointsId + 7), (#slHiddenPolys - 2)]]
+			[If, #slAdaptRes == 0 ,
+				[VarSet, slTargetHighest,[IGet, "ZScript:Highest Lvl Polys 1=1k"]]
+				[VarSet, slOrigPoints, (#slTargetHighest * 1000)]
+			]
+			[VarSet, slLogConstant, .60205999132798]
+			[VarSet, slOrigPointsLog, (LOG10(#slOrigPoints * .001))]
+			[VarSet,slSubDivCount,((INT(#slOrigPointsLog / #slLogConstant)) - 1)]
+			[VarSet, slConstantMult,(#slLogConstant * #slSubDivCount)]
+			[VarSEt, slTheBase, (10 ^^ (#slOrigPointsLog- #slConstantMult))]
+			[VarSet, slTargetCount, 0]
+			[If, #slAdaptRes ,
+				[If, #slSymmetryOn ,
+					[If, #slAltPressed ,
+						[VarSet, slTargetCount, (#slTheBase)]
+					,
+						[VarSet, slTargetCount, (#slTheBase*.5)]
+					]
+				,
+					[VarSet, slTargetCount, #slTheBase]
+				]
+			,
+				[VarSet, slTargetLowest,[IGet, "ZScript:Lowest Lvl Polys 1=1k"]]
+				[VarSet, slTargetCount, #slTargetLowest]
+				
+				[If, #slSymmetryOn ,
+					[If, !#slAltPressed ,
+						[VarSet, slTargetCount, (#slTargetCount*.5)]
+					]
+				]
+			]
+			[ISet, "Tool:Geometry:Target Polygons Count", #slTargetCount]
+			
+			[If, #slAltPressed ,
+				[Note, "Step 1 - Please wait... Now remeshing (ALT)..."]
+			,
+				[Note, "Step 1 - Please wait... Now remeshing..."]
+			]

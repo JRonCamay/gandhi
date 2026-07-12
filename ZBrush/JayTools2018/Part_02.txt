@@ -1,0 +1,300 @@
+	
+	[IShowActions, 1]
+	[IUpdate, 1,1]
+]
+[ISwitch, SilhouetteMode, 0,"",
+		[IKeyPress, '1',
+			[RoutineCall, J_SilhouetteOn]
+		]
+	,
+		[IKeyPress, '1',
+			[RoutineCall, J_SilhouetteOff]
+		]
+		
+		
+]
+
+[RoutineDef, J_DynaDec,
+	[RoutineCall, J_DeclareVarQuiet, "memJ_DynameshTargetPoints", 1,250]
+	[If, [MVarGet, memJ_DynameshTargetPoints, 0] < 4 ,
+		[MVarSet, memJ_DynameshTargetPoints, 0, 250]
+	,]
+]
+
+[RoutineCall, J_DynaDec]
+
+[ISlider, "Target Points" , [MVarGet, memJ_DynameshTargetPoints, 0], 4, 10, 3000,,
+	[RoutineCall, J_TargetPointsAdj]
+,0, 200 ]
+
+[RoutineDef, J_TargetPointsAdj,
+	
+	[MVarSet, memJ_DynameshTargetPoints, 0, [IGet, ZScript:Target Points]]
+	
+]
+
+[Loop, 1,
+	[RoutineCall, J_DeclareVarQuiet, "jmemTargetPts", 1,0]
+]
+
+// ----------  POLYGROUPING BUTTON SECTION ------------------ 
+
+[ISwitch, PGroups, 0, "", , ,0, 40]
+// ----------  END OF POLYGROUPING BUTTON SECTION ------------------
+
+[RoutineDef, J_MessageToggleDec,
+	[RoutineCall, J_DeclareVarQuiet,"jmemDynaMessageToggle", 1,1]
+]
+
+[RoutineCall, J_MessageToggleDec]
+
+[RoutineDef, J_DynaM,
+	[IShowActions,0]	
+	[VarSet, slHasError, 0]
+	[VarSet, slErrorToDisplay, ""]
+	
+	[IFreeze,
+		[Loop, 1,
+			[VarSet, slPPaintFlags,[IGetFlags,Tool:Polypaint:Colorize]]
+			[VarSet, slDrawFlags,[IGetFlags, "Transform:Draw Pointer"]]
+			[VarSet, slMoveFlags,[IGetFlags, "Transform:Move"]]
+			[VarSet, slScaleFlags,[IGetFlags, "Transform:Scale"]]
+			[VarSet, slRotateFlags,[IGetFlags, "Transform:Rotate"]]
+			[RoutineCall,J_CatchValidityError, slHasError ,slErrorToDisplay]
+			//..continue
+			[If, [MVArGet, jmemDynaMessageToggle, 0] == 1,
+				[VarSet, slNoteFadeDuration, [IGet, Preferences:Interface:Notes Fade In-Out Time]]
+				[ISet, Preferences:Interface:Notes Fade In-Out Time, 0]
+				[Note, "Dynameshing, Please wait..." ]
+				[ISet, Preferences:Interface:Notes Fade In-Out Time, 0]
+			]
+			[VarSet, slOpTime, [ZBrushInfo, 2]]
+			[IHide,  1011] // Hides the Status bar
+			[RoutineCall, J_SetSaveScrollBarStatus]
+			[RoutineCall, J_InitiateProgressBar, 374, 629]
+			[RoutineCall, J_ProgressUpdate, 375, 0,0,0,0]
+			
+			[IUnPress, Transform:Edit] //Go outside edit mode.
+			[RoutineCall, J_SetUndoHistoryMax]
+			[RoutineCall, J_StoreCameraCanvas]
+			[RoutineCall, J_HideCanvas]
+			[RoutineCall, J_SoloOn]
+			[RoutineCall, J_SaveUndoPoint]
+			[RoutineCall, J_ProgressUpdate, 383, 0,0,0,0]
+			[IPress, Tool:Masking:Clear] // So that when you mergeundo and also unmask first
+			[VarSet, slPPaintStat,0]
+			[If, ((FRAC(#slPPaintFlags/2)) > 0),
+				[VarSet, slPPaintStat,1]
+			]
+			[VarSet, slDynaFlag, [IGetFlags, Tool:Geometry:DynaMesh]]
+			[If, ((FRAC(#slDynaFlag/2)) > 0),
+				[MergeUndo]
+				[IUnPress, Tool:Geometry:DynaMesh]// Unpresses first the DynaMesh button to prevent operation failure.
+			]
+			
+			[MVarSet, jmemTargetPts, 0, ([IGet, "ZScript:Target Points"]*1000)]
+			[RoutineCall, J_ProgressUpdate, 397, 0,0,0,0]
+			[MergeUndo]
+			[RoutineCall, J_BakeGeometry]
+			[VarSet, slHiddenPolys, -1]// The hidden polys count
+			[RoutineCall, J_GetPointsInfo, slHiddenPolys, 0 ]
+			[VarSet, slHasHiddenPoints, 0]
+			[If, #slHiddenPolys > 0,
+				[MergeUndo]
+				[IPress, "Tool:Geometry:Del Hidden"]
+			]
+			
+			
+			[RoutineCall, J_ProgressUpdate, 408, 0,0,0,0]
+			//Saves the settings of the DynaMesh Palette
+			[VarSet, slPolishFlag, [IGetFlags,Tool:Geometry:D.Polish]]
+			[VarSet, slProjectFlag, [IGetFlags,Tool:Geometry:Project]]
+			[If, ((FRAC(#slPolishFlag/2)) > 0), // Unpress the polish button
+				[IUnPress, "Tool:Geometry:D.Polish"]
+			]
+			[RoutineCall, J_ProgressUpdate, 415, 0,0,0,0]
+			[ISet, Tool:Geometry:Blur,2]
+			[IModSet, Tool:Geometry:Blur,0]
+			[ISet,Tool:Geometry:SubProjection,.6]
+			[If, ((FRAC(#slProjectFlag/2)) > 0), // Unpress the project button
+				[IUnPress, Tool:Geometry:Project]
+			]
+			
+			// Saves the position and size of the mesh
+			[VarSet, slGeoXPos, [IGet,"Tool:Geometry:X Position"]]
+			[VarSet, slGeoYPos, [IGet,"Tool:Geometry:Y Position"]]
+			[VarSet, slGeoZPos, [IGet,"Tool:Geometry:Z Position"]]
+			[VarSet, slGeoXSize, [IGet,"Tool:Geometry:X Size"]]
+			[VarSet, slGeoYSize, [IGet,"Tool:Geometry:Y Size"]]
+			[VarSet, slGeoZSize, [IGet,"Tool:Geometry:Z Size"]]
+			[RoutineCall, J_ProgressUpdate, 430, 0,0,0,0]
+			[VarSet, slGeoXYZSize, [IGet,"Tool:Geometry:XYZ Size"]] // Saves the global size  for later use.
+			[VarSet, slXScaleMagnification, 0]
+			[VarSet, slYScaleMagnification, 0]
+			[VarSet, slZScaleMagnification, 0]
+			[VarSet, slTargetRes, ([IGet, ZScript:Target Points]*1000)] // Computation of the target point count x 1000
+			
+			[VarSet, slXScaledTo2, 0]
+			[VarSet, slYScaledTo2, 0]
+			[VarSet, slZScaledTo2, 0]
+			[VarSet, slMagnification, 0]
+			[RoutineCall, J_ProgressUpdate, 441, 0,0,0,0]
+			[VarSet, slMagnification, ([IGet, "Tool:Geometry:XYZ Size"]/2)]
+			[VarSet, slXScaleMagnificationTemp, #slGeoXSize]
+			[VarSet, slYScaleMagnificationTemp, #slGeoYSize]
+			[VarSet, slZScaleMagnificationTemp, #slGeoZSize]
+			
+			[MergeUndo]
+   			[ISet, "Tool:Geometry:XYZ Size", 2]
+   			[RoutineCall, J_ProgressUpdate, 449, 0,0,0,0]
+   			[VarSet, slXScaledTo2, [IGet,"Tool:Geometry:X Size"]]
+   			[VarSet, slYScaledTo2, [IGet,"Tool:Geometry:Y Size"]]
+   			[VarSet, slZScaledTo2, [IGet,"Tool:Geometry:Z Size"]]
+   			[VarSet, slXScaleMagnificationTemp, (#slXScaleMagnificationTemp / #slXScaledTo2)]
+   			[VarSet, slYScaleMagnificationTemp, (#slYScaleMagnificationTemp / #slYScaledTo2)]
+   			[VarSet, slZScaleMagnificationTemp, (#slZScaleMagnificationTemp / #slZScaledTo2)]
+   			
+   			// Check if PGroups buttons is on
+			[VarSet, slPGroupsStatus, [IGetFlags, ZScript:PGroups]]
+			[If, ((FRAC(#slPGroupsStatus/2)) > 0),
+				[VarSet, slGeometryGroupsStatus, [IGetFlags, Tool:Geometry:Groups]]
+				[If, ((FRAC(#slGeometryGroupsStatus/2)) == 0),
+					[IPress, Tool:Geometry:Groups]
+				]
+			,
+				[VarSet, slGeometryGroupsStatus, [IGetFlags, Tool:Geometry:Groups]]
+				[If, ((FRAC(#slGeometryGroupsStatus/2)) > 0),
+					[IUnPress, Tool:Geometry:Groups]
+				]
+			]
+			[RoutineCall, J_ProgressUpdate, 470, 0,0,0,0]		
+			[VaRSet, slTheRes, 0] // Declaration of this local variable in this level to prevent any error just in case.
+			[VarSet, slXPosO, [IGet, "Tool:Geometry:X Position"]]
+			[VarSet, slYPosO, [IGet, "Tool:Geometry:Y Position"]]
+			[VarSet, slZPosO, [IGet, "Tool:Geometry:Z Position"]]
+			[If, #slXPosO != 0 ,
+				[MergeUndo]
+				[ISet, "Tool:Geometry:X Position", 0]
+			]
+			
+			[If, #slYPosO != 0 ,
+				[MergeUndo]
+				[ISet, "Tool:Geometry:Y Position", 0]
+			]
+			[If,#slZPosO != 0 ,
+				[MergeUndo]
+				[ISet, "Tool:Geometry:Z Position", 0]
+			]
+			
+			[RoutineCall, J_ProgressUpdate, 490, 0,0,0,0]
+			
+			// Pre dynamization of the subtool
+			
+			[ISet, Tool:Geometry:Resolution, 64]
+			[IPress, Tool:Geometry:DynaMesh]
+			
+			[VarSet, slToolInfo, [IGetInfo, "Tool:Current Tool"]]
+			[VarSet, slPolysId, [StrFind, "Polys=", slToolInfo]]
+			[VarSet, slHiddenPolysId, [StrFind, "HiddenPolys=", #slToolInfo]]
+			[VarSet, slResCounter, [StrExtract, #slToolInfo, (#slPolysId + 6), (#slHiddenPolysId - 2)]]
+			[IPress, Edit:Tool:Undo]
+			[RoutineCall, J_ProgressUpdate, 503, 0,0,0,0]
+			[VarSet, slThePerc, (FRAC(#slResCounter) + 1)]
+			[VarSet,slTargetRes, (#slTargetRes * #slThePerc)]
+			[VarSet, slOldResCounter, #slResCounter]
+			// New Formula
+			[VarSet, slLogConstant4, .60205999132798]
+			[VarSet, slLogConstant2, .301029995664]
+			[VarSet, slTargetLog, (LOG10(#slTargetRes * .001))]
+			[VarSet, slResLog, (LOG10(#slResCounter * .001))]
+			[VarSet,slLogDiff,((#slResLog -#slTargetLog) / #slTargetLog)]
+			[VarSet, slLogDist4,(#slLogDiff /#slLogConstant4 )]
+			[VArSet, slBaseResLog,(LOG10(64))]
+			[VArSet, slBaseResLog,(#slBaseResLog + (#slLogDist4*#slLogConstant2))]
+			[VarSet, slTheResMult, (10^^ #slBaseResLog)]
+			
+			[VarSet, slTheRes, #slTheResMult]
+			
+			[RoutineCall, J_ProgressUpdate, 519, 0,0,0,0]
+			[ISet, Tool:Geometry:Resolution,  #slTheRes]
+			[IPress, Tool:Geometry:DynaMesh]
+			
+			[VarSet, slProcCtr, 1]
+			[VarSet, slToolInfo, [IGetInfo, "Tool:Current Tool"]]
+			[VarSet, slPolysId, [StrFind, "Polys=", #slToolInfo]]
+			[VarSet, slHiddenPolysId, [StrFind, "HiddenPolys=", #slToolInfo]]
+			[VarSet, slResCounter, [StrExtract, #slToolInfo, (#slPolysId + 6), (#slHiddenPolysId - 2)]]
+			
+			[RoutineCall, J_ProgressUpdate, 529, 0,0,0,0]
+			[VarSet, slLimit, 3000]
+			[VarSet,slLimitDist, (ABS( #slResCounter - #slTargetRes))]
+			[If, #slLimitDist > #slLimit ,
+				[IPress, Edit:Tool:Undo]
+				[VarSet, slDiffCtr, ((#slResCounter - #slTargetRes)/#slTargetRes) ]
+				[VarSet, slTargetInc, (#slTargetRes + #slDiffCtr)]
+				[VarSet, slTargetLog, (LOG10(#slTargetInc * .001))]
+				[VarSet, slResLog, (LOG10(#slOldResCounter * .001))]
+				[VarSet,slLogDiff,(#slTargetLog - #slResLog)]
+				[VarSet, slLogDist4,(#slLogDiff /#slLogConstant4 )]
+				[VArSet, slBaseResLog,(LOG10(64))]
+				[VArSet, slBaseResLog,(#slBaseResLog + (#slLogDist4*#slLogConstant2))]
+				[VarSet, slTheResMult, (10^^ #slBaseResLog)]
+				[VarSet, slTheRes, #slTheResMult]
+				[ISet, Tool:Geometry:Resolution,  #slTheRes ]
+
+				[IPress, Tool:Geometry:DynaMesh]
+ 				[RoutineCall, J_ProgressUpdate, 552, 0,0,0,0]
+			]
+			
+			[IPress, Transform:Edit]
+			[VarSet, slTempXPos, [IGet,"Tool:Geometry:X Position"]]
+			[VarSet, slTempYPos, [IGet,"Tool:Geometry:Y Position"]]
+			[VarSet, slTempZPos, [IGet,"Tool:Geometry:Z Position"]]
+			[RoutineCall, J_ProgressUpdate, 559, 0,0,0,0]
+			[VarSet, slTemp1, [IGet,"Tool:Geometry:XYZ Size"]]
+			[VarSet, slTemp2, [IGet,"Tool:Geometry:X Size"]]
+			[VarSet, slTemp3, [IGet,"Tool:Geometry:Y Size"]]
+			[VarSet, slTemp4, [IGet,"Tool:Geometry:Z Size"]]
+			
+			[VarSet, slTempXYZSize, (#slTemp1 - 2)] // The new xyz - 2 
+			[VarSet, slTempXSize, (#slTemp2 - #slXScaledTo2)] 
+			[VarSet, slTempYSize, (#slTemp3 - #slYScaledTo2)]
+			[VarSet, slTempZSize, (#slTemp4 -  #slZScaledTo2)]
+			[IUnPress, Transform:Edit]
+			[RoutineCall, J_ProgressUpdate, 570, 0,0,0,0]
+			[MergeUndo]
+			[ISet, Tool:Geometry:X Position,(#slGeoXPos+(#slTempXPos * #slXScaleMagnificationTemp))]
+			[MergeUndo]
+			[ISet, Tool:Geometry:Y Position,(#slGeoYPos+(#slTempYPos * #slYScaleMagnificationTemp))]
+			[MergeUndo]
+			[ISet, Tool:Geometry:Z Position,(#slGeoZPos+(#slTempZPos * #slZScaleMagnificationTemp))]
+			[MergeUndo]
+			[ISet,"Tool:Geometry:X Size", (#slGeoXSize + (#slTempXSize * #slXScaleMagnificationTemp))]
+			[MergeUndo]
+			[ISet,"Tool:Geometry:Y Size", (#slGeoYSize + (#slTempYSize * #slYScaleMagnificationTemp))]
+			[MergeUndo]
+			[ISet,"Tool:Geometry:Z Size", (#slGeoZSize + (#slTempZSize * #slZScaleMagnificationTemp))]
+			[RoutineCall, J_ProgressUpdate, 583, 0,0,0,0]
+			
+			[RoutineCall, J_ProgressUpdate, 585, 0,0,0,0]
+			[IPress, Tool:Geometry:Copy]
+			[RoutineCall, J_RestoreUndoPoint]
+			
+			[VarSet, slUndoMax, [IGet, Edit:Tool:UndoCounter]]
+			[VarSet, slLayersDelStat, [IGetStatus, Tool:Layers:Delete]]
+			[If, #slLayersDelStat ,
+				[IPress, Tool:Masking:Clear]
+				[MergeUndo]
+			]
+			[RoutineCall, J_DisableGeometry]
+			[VarSet, slUndoMaxAfter, [IGet, Edit:Tool:UndoCounter]]
+			[VarSet, slNewRes, (#slTheRes / #slMagnification)]
+			[VarSet, slDynaMEshFlags, [IGEtFlags, Tool:Geometry:DynaMesh]]
+			[If, ((FRAC(#slDynaMEshFlags/2)) > 0),
+				[If, #slUndoMaxAfter <= #slUndoMax,
+					[IPress, Tool:Masking:Clear]
+				,]
+				[MergeUndo]
+				[ISet, Tool:Geometry:Resolution, #slNewRes]// Set the Resolution setting so it could be manually dnameshed without the plugin's help.
+			,
+				[ISet, Tool:Geometry:Resolution, #slNewRes]// Set the Resolution setting so it could be manually dnameshed without the plugin's help.

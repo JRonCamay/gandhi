@@ -1,0 +1,300 @@
+			]
+			[ISet, "Tool:Display Properties:Polygons Draw Size", .5]
+			[IUnPress, Transform:Edit]
+			[IPress, "Edit:Tool:DelUH"]
+			[ToolSelect, #slLastVisitedTool]
+			[SubToolSelect, 1]
+			[IPress, Tool:Geometry:Copy] // Copy the final projected mesh.
+			[IKeyPress, '2',
+				[IPress, "Tool:SubTool:Del All"]
+			]
+			
+			[ToolSelect, #slToolIndex]
+			[IPress, Tool:SubTool:SelectDown]
+			
+			[MergeUndo]
+			[IPress, Tool:Geometry:Paste Replace] // PAste the projeted details on the morph side 2
+			[If, #slSymmetryOn,
+				[IPress, "Transform:Activate Symmetry"]
+			]
+			[SubToolSelect, #slActiveTool]
+			[VarSet, slIndex, -1]
+			[RoutineCall, J_SubToolListGetSelected2, slIndex]
+			[VarSet, slSuccess, -1]
+			[RoutineCall, J_HideSubTool,#slIndex, slSuccess]
+			[RoutineCall, J_SubToolListGetSelected2, slIndex]
+			[ISet, "Tool:Geometry:Res", 995]
+			[ISet, "Tool:Geometry:Polish", 64]
+			[SubToolSelect, (#slActiveTool+1)]
+			[RoutineCall, J_MemoryOptimize, 0]
+			
+		
+		]// END LOOP
+		[If, #slAutoCollapseFlags > -1,
+			[RoutineCall, J_RestoreUndoHistoryMax]
+			[RoutineCall, J_CanvasClickInsertMesh] // Need to doublecehck other script for the restore placement
+			[RoutineCall, J_RestoreCameraCanvas]
+			[RoutineCall, J_SoloRestore]
+			[RoutineCall, J_RestoreScrollBarStatus]
+			[If,  #slHasError == 0,
+				[If, ((FRAC(#slMrgbFlag/2)) > 0),
+					[IPress,Draw:Mrgb]
+				,
+					[IUnPress,Draw:Mrgb]
+				]
+				[If, ((FRAC(#slRgbFlag/2)) > 0),
+					[IPress,Draw:Rgb]
+				,
+					[IUnPress,Draw:Rgb]
+				]
+				[If, ((FRAC(#slMFlag/2)) > 0),
+					[IPress,Draw:M]
+				,
+					[IUnPress,Draw:M]
+				]
+			]
+		]	
+		
+	]//END FREEZE
+	
+	[If, #slHasError,	
+		[VArSet,slErrorLength,[StrLength, #slErrorToDisplay]]
+		[If, #slErrorLength > 0,
+			[Note, #slErrorToDisplay]
+		]
+		
+	]
+	[IShowActions, 1]
+	[IUpdate, 1,1]
+	[If,  !#slHasError,
+		[IFreeze,
+			[SubToolSelect, ([SubtoolGetActiveIndex] - 1)]
+			[VarSet, slSubToolName, ""]
+			[RoutineCall,J_SubToolNameGet, slSubToolName]
+			[VarSet,slNewName,[StrMerge, "FPTM||", #slSubToolName]]
+			[VarSet,slButtonPath,"Tool:SubTool:Rename"]
+			[FileExecute, [Var, gFileUtilsPath], RenameSetNext, slNewName]
+			[IPress, "Tool:SubTool:Rename"]
+			[SubToolSelect, ([SubtoolGetActiveIndex] + 1)]
+		]
+	]
+	
+]
+[IButton, ZMeshq, "",
+	[IkeyPress, '1',
+		[RoutineCall, J_ZMeshq]
+	]
+	
+]
+
+
+[RoutineDef, J_FixProjq,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VarSet, slErrorToDisplay , ""]
+	[VArSet, slAutoCollapseFlags, -1]
+	[VarSet, slIndex0Error, "The index of the active subtool is 0. Action cancelled."]
+	[VarSet, slIndexBeforeError,  "The subtool before the active one is invalid. Action cancelled."]
+	[IFreeze,
+		[Loop, 1,
+			[RoutineCall, J_CatchValidityError, slHasError, slErrorToDisplay]
+			//...continue
+			
+			[VarSet, slActiveSubTool, [SubToolGetActiveIndex]]
+			[If, #slActiveSubTool < 1,
+				[VarSet, slHasError, 1]
+				[VarSet, slErrorToDisplay , #slIndex0Error]
+				[LoopExit]
+			,]
+			
+			[SubToolSelect, (#slActiveSubTool-1)]
+			[VarSet, slShadRes, [IGet, "Tool:Geometry:Res"]]
+			[VarSet, slShadPol, [IGet, "Tool:Geometry:Polish"]]
+			
+			[If, (#slShadRes == 995) && (#slShadPol == 64) ,
+			,
+				[SubToolSelect, #slActiveSubTool]
+				[VarSet, slHasError, 1]
+				[VarSet, slErrorToDisplay , #slIndexBeforeError]
+				[LoopExit]
+			
+			]
+			
+			//..continue
+			[Note, "Please wait...."]
+			[RoutineCall, J_SetSaveScrollBarStatus]
+			[RoutineCall, J_GetAutoCollapseFlags, slAutoCollapseFlags]
+			[IHide, 1011]
+			[RoutineCall, J_SetUndoHistoryMax]
+			[RoutineCall, J_InitiateProgressBar, 9120,9151]
+			[RoutineCall, J_ProgressUpdate, 9122, 0, 0, 0, 0]
+			[RoutineCall, J_StoreCameraCanvas]
+			[RoutineCall, J_SoloOn]
+			[RoutineCall, J_ProgressUpdate, 9125, 0, 0, 0, 0]
+			[RoutineCall, J_HideCanvas]
+			
+			[IUnPress, Transform:Edit]
+			[RoutineCall, J_ProgressUpdate, 9129, 0, 0, 0, 0]
+			
+			[SubToolSelect, (#slActiveSubTool-1)]
+			[VarSet, slIndex, -1]
+			[RoutineCall, J_ProgressUpdate, 9132, 0, 0, 0, 0]
+			[RoutineCall, J_SubToolListGetSelected2, slIndex]
+			[VarSet, slSuccess, -1]
+			[RoutineCall, J_ProgressUpdate, 9135, 0, 0, 0, 0]
+			[RoutineCall, J_ShowSubTool, #slIndex, slSuccess]
+			[RoutineCall, J_ProgressUpdate, 9137, 0, 0, 0, 0]
+			[ISet, "Tool:Display Properties:Polygons Draw Size", .5]
+			[IPress, Transform:Edit]
+			[RoutineCall, J_SetRGB, 255, 0,0]
+			[RoutineCall, J_ProgressUpdate, 9141, 0, 0, 0, 0]
+			[RoutineCall, J_SetMaterial, "MatCap Red Wax"]
+			[IUnPress, Transform:Edit]
+			[IPress, Edit:Tool:DelUH]
+			[RoutineCall, J_ProgressUpdate, 9145, 0, 0, 0, 0]
+			[SubToolSelect, #slActiveSubTool]
+			
+			[IPress, Transform:Edit]
+			[RoutineCall, J_RestoreCameraCanvas]
+			[RoutineCall, J_ProgressUpdate, 9149, 0, 0, 0, 0]
+			[IUnPress, Transform:Solo]
+			[RoutineCall, J_ProgressUpdate, 9151, 0, 0, 0, 0]
+			[RoutineCall, J_ProgressEnd]
+			[RoutineCall, J_RestoreUndoHistoryMax]
+			[RoutineCall, J_RestoreScrollBarStatus]
+			
+		]// END OF LOOP
+		
+	]// END OF FREEZE
+	[If, #slHasError == 1,
+		[NOte, #slErrorToDisplay]
+	
+	,]
+	[IShowActions, 1]
+	[IUpdate, 1,1]
+]
+
+
+[IButton, FixProjq, "",
+	[IKeyPress, '1',
+		[RoutineCall, J_FixProjq]
+	]
+	
+]
+[Loop, 1,
+	[RoutineCall, J_DeclareVarQuiet, "jmemIsoFixID",1,-1]
+	[RoutineCall, J_DeclareVarQuiet, "jmemIsoFixOrigID",1,-1]
+]
+[RoutineDef, J_IsolateProjQ,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VarSet, slErrorToDisplay, ""]
+	[VarSet, slAutoCollapseFlags, -1]
+	[IFreeze,
+		[Loop, 1,
+			[RoutineCall, J_CatchValidityError,slHasError, slErrorToDisplay]
+			//..continue
+			
+			
+			
+			[Note, "Isolating. Please wait..."]
+			[RoutineCall, J_SetSaveScrollBarStatus]
+			[RoutineCall, J_GetAutoCollapseFlags, slAutoCollapseFlags]
+			[IUnPress, Transform:Edit]
+			[IHide, 1011]
+			[RoutineCall, J_SetUndoHistoryMax]
+			[RoutineCall, J_StoreCameraCanvas]
+			[RoutineCall, J_SoloOn]
+			[RoutineCall, J_HideCanvas]
+			
+			[VarSet, slSelSubTool, [SubToolGetActiveIndex]]
+			
+			[VArSet, slValid, 0]
+			[VArSet, slSelection, 0]
+			//Check if it is the clone
+			[VArSet, slSubToolCount, [SubToolGetCount]]
+			[If,  #slSubToolCount < 2,
+				[LoopExit]
+			,]
+			[VArSet, slFixID, [MVarGet, jmemIsoFixID, 0]]
+				
+			[If, #slSubToolCount == 2 ,
+				[VarSet, slToolID, [ToolGetActiveIndex]]
+				[VArSet, slFixID, [MVarGet, jmemIsoFixID, 0]]
+				[If, #slToolID ==  #slFixID,
+					
+					[SubToolSelect, 1]
+					[IPress, Tool:Geometry:Copy]
+					[IKeyPress, '2',
+						[IPress, "Tool:SubTool:Del All"]
+					]
+					
+					[VarSet, slOrigTool,[MVarGet,jmemIsoFixOrigID, 0 ]]
+					[ToolSelect, #slOrigTool]
+					[IPress, "Tool:Geometry:Paste Replace"]
+					[MVarSet,jmemIsoFixOrigID, 0, -1 ]
+					[MVarSet,jmemIsoFixID, 0, -1 ]
+					[RoutineCall, J_MemoryOptimize, 0]
+					[LoopExit]
+				,]
+				
+				//...continue
+				[VarSet, slSelSubTool, [SubToolGetActiveIndex]]
+				[SubToolSelect, 0]
+				[VarSet, slShadRes,[IGet, "Tool:Geometry:Res"]]
+				[VarSet, slShadPolish,[IGet, "Tool:Geometry:Polish"]]
+				[If, (#slShadRes == 995) && (#slShadPolish == 64) ,
+					[VarSet, slIsVisible, 0]
+					[VarSet, slPolDisp, [IGet, "Tool:Display Properties:Polygons Draw Size"]]
+					[If, #slPolDisp == .5 ,
+						[VArSet, slTheID, 0]
+						[RoutineCall, J_SubToolListGetSelected2, slTheID]
+						[VarSet, slIsVisible, -1]
+						[RoutineCall, J_SubToolVisibility, #slTheID, slIsVisible]
+						[If, #slSelSubTool == 1 ,
+							[SubToolSelect, 1]
+						,]
+						[If, !#slIsVisible ,
+							[VarSet, slHasError, 1]
+							[VarSet, slErrorToDisplay, "You must click FixProjq first.Action cancelled."]
+							[LoopExit]
+						,]
+					,
+						[If, #slSelSubTool == 1 ,
+							[SubToolSelect, 1]
+						,]
+						[VarSet, slHasError, 1]
+						[VarSet, slErrorToDisplay, "You must click FixProjq first.Action cancelled."]
+						[LoopExit]
+					]
+						
+					
+				,]
+				[If, #slSelSubTool == 1 ,
+					[SubToolSelect, 1]
+				,]
+				[If, (#slShadRes == 995) && (#slShadPolish == 64) ,
+					
+					
+					[VarSet, slValid, 1]
+					[VArSet, slSelection, #slSelSubTool]
+				,
+					[VarSet, slHasError, 1]
+					[VarSet, slErrorToDisplay, "Action can not proceed. Mesh invalid for isolation. You must ZMeshq this first."]
+					[LoopExit]
+				]
+			,]
+			[If, #slSubToolCount > 2 ,
+				[VarSet, slShadRes,[IGet, "Tool:Geometry:Res"]]
+				[VarSet, slShadPolish,[IGet, "Tool:Geometry:Polish"]]
+				[If, (#slShadRes == 995) && (#slShadPolish == 64) ,
+					[VarSet, slIsVisible, 0]
+					[VarSet, slPolDisp, [IGet, "Tool:Display Properties:Polygons Draw Size"]]
+					[If, #slPolDisp == .5 ,
+						[VArSet, slTheID, 0]
+						[RoutineCall, J_SubToolListGetSelected2, slTheID]
+						[VarSet, slIsVisible, -1]
+						[RoutineCall, J_SubToolVisibility, #slTheID, slIsVisible]
+						[If, !#slIsVisible ,
+							[VarSet, slHasError, 1]
+							[VarSet, slErrorToDisplay, "You must click FixProjq first.Action cancelled."]

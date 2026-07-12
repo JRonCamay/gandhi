@@ -1,0 +1,300 @@
+			[VarSet, slPoint1, ]
+			[RoutineCall, J_NewPoint2D, slPoint1,#slSavedXPos, #slSavedYPos ]
+			[VarSet, slPoint2, ]
+			[RoutineCall, J_NewPoint2D, slPoint2,#slCurMouseX, #slCurMouseY ]
+			[VArSet, slVect1,]
+			[RoutineCall, J_NewVector2D, slVect1,slPoint1, slPoint2 ]
+			[VarSet, slDist, 0]
+			[RoutineCall, J_GetVector2DLength,slVect1, slDist]
+			[VarSet, slMult, 1]
+			[If, #slSX > 100 ,
+				[VarSet, slMult, (100/#slSX )]
+			,]
+			[If, #slSX < 100 ,
+				[VarSet, slMult, (#slSX / 100)]
+				
+			,]
+			[VarSet, slFact, INT((INT(#slDist))* #slMult)]
+			[RoutineCall, J_RestoreStrokeEtc]
+			
+			[IPress, Brush:Standard]
+			[ISet, "Draw:Focal Shift", 0]
+			[VArSet, slDrawSize, INT(#slFact * 5.2)]
+			[ISet, "Draw:Draw Size", #slDrawSize]
+			
+			[IShowActions, 1]
+			[IUpdate, 1,1]
+			[NoteBar, [StrMerge, "Brush size is set to ", #slDrawSize]]
+			[RoutineCall, J_SleepChangeEvent, #TIMER, ""]
+			[LoopExit]
+		]
+	
+	]
+
+]
+[IButton, SampleBandWidth, "",
+	[IKeyPress, '1',
+		[RoutineCall, J_SampleBandWidth]
+	]
+]
+
+
+[RoutineDef, J_SHIFTCTRLBrushDec,
+	[RoutineCall, J_DeclareVarQuiet, "jmemSHIFTCTRLBrushSettings", 3, 1]
+]
+[RoutineCall, J_SHIFTCTRLBrushDec]
+
+[RoutineDef, J_CreateBand,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VarSet, slErrorToDisplay, ""]
+	[VarSet, slAutoCollapseFlags, -1]
+	[IFreeze,
+		[Loop, 1,
+			[RoutineCall, J_CatchValidityError, slHasError, slErrorToDisplay]
+			//..continue
+			[Note, "Please wait..."]
+			[IHide, 1011]
+			[RoutineCall, J_ResetSleep]
+			[RoutineCall, J_SetSaveScrollBarStatus]
+			[RoutineCall, J_GetAutoCollapseFlags, slAutoCollapseFlags]
+			[RoutineCall, J_StoreCameraCanvas]
+			[RoutineCall, J_SoloOn]
+			[RoutineCall, J_HideCanvas]
+			[RoutineCall, J_SaveUndoPoint]
+			[RoutineCall, J_SetUndoHistoryMax]
+			[IUnPress, Transform:Edit] // Exit edit mode
+			[RoutineCall, J_BakeGeometry]
+			[VarSet, slDecimateSet, [IGet, "Tool:Geometry:Polygons Size"]]
+			[VarSet, slTesselateFlags,[IGetFlags,"Tool:Geometry:Tesselate"]]
+			[VarSet, slDecimateFlags,[IGetFlags,"Tool:Geometry:Decimate"]]
+			[If, (#slTesselateFlags == 9) || (#slTesselateFlags == 11) || (#slTesselateFlags == 13) || (#slTesselateFlags == 1),
+				[IUnPress,"Tool:Geometry:Tesselate"]
+			,]
+			[If, (#slDecimateFlags == 8) || (#slDecimateFlags == 10) || (#slDecimateFlags == 12) || (#slDecimateFlags == 0),
+				[IPress,"Tool:Geometry:Decimate"]
+			,]
+			[VarSet, slTessimateMod, [IModGet, "Tool:Geometry:Tessimate"]]
+			[IModSet, "Tool:Geometry:Tessimate", 0]
+			[ISet, "Tool:Geometry:Polygons Size", .4]
+			[IPress, "Tool:Geometry:Tessimate"]
+						
+			[IUnPress, "Tool:Geometry:Decimate"]
+			[IModSet, "Tool:Geometry:Tessimate", #slTessimateMod]
+			[If, (#slTesselateFlags == 9) || (#slTesselateFlags == 11) || (#slTesselateFlags == 13) || (#slTesselateFlags == 1),
+				[IPress,"Tool:Geometry:Tesselate"]
+			,]
+			[If, (#slDecimateFlags == 9) || (#slDecimateFlags == 11) || (#slDecimateFlags == 13) || (#slDecimateFlags == 1),
+				[IPress,"Tool:Geometry:Decimate"]
+			,]
+			
+			//Checks if the symmetry is on then turns it off if yes.
+			[VarSet, slSymmetryFlag, [IGetFlags, "Transform:Activate Symmetry"]]
+			[If, (#slSymmetryFlag == 9) || (#slSymmetryFlag == 11) || (#slSymmetryFlag == 13) || (#slSymmetryFlag == 1),
+				[IUnPress, "Transform:Activate Symmetry"] // Turns off the symmetry.
+			,]
+			
+			[IPress, Transform:Edit]
+			[VarSet, slBRadiusFlags, [IGetFlags, "Brush:Clip Brush Modifiers:BRadius"]]
+			[If, (#slBRadiusFlags == 8) || (#slBRadiusFlags == 10) || (#slBRadiusFlags == 12) || (#slBRadiusFlags == 0),
+				[IPRess, "Brush:Clip Brush Modifiers:BRadius"] // Unpress the BRadius switch if it is currently on. Restore the setting after the action.
+			,]
+			
+			[MVarSet, jmemSHIFTCTRLBrushSettings, 0, #slBRadiusFlags]
+			//Query the SHIFT + CTRL brush then
+			[VarSet, slShiftCtrlBrush, ""]
+			[VarSet, slShiftCtrlCenter, 0]
+			[VarSet, slShiftCtrlSquare, 0]
+			[VarSet, slBRadiusFlags, 0]
+			[VarSet, slFocalShift, 0]
+			[VarSet, slBrushID, 0]
+			[IKeyPress, SHIFT+CTRL,
+				[IClick, "Brush:Current Brush", 0,0]
+				[VarSet, slBrushID, [IGet, "Brush:Item Info"]]
+				[MVarSet, jmemSHIFTCTRLBrushSettings, 2, #slBrushID]
+			]
+			[RoutineCall, J_GetSHIFTCTRLBrush, slShiftCtrlBrush, slShiftCtrlCenter, slShiftCtrlSquare]
+			[RoutineCall, J_SetSHIFTCTRLBrush, "SliceCurve", 0, 0]
+			
+			[IKeyPress, SHIFT + CTRL,
+				[VarSet, slFocalShift, [IGet, "Draw:Focal Shift"]]
+				[MVarSet, jmemSHIFTCTRLBrushSettings, 1, #slFocalShift]
+				[ISet, "Draw:Focal Shift", -100]
+			]
+			
+			// Sleep section
+			[IUnPress, Transform:Edit]
+			
+			
+		]// END LOOP
+		[If, #slAutoCollapseFlags > -1 ,
+			[RoutineCall, J_CanvasClickInsertMesh]
+			[RoutineCall, J_RestoreUndoHistoryMax]
+			[RoutineCall, J_SoloRestore]
+			[RoutineCall, J_RestoreCameraCanvas]
+			[IUnPress, Draw:Perspective]
+			[RoutineCall, J_RestoreScrollBarStatus]
+			[IShow,1011]
+			
+		,]
+	]//END FREEZE
+	
+	[If, #slHasError == 1,
+		[Note, slErrorToDisplay]
+	,
+	
+	]
+	
+	[IShowActions, 1]
+	[IUpdate, 1,1]
+	[If, #slHasError == 0 ,
+		[NoteBar, "Use the SliceCurve to create a band mesh. Hold SHIFT + CTRL to draw the curve."]
+		[RoutineCall, J_SleepChangeEventAdv, #LMOUSEDOWN,"J_CreateBandPressed", 3, 1, 0]
+	,
+		[RoutineCall, J_SleepChangeEvent, #TIMER,""]
+	
+	]
+]
+[RoutineDef, J_CreateBandDec,
+	[RoutineCall, J_DeclareVarQuiet, "jmemCreateBandCurUndo", 1, 1]
+]
+
+[RoutineCall, J_CreateBandDec]
+[RoutineDef, J_CreateBandPressed,
+	[IShowActions, 0]
+	[Loop, 1,
+		[VArSet, slCtrlShiftPressed, 0]
+		[RoutineCall, J_CtrlShiftGetStatus, slCtrlShiftPressed]
+		[IShowActions, 1]
+		[If, #slCtrlShiftPressed,
+			[RoutineCall, J_SleepChangeEventAdv, #LMOUSEUP,"J_CreateBandUnPressed", 0, 0, 0]
+		,
+			[RoutineCall, J_SleepChangeEventAdv, #LMOUSEDOWN,"J_CreateBandPressed", 3, 1, 0]
+
+		]
+	
+	]	
+
+]
+
+
+[RoutineDef, J_CreateBandUnPressed,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VarSet, slErrorToDisplay, ""]
+	[VarSet, slAutoCollapseFlags, -1]
+	[VArSet, slISSuccess, 0]
+	[IFreeze,
+		[Loop, 1,
+			[Note, "Please wait..."]
+			[IHide, 1011]
+			
+			[RoutineCall, J_SetUndoHistoryMax]
+			[RoutineCall, J_SetSaveScrollBarStatus]
+			[RoutineCall, J_GetAutoCollapseFlags, slAutoCollapseFlags]
+			
+			[RoutineCall, J_StoreCameraCanvas]
+			[RoutineCall, J_SoloOn]
+			[VarSet, slLastStroke,[StrokeGetLast] ]
+			[VarSet, slBrushSize, [IGet, "Draw:Draw Size"]]
+			[IUnPress, Transform:Edit]
+			[RoutineCall, J_HideCanvas]
+			
+			[IPress, Edit:Tool:Undo]
+			[VarSet, slToolLast,[ToolGetActiveIndex]]
+			[IPress, Tool:Clone]
+			
+			[RoutineCall, J_RestoreUndoPoint]
+			[IPress,Tool:Masking:Clear]
+			[IPress, Edit:Tool:Undo]
+			[ToolSelect,([ToolGetCount] - 1)]
+			[ISet, "Tool:Polygroups:Coverage", 1]
+			[ISet, "Tool:Polygroups:Clstr", .75]
+			[IPress, "Tool:Polygroups:GroupVisible"]
+			
+			[RoutineCall, J_CanvasClickInsertMesh]
+			[RoutineCall, J_RestoreCameraCanvas]
+			[MergeUndo]
+			[CanvasStroke, #slLastStroke]
+			[IUnPress, Transform:Edit]
+			[RoutineCall, J_HideCanvas]
+			[VarSet,slHasGroups, 0]
+			[VArSet, slUndoStepBefore, [IGet,"Edit:Tool:UndoCounter"]]
+			[VarSet,slBorderMask, [IGetFlags, "Tool:Masking:Border"]]
+			[VarSet,slGroupsMask, [IGetFlags, "Tool:Masking:Groups"]]
+			[VarSet,slCreaseMask, [IGetFlags, "Tool:Masking:Crease"]]
+			[IUnPress, "Tool:Masking:Border"]
+			[IPress, "Tool:Masking:Groups"]
+			[IUnPress, "Tool:Masking:Crease"]
+			[IPress, Tool:Masking:MaskByFeature]
+			[VArSet, slUndoStepAfter, [IGet,"Edit:Tool:UndoCounter"]]
+			[If, (#slBorderMask == 9) || (#slBorderMask == 11) || (#slBorderMask == 13) || (#slBorderMask == 1),
+				[IPress,"Tool:Masking:Border"]
+			,]
+			[If, (#slGroupsMask == 8) || (#slGroupsMask == 10) || (#slGroupsMask == 12) || (#slGroupsMask == 0),
+				[IUnPress,"Tool:Masking:Groups"]
+			,]
+			[If, (#slCreaseMask == 9) || (#slCreaseMask == 11) || (#slCreaseMask == 13) || (#slCreaseMask == 1),
+				[IPress,"Tool:Masking:Crease"]
+			,]
+			[If, #slUndoStepAfter > #slUndoStepBefore ,
+				[VArSet, slHasGroups, 1]
+			,]
+			
+			[If, #slHasGroups ,
+				[MergeUndo]
+				[IPress, Tool:Geometry:Unweld Groups Border]
+				[IPress, Edit:Tool:DelUH]
+				[IKeyPress, '2',
+					[IPress, "Tool:SubTool:Groups Split"]
+				]
+			,
+			
+				[IKeyPress,'2',
+					[IPress, "Tool:SubTool:Del All"]
+				]
+				[VArSet, slHasError, 1]
+				
+				[VArSet, slErrorToDisplay, " Nothing has been sliced. Try Again."]
+				[ToolSelect, #slToolLast]
+				[RoutineCall, J_RestoreUndoPoint]
+				[IPress,Tool:Masking:Clear]
+				[IPress, Edit:Tool:Undo]
+				[RoutineCall, J_MemoryOptimize, 0]
+				[LoopExit]
+			]
+			
+			
+			
+			[VarSet, slSubToolCount, [SubToolGetCount]]
+			[If, #slSubToolCount == 2 ,
+				[IKeyPress,'2',
+					[IPress, "Tool:SubTool:Del All"]
+				]
+				[ToolSelect, #slToolLast]
+				[RoutineCall, J_RestoreUndoPoint]
+				[IPress,Tool:Masking:Clear]
+				[IPress, Edit:Tool:Undo]
+				[RoutineCall, J_MemoryOptimize, 0]
+				[VArSet, slHasError, 1]
+				[VArSet, slErrorToDisplay, " The slice is not properly done. Try again."]
+				[LoopExit]
+			,]
+			
+			//...continue
+			[RoutineCall, J_CanvasClickInsertMesh]
+			[RoutineCall, J_RestoreCameraCanvas]
+			[VarSet, slCtr,0]
+			[VarSet, slDrawSize,[IGet,"Draw:Draw Size"]]
+			[ISet,"Draw:Draw Size", (#slDrawSize * .8)]
+			[VArSet, slTheMid,0]
+			[Loop, #slSubToolCount,
+				[SubToolSelect, #slCtr]
+				[VarSet,slPCount, 0]
+				[RoutineCall, J_GetPointsCount, slPCount]
+				[CanvasStroke, #slLastStroke]
+				[VarSet,slPCount2, 0]
+				[RoutineCall, J_GetPointsCount, slPCount2]
+				[If, #slPCount2 ==  #slPCount,
+					
+				,

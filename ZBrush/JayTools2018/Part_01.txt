@@ -1,0 +1,300 @@
+[IShowActions, 0]
+//RECORDED ZSCRIPT 4.7
+		
+	/* Path Variables */
+[MVarDef, J_Initialized,1,1]
+[VarDef, gFileUtilsPath, ""]
+<zscriptinsert, "JMemVarRoutines.txt">
+<zscriptinsert, "JStringRoutines.txt">
+<zscriptinsert, "JMathRoutines.txt">
+<zscriptinsert, "JEssentialRoutines.txt">
+<zscriptinsert, "JColorRoutines.txt">
+<zscriptinsert, "JMouseRoutines.txt">
+<zscriptinsert, "JKeyboardRoutines.txt">
+<zscriptinsert, "JMessageRoutines.txt">
+<zscriptinsert, "JDisplayRoutines.txt">
+<zscriptinsert, "JSubToolRoutines.txt">
+<zscriptinsert, "JUndoRoutines.txt">
+<zscriptinsert, "JBrushRoutines.txt">
+<zscriptinsert, "JSceneRoutines.txt">
+<zscriptinsert, "JErrorRoutines.txt">
+<zscriptinsert, "JSleepRoutines.txt">
+
+
+
+/*
+		0 = nothing
+		1 = Create Shell
+		2 = Extract MeshF
+		3 = Extract Band
+	
+*/
+
+
+[RoutineDef, J_Dec1,
+	[RoutineCall, J_DeclareVarQuiet, "jmemPreviousColor", 3, 255]
+	[RoutineCall, J_DeclareVarQuiet, "jmemDocRange", 1, 0]
+	[RoutineCall, J_DeclareVarQuiet, "jmemFloorStat", 1, 0]
+	[RoutineCall, J_DeclareVarQuiet, "jmemBGColor", 3, 255]
+	[RoutineCall, J_DeclareVarQuiet, "jmemCurrentRenderMode", 1, 0]
+	[RoutineCall, J_DeclareVarQuiet, "jmemRGBg", 3, 255]
+	[RoutineCall, J_DeclareVarQuiet, "jmemSilhoHasError", 1, 0]
+]
+[RoutineCall,J_Dec1 ]
+
+[RoutineDef, J_SilhouetteOn,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VarSet, slErrorToDisplay, ""]
+	[VarSet, slAutoCollapseFlags, -1]
+	[IFreeze, 
+		[Loop,1,
+			[VarSet, slSilhoHasError, [MVarGet, jmemSilhoHasError, 0]]
+			[If, #slSilhoHasError == 1,
+				[MVarSet, jmemSilhoHasError, 0, 0]
+				[LoopExit]	
+			,]
+			[RoutineCall,J_CatchValidityError, slHasError ,slErrorToDisplay]
+			//..continue
+			
+			[Note, "Turning silhouette mode on. Please wait..."]
+			[IHide,  1011] // Hides the Status bar
+			[RoutineCall, J_SetUndoHistoryMax]
+			[RoutineCall, J_SetSaveScrollBarStatus]
+			[RoutineCall, J_GetAutoCollapseFlags, slAutoCollapseFlags]
+			[RoutineCall, J_StoreCameraCanvas] 
+			[RoutineCall, J_SoloOn] 
+			
+			[VarSet, slDocRange, [IGet, Document:Range]]
+			[MVarSet, jmemDocRange, 0, #slDocRange]
+			[ISet, Document:Range, 0]
+			[MVaRSet, jmemPreviousColor, 0,  [IGet, Color:R]]
+			[MVaRSet, jmemPreviousColor, 1,  [IGet, Color:G]]
+			[MVaRSet, jmemPreviousColor, 2,  [IGet, Color:B]]
+			
+			[VarSet, slFloorStat, [IGetFlags, Draw:Floor]]
+			[MVaRSet, jmemFloorStat, 0, #slFloorStat]
+			[If, (#slFloorStat == 9 ) || (#slFloorStat == 11) || (#slFloorStat == 13) || (#slFloorStat == 1),
+				[IUnPress, Draw:Floor ]
+			,]
+			
+			[IUnPress, Transform:Edit]
+			[IPress, Layer:Bake]
+			[IPress, Layer:Clear] //Clear the canvas so the color of the center could be color picked.
+			[MVarSet, jmemBGColor, 0, [PixolPick, 2, 0, 0]]
+			[MVarSet, jmemBGColor, 1, [PixolPick, 3, 0, 0]]
+			[MVarSet, jmemBGColor, 2, [PixolPick, 4, 0, 0]]
+			
+			//Need to insert drag the tool in the canvas
+			[RoutineCall, J_CanvasClickInsertMesh]
+			[IUnPress, Transform:Edit]
+			
+			[VarSet, slSubToolCount, [SubToolGetCount]]
+			[VarSet, slCtr, 0]
+			[VarSet, slActiveSubtool, [SubToolGetActiveIndex]]
+			[Loop, #slSubToolCount,
+				[SubToolSelect, #slCtr]
+				[VarSet, slColorizeF, [IGetFlags, Tool:Polypaint:Colorize]]
+				[If, (#slColorizeF == 9) || (#slColorizeF == 11),
+					[ISet, "Tool:Initialize:X Res", 25]
+					[ISet, "Tool:Initialize:Y Res", 50]
+					[ISet, "Tool:Initialize:Z Res", 100]
+				,
+					[ISet, "Tool:Initialize:X Res", 30]
+					[ISet, "Tool:Initialize:Y Res", 60]
+					[ISet, "Tool:Initialize:Z Res", 90]
+				]
+				[If, (#slColorizeF == 9) || (#slColorizeF == 11),
+					[IUnPress, Tool:Polypaint:Colorize ]
+				,]
+				[VarInc, slCtr]
+				[If,#slCtr == #slSubToolCount ,
+					[IUpdate, 1]
+					[LoopExit]
+				,]
+			]
+			
+			[SubToolSelect, #slActiveSubtool]
+			[VarSet, slPreviewF, [IGetFlags, Render:Preview]]
+			[VarSet, slFlatF, [IGetFlags, Render:Flat]]
+			[VarSet, slFastF, [IGetFlags, Render:Fast]]
+			[If, (#slPreviewF == 9) || (#slPreviewF == 11),
+				[MVarSet, jmemCurrentRenderMode, 0, 1]
+				
+			,
+				[If, (#slFlatF == 9) || (#slFlatF == 11),
+					[MVarSet, jmemCurrentRenderMode, 0, 2]
+
+				,
+				
+					[If, (#slFastF == 9) || (#slFastF == 11),
+						[MVarSet, jmemCurrentRenderMode, 0, 3]
+
+					,]
+				]
+			]
+			[VarSet, slRenderMode,[MVarGet, jmemCurrentRenderMode, 0] ]
+			[If, #slRenderMode== 2,
+			
+			,
+				[IPress, Render:Fast]
+			]
+			[MVarSet, jmemRGBg, 0, [IGet, Color:R]]
+			[MVarSet, jmemRGBg, 1, [IGet, Color:G]]
+			[MVarSet, jmemRGBg, 2, [IGet, Color:B]]
+			
+			[ISet, Color:R, 255]
+			[ISet, Color:G, 255]
+			[ISet, Color:B, 255]
+			[IPress, Document:Back]
+			[ISet, Color:R, 0]
+			[ISet, Color:G, 0]
+			[ISet, Color:B, 0]
+			
+			[IShow,  1011] // Hides the Status bar 
+			
+		
+		] //END OF LOOP
+		[If, #slAutoCollapseFlags > -1 ,
+			[RoutineCall, J_CanvasClickInsertMesh]
+			[RoutineCall, J_RestoreCameraCanvas]
+			[RoutineCall, J_SoloRestore]
+			[RoutineCall, J_RestoreScrollBarStatus]
+			[RoutineCall, J_RestoreUndoHistoryMax]
+			
+			
+		,]
+	]//END OF IFREEZE
+	[If, #slHasError == 1 ,
+		[VarSet, gSiloHasError, 1]
+		[IUnPress, ZScript:SilhouetteMode]
+		[Note, #slErrorToDisplay]
+	,]
+	
+	[IShowActions, 1]
+	[IUpdate, 1,1]
+]
+
+[RoutineDef, J_SilhouetteOff,
+	
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VarSet, slErrorToDisplay, ""]
+	[VarSet, slAutoCollapseFlags, -1]
+	[IFreeze, 
+		[Loop,1,
+			[VarSet, slSilhoHasError, [MVarGet, jmemSilhoHasError, 0]]
+			[If, #slSilhoHasError == 1,
+				[MVarSet, jmemSilhoHasError, 0, 0]
+				[LoopExit]	
+			,]
+			
+			[RoutineCall,J_CatchValidityError, slHasError ,slErrorToDisplay]
+			
+			//...continue
+			
+			[NOte, "Turning silhouette mode off. Please wait..."]
+			[IHide,  1011] // Hides the Status bar
+			[RoutineCall, J_SetUndoHistoryMax]
+			[RoutineCall, J_SetSaveScrollBarStatus]
+			[RoutineCall, J_GetAutoCollapseFlags, slAutoCollapseFlags]
+			[RoutineCall, J_StoreCameraCanvas] 
+			[RoutineCall, J_SoloOn] 
+			
+			[IUnPress, Transform:Edit]
+			
+			[VarSet, slSubToolCount, [SubToolGetCount]]
+			[VarSet, slCtr, 0]
+			[VarSet, slActiveSubtool, [SubToolGetActiveIndex]]
+			[IPress, Edit:UNDO]
+			[VarSet, slSolo, -1]
+			[RoutineCall, J_SoloFlagsPressGet, slSolo]
+			
+			[Loop, #slSubToolCount,
+				
+				[SubToolSelect, #slCtr]
+				
+				[VarSet, slXRes, [IGet, "Tool:Initialize:X Res"]]
+				[VarSet, slYRes, [IGet, "Tool:Initialize:Y Res"]]
+				[VarSet, slZRes, [IGet, "Tool:Initialize:Z Res"]]
+				[If, (#slXRes + #slYRes + #slZRes) == 175,
+					[VarSet, slColorizeF, [IGetFlags, Tool:Polypaint:Colorize]]
+					[If, (#slColorizeF == 8) || (#slColorizeF == 10),
+						[IPress, Tool:Polypaint:Colorize ]
+					,]
+				,
+					[VarSet, slColorizeF, [IGetFlags, Tool:Polypaint:Colorize]]
+					[If, (#slColorizeF == 9) || (#slColorizeF == 11),
+						[IUnPress, Tool:Polypaint:Colorize ]
+					,]
+				]
+				[ISet, "Tool:Initialize:X Res", 2]
+				[ISet, "Tool:Initialize:Y Res", 2]
+				[ISet, "Tool:Initialize:Z Res", 2]
+				
+				[VarInc, slCtr]
+				[If, #slCtr == #slSubToolCount,
+					[IUpdate, 1]
+					[LoopExit]
+				,]
+			]
+			
+			[SubToolSelect, #slActiveSubtool]
+			[RoutineCall, J_SoloFlagsUnPress, slSolo]
+			[VarSet, slCurrentRenderMode, [MVarGet, jmemCurrentRenderMode, 0]]
+			[If, #slCurrentRenderMode == 1,
+				[IPress,Render:Preview]
+			,
+				
+				[If, #slCurrentRenderMode == 2,
+					[IPress,Render:Flat] 
+				,
+					[If, #slCurrentRenderMode == 3,
+						[IPress,Render:Fast] 
+					,]
+				]
+			]
+			
+			[ISet, Color:R,  [MVarGet, jmemRGBg, 0]]
+			[ISet, Color:G,  [MVarGet, jmemRGBg, 1]]
+			[ISet, Color:B,  [MVarGet, jmemRGBg, 0]]
+			[MVarSet, jmemRGBg, 0, 0]
+			[MVarSet, jmemRGBg, 1, 0]
+			[MVarSet, jmemRGBg, 2, 0]
+					
+			[ISet,Color:R, [MVarGet, jmemBGColor, 0]] 
+			[ISet,Color:G, [MVarGet, jmemBGColor, 1]] 
+			[ISet,Color:B, [MVarGet, jmemBGColor, 2]] 
+			
+ 			[IPress, Document:Back]
+ 			[ISet, Document:Range, [MVarGet, jmemDocRange, 0]]
+ 			[ISet, Color:R, [MVarGet, jmemPreviousColor, 0]]
+ 			[ISet, Color:G, [MVarGet, jmemPreviousColor, 1]]
+ 			[ISet, Color:B, [MVarGet, jmemPreviousColor, 2]]
+ 			
+ 			[VarSet, slFloorStat, [MVarGet, jmemFloorStat, 0]]
+ 			[If, (#slFloorStat == 9 ) || (#slFloorStat == 11)  || (#slFloorStat == 13)  || (#slFloorStat == 1),
+				[IPress, Draw:Floor ]
+			,
+				[IUnPress, Draw:Floor ]
+			]
+			[IShow,  1011] // Hides the Status bar 
+			
+		]// END OF LOOP
+		
+		[If, #slAutoCollapseFlags > -1 ,
+			[RoutineCall, J_CanvasClickInsertMesh]
+			[RoutineCall, J_RestoreCameraCanvas]
+			[RoutineCall, J_SoloRestore]
+			[RoutineCall, J_RestoreScrollBarStatus]
+			[RoutineCall, J_RestoreUndoHistoryMax]
+			
+			
+		,]
+	] // END OF IFREEZE
+	[If, #slHasError == 1 ,
+		[MVarSet, jmemSilhoHasError, 0, 1]
+		[IPress, ZScript:SilhouetteMode]
+		[Note, #slErrorToDisplay]
+		
+	,]

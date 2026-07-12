@@ -1,0 +1,300 @@
+			[VarSet, [Var, jOutPut], 16]
+			[LoopExit]
+		,]
+		
+		[VarSet, slPolyGrp, [IGetFlags, "PopUp:EDGE ACTIONS:PolyGroup"]]
+		[If, (#slPolyGrp == 9) || (#slPolyGrp == 11)|| (#slPolyGrp == 13) || (#slPolyGrp == 1) ,
+			[VarSet, [Var, jOutPut], 17]
+			[LoopExit]
+		,]
+		[VarSet, slQMesh, [IGetFlags, "PopUp:EDGE ACTIONS:QMesh"]]
+		[If, (#slQMesh == 9) || (#slQMesh == 11)|| (#slQMesh == 13) || (#slQMesh == 1) ,
+			[VarSet, [Var, jOutPut], 18]
+			[LoopExit]
+		,]
+		[VarSet, slScale, [IGetFlags, "PopUp:EDGE ACTIONS:Scale"]]
+		[If, (#slScale == 9) || (#slScale == 11)|| (#slScale == 13) || (#slScale == 1) ,
+			[VarSet, [Var, jOutPut], 19]
+			[LoopExit]
+		,]
+		
+		[VarSet, slSlide, [IGetFlags, "PopUp:EDGE ACTIONS:Slide"]]
+		[If, (#slSlide == 9) || (#slSlide == 11)|| (#slSlide == 13) || (#slSlide == 1) ,
+			[VarSet, [Var, jOutPut], 20]
+			[LoopExit]
+		,]
+		
+		[VarSet, slSpin, [IGetFlags, "PopUp:EDGE ACTIONS:Spin"]]
+		[If, (#slSpin == 9) || (#slSpin == 11)|| (#slSpin == 13) || (#slSpin == 1) ,
+			[VarSet, [Var, jOutPut], 21]
+			[LoopExit]
+		,]
+		
+		[VarSet, slSplit, [IGetFlags, "PopUp:EDGE ACTIONS:Split"]]
+		[If, (#slSplit == 9) || (#slSplit == 11)|| (#slSplit == 13) || (#slSplit == 1) ,
+			[VarSet, [Var, jOutPut], 22]
+			[LoopExit]
+		,]
+		[VarSet, slStitch, [IGetFlags, "PopUp:EDGE ACTIONS:Stitch"]]
+		[If, (#slStitch == 9) || (#slStitch == 11)|| (#slStitch == 13) || (#slStitch == 1) ,
+			[VarSet, [Var, jOutPut], 23]
+			[LoopExit]
+		,]
+		[VarSet, slSwivel, [IGetFlags, "PopUp:EDGE ACTIONS:Swivel"]]
+		[If, (#slSwivel== 9) || (#slSwivel == 11)|| (#slSwivel == 13) || (#slSwivel == 1) ,
+			[VarSet, [Var, jOutPut], 24]
+			[LoopExit]
+		,]
+		[VarSet, slTranspose, [IGetFlags, "PopUp:EDGE ACTIONS:Transpose"]]
+		[If, (#slTranspose == 9) || (#slTranspose == 11)|| (#slTranspose == 13) || (#slTranspose == 1) ,
+			[VarSet, [Var, jOutPut], 25]
+			[LoopExit]
+		,]
+		[VarSet, slUnweld, [IGetFlags, "PopUp:EDGE ACTIONS:Unweld"]]
+		[If, (#slUnweld == 9) || (#slUnweld == 11)|| (#slUnweld == 13) || (#slUnweld == 1) ,
+			[VarSet, [Var, jOutPut], 26]
+			[LoopExit]
+		,]
+		
+		
+	]
+
+, jOutPut]
+
+[RoutineDef, J_GetEdgeOperationName,
+	[Loop, 1,
+		[If, #jOpID == 0,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:Add To Curve"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 1,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:Align"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 2,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:Bevel"]
+			[LoopExit]
+		,]
+		
+		[If, #jOpID == 3,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:Bridge"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 4,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:Close"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 5,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:Collapse"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 6,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:Crease"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 7,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:Delete"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 8,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:Do Nothing"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 9,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:Extrude"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 10,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:Insert"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 11,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:Inset"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 12,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:Mask"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 13,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:Move"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 14,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:Move Auto Radius"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 15,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:Move Brush Radius"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 16,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:Move Infinite Radius"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 17,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:PolyGroup"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 18,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:QMesh"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 19,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:Scale"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 20,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:Slide"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 21,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:Spin"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 22,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:Split"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 23,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:Stitch"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 24,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:Swivel"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 25,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:Transpose"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 26,
+			[VarSet, [Var, jOutputName], "PopUp:EDGE ACTIONS:Unweld"]
+			[LoopExit]
+		,]
+		
+	]
+
+, jOpID, jOutputName]
+
+[RoutineDef, J_GetPointOperation,
+	[Loop, 1,
+		
+		[VarSet, slBridge, [IGetFlags, "PopUp:POINT ACTION:Bridge"]]
+		[If, (#slBridge == 9) || (#slBridge == 11)|| (#slBridge == 13) || (#slBridge == 1) ,
+			[VarSet, [Var, jOutPut], 0]
+			[LoopExit]
+		,]
+		
+		[VarSet, slCrease, [IGetFlags, "PopUp:POINT ACTION:Crease"]]
+		[If, (#slCrease == 9) || (#slCrease == 11)|| (#slCrease == 13) || (#slCrease == 1) ,
+			[VarSet, [Var, jOutPut], 1]
+			[LoopExit]
+		,]
+		[VarSet, slDelete, [IGetFlags, "PopUp:POINT ACTION:Delete"]]
+		[If, (#slDelete == 9) || (#slDelete == 11)|| (#slDelete == 13) || (#slDelete == 1) ,
+			[VarSet, [Var, jOutPut], 2]
+			[LoopExit]
+		,]
+		
+		[VarSet, slDoNothing, [IGetFlags, "PopUp:POINT ACTION:Do Nothing"]]
+		[If, (#slDoNothing == 9) || (#slDoNothing == 11)|| (#slDoNothing == 13) || (#slDoNothing == 1) ,
+			[VarSet, [Var, jOutPut], 3]
+			[LoopExit]
+		,]
+		
+		[VarSet, slExtrude, [IGetFlags, "PopUp:POINT ACTION:Extrude"]]
+		[If, (#slExtrude == 9) || (#slExtrude == 11)|| (#slExtrude == 13) || (#slExtrude == 1) ,
+			[VarSet, [Var, jOutPut], 4]
+			[LoopExit]
+		,]
+		
+		[VarSet, slMakeCurve, [IGetFlags, "PopUp:POINT ACTION:Make Curve"]]
+		[If, (#slMakeCurve == 9) || (#slMakeCurve == 11)|| (#slMakeCurve == 13) || (#slMakeCurve == 1) ,
+			[VarSet, [Var, jOutPut], 5]
+			[LoopExit]
+		,]
+		
+		
+		[VarSet, slMask, [IGetFlags, "PopUp:POINT ACTION:Mask"]]
+		[If, (#slMask == 9) || (#slMask == 11)|| (#slMask == 13) || (#slMask == 1) ,
+			[VarSet, [Var, jOutPut], 6]
+			[LoopExit]
+		,]
+		
+		[VarSet, slMove, [IGetFlags, "PopUp:POINT ACTION:Move"]]
+		[If, (#slMove == 9) || (#slMove == 11)|| (#slMove == 13) || (#slMove == 1) ,
+			[VarSet, [Var, jOutPut], 7]
+			[LoopExit]
+		,]
+		
+		[VarSet, slQMesh, [IGetFlags, "PopUp:POINT ACTION:QMesh"]]
+		[If, (#slQMesh == 9) || (#slQMesh == 11)|| (#slQMesh == 13) || (#slQMesh == 1) ,
+			[VarSet, [Var, jOutPut], 8]
+			[LoopExit]
+		,]
+		
+		
+		[VarSet, slSlide, [IGetFlags, "PopUp:POINT ACTION:Slide"]]
+		[If, (#slSlide == 9) || (#slSlide == 11)|| (#slSlide == 13) || (#slSlide == 1) ,
+			[VarSet, [Var, jOutPut], 9]
+			[LoopExit]
+		,]
+		
+		
+		[VarSet, slSplit, [IGetFlags, "PopUp:POINT ACTION:Split"]]
+		[If, (#slSplit == 9) || (#slSplit == 11)|| (#slSplit == 13) || (#slSplit == 1) ,
+			[VarSet, [Var, jOutPut], 10]
+			[LoopExit]
+		,]
+		[VarSet, slStitch, [IGetFlags, "PopUp:POINT ACTION:Stitch"]]
+		[If, (#slStitch == 9) || (#slStitch == 11)|| (#slStitch == 13) || (#slStitch == 1) ,
+			[VarSet, [Var, jOutPut], 11]
+			[LoopExit]
+		,]
+		
+		[VarSet, slTranspose, [IGetFlags, "PopUp:POINT ACTION:Transpose"]]
+		[If, (#slTranspose == 9) || (#slTranspose == 11)|| (#slTranspose == 13) || (#slTranspose == 1) ,
+			[VarSet, [Var, jOutPut], 12]
+			[LoopExit]
+		,]
+		
+		
+		
+	]
+
+, jOutPut]
+
+[RoutineDef, J_GetPointOperationName,
+	[Loop, 1,
+		[If, #jOpID == 0,
+			[VarSet, [Var, jOutputName], "PopUp:POINT ACTION:Bridge"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 1,
+			[VarSet, [Var, jOutputName], "PopUp:POINT ACTION:Crease"]
+			[LoopExit]
+		,]
+		
+		[If, #jOpID == 2,
+			[VarSet, [Var, jOutputName], "PopUp:POINT ACTION:Delete"]
+			[LoopExit]
+		,]
+		
+		[If, #jOpID == 3,
+			[VarSet, [Var, jOutputName], "PopUp:POINT ACTION:Do Nothing"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 4,
+			[VarSet, [Var, jOutputName], "PopUp:POINT ACTION:Extrude"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 5,
+			[VarSet, [Var, jOutputName], "PopUp:POINT ACTION:Make Curve"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 6,
+			[VarSet, [Var, jOutputName], "PopUp:POINT ACTION:Mask"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 7,

@@ -1,0 +1,300 @@
+			]
+			[RoutineCall, J_ProgressUpdate, 7580, 0,0,0,0]
+			[ToolSelect, #slSelTool]
+			[RoutineCall, J_ProgressEnd]
+		]
+		[If, #slAutoCollapseFlags > -1,
+			[RoutineCall, J_SoloRestore]
+			[RoutineCall, J_RestoreCameraCanvas]
+		,]
+		[IShow, 1011]
+
+	]
+	
+	[If, #slHasError ,
+		[NoteBar, ""]
+		[Note, #slErrorToDisplay]
+	,]
+	
+	[IShowActions, 1]
+	[IUpdate, 1, 1]
+
+]
+
+[IButton,EdgeMode,"",
+	[IKeyPress, '1',
+		[RoutineCall, J_EdgeMode]
+	
+	]
+
+]
+
+[RoutineDef, J_PointMode,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VarSet, slErrorToDisplay, ""]
+	[VarSet, slAutoCollapseFlags, -1]
+	[IFreeze,
+		[Loop, 1,
+			[RoutineCall, J_CatchValidityError,slHasError, slErrorToDisplay]
+			//...continue
+			[RoutineCall, J_CatchGeometryError,slHasError, slErrorToDisplay, 1, 1, 0, 0, 0]
+			//...continue
+			
+			[VarSet, slBrushName, ""]
+			[RoutineCall, J_GetCurrentBrush, slBrushName]
+			[VarSet, slIsSame, 0]
+			[RoutineCall,J_CompareStringsIfSame, #slBrushName, "ZModeler", slIsSame]
+			[If, !#slIsSame ,
+				[VarSet, slHasError, 1]
+				[VarSet, slErrorToDisplay, "Brush is not ZModeler. Action cancelled."]
+				[LoopExit]
+			,]
+			//...continue
+			[Note, "Switching to POINT MODE only.Please wait..."]
+			[VarSet, slAutoCollapseFlags, 0]
+			[IHide, 1011]
+			[RoutineCall, J_InitiateProgressBar, 7540,7580]
+			[RoutineCall, J_ProgressUpdate, 7541, 0,0,0,0]
+			[RoutineCall, J_StoreCameraCanvas]
+			[RoutineCall, J_SoloOn]
+			[RoutineCall, J_CenterCanvasFrontOrtho]
+			[VarSet, slSelTool, [ToolGetActiveIndex]]
+			[IPress, Tool:Clone]
+			[RoutineCall, J_ProgressUpdate, 7547, 0,0,0,0]
+			[ToolSelect, ([ToolGetCount]-1)]
+			
+			[VArSet, slSavePointOp, [MVarGet, jMemPointOperation, 0]]
+			[If, #slSavePointOp < 100 ,
+				
+				[ISet, "Tool:Initialize:X Res", 2]
+				[ISet, "Tool:Initialize:Y Res", 2]
+				[ISet, "Tool:Initialize:Z Res", 2]
+				[IPress, "Tool:Initialize:QCube"]
+				[RoutineCall, J_TrueFitToCanvas]
+				[IKeyPress, 32,
+					[Delay,.001]
+					[VarSet, slPointOpName, ""]
+					[RoutineCall,J_GetPointOperationName, #slSavePointOp,slPointOpName]
+					[IPress, #slPointOpName]
+					
+				,([IGEt, Document:Width] *.5), ([IGEt, Document:Height] *.5)]
+			,]
+			[If, #slSavePointOp == 100 ,
+				
+				[ISet, "Tool:Initialize:X Res", 2]
+				[ISet, "Tool:Initialize:Y Res", 2]
+				[ISet, "Tool:Initialize:Z Res", 2]
+				[IPress, "Tool:Initialize:QCube"]
+				[RoutineCall, J_TrueFitToCanvas]
+				[IKeyPress, 32,
+					[Delay,.001]
+					[VarSet, slPointOpID, -1]
+					[RoutineCall,J_GetPointOperation, slPointOpID]
+					[MVarSet, jMemPointOperation, 0, #slPointOpID]
+				,([IGEt, Document:Width] *.5), ([IGEt, Document:Height] *.5)]
+			,]
+			
+			[IKeyPress, 32,
+				
+			,0,0]
+			
+			[ISet, "Tool:Initialize:X Res", 3]
+			[ISet, "Tool:Initialize:Y Res", 2]
+			[ISet, "Tool:Initialize:Z Res", 2]
+			[RoutineCall, J_ProgressUpdate, 7553, 0,0,0,0]
+			[IPress, "Tool:Initialize:QCube"]
+			[RoutineCall, J_TrueFitToCanvas]
+			[RoutineCall, J_ProgressUpdate, 7556, 0,0,0,0]
+			[IKeyPress, 32,
+				[Delay,.001]
+				[VArSet, slSaveEdgeOp, -1]
+				[RoutineCall,J_GetEdgeOperation, slSaveEdgeOp]
+				[If, #slSaveEdgeOp == 8 ,
+				
+				,
+					[MVarSet, jMemEdgeOperation,0, #slSaveEdgeOp]
+				]
+				
+				[IPress, "PopUp:EDGE ACTIONS:Do Nothing"]
+				
+			,([IGEt, Document:Width] *.5), ([IGEt, Document:Height] *.5)]
+			[RoutineCall, J_ProgressUpdate, 7561, 0,0,0,0]
+			[IKeyPress, 32,
+				
+			,0,0]
+			[RoutineCall, J_ProgressUpdate, 7565, 0,0,0,0]
+			[ISet, "Tool:Initialize:X Res", 1]
+			[ISet, "Tool:Initialize:Y Res", 1]
+			[ISet, "Tool:Initialize:Z Res", 1]
+			[IPress, "Tool:Initialize:QCube"]
+			[RoutineCall, J_ProgressUpdate, 7570, 0,0,0,0]
+			[RoutineCall, J_TrueFitToCanvas]
+			[IKeyPress, 32,
+				[Delay,.001]
+				[VArSet, slSaveFaceOp, -1]
+				[RoutineCall,J_GetFaceOperation, slSaveFaceOp]
+				[If, #slSaveFaceOp == 5 ,
+				
+				,
+					[MVarSet, jMemFaceOperation,0, #slSaveFaceOp]
+				]
+				
+				[IPress, "PopUp:POLYGON ACTIONS:Do Nothing"]
+				
+			,([IGEt, Document:Width] *.5), ([IGEt, Document:Height] *.5)]
+			[RoutineCall, J_ProgressUpdate, 7576, 0,0,0,0]
+			[IKeyPress, '2',
+				[IPress, "Tool:SubTool:Delete"]
+			]
+			[RoutineCall, J_ProgressUpdate, 7580, 0,0,0,0]
+			[ToolSelect, #slSelTool]
+			[RoutineCall, J_ProgressEnd]
+		]
+		[If, #slAutoCollapseFlags > -1,
+			[RoutineCall, J_SoloRestore]
+			[RoutineCall, J_RestoreCameraCanvas]
+		,]
+		[IShow, 1011]
+
+	]
+	
+	[If, #slHasError ,
+		[NoteBar, ""]
+		[Note, #slErrorToDisplay]
+	,]
+	
+	[IShowActions, 1]
+	[IUpdate, 1, 1]
+
+]
+
+[IButton,PointMode,"",
+	[IKeyPress, '1',
+		[RoutineCall, J_PointMode]
+	
+	]
+
+]
+
+
+// ************ END OF REMESHING TOOLS *****************
+
+[RoutineDef, J_RemeshDec,
+	[RoutineCall, J_DeclareVarQuiet, "jmemStrokeSettings", 11, 0]
+	[RoutineCall, J_DeclareStringVar, "jmemLastBrush", "lala"]
+	[RoutineCall, J_DeclareVarQuiet, "jmemToolSubToolID", 2, 1]
+]
+[RoutineCall, J_RemeshDec]
+
+[RoutineDef, J_SampleHeight,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VarSet, slErrorToDisplay , ""]
+	[VarSet, slMessage, ""]
+	[VArSet, slHasNoValidityError, 0]
+	[IFreeze,
+		[Loop, 1,
+			[RoutineCall, J_ResetSleep]
+			[RoutineCall, J_CatchValidityError, slHasError, slErrorToDisplay]
+			//..continue
+			[VArSet, slHasNoValidityError, 1]
+			[VarSet, slArrayOn, 0]
+			[VarSet, slNanoMeshOn, 0]
+			[VarSet, slArrayFlags, [IgetFlags, "Tool:ArrayMesh:a.Array Mesh"]]
+			[If, (#slArrayFlags == 9) || (#slArrayFlags == 11),
+				[VarSet, slMessage, [StrMerge, #slMessage, "Array Mesh"]]
+				[VarSet, slArrayOn, 1]
+			,]
+			[If, #slArrayOn ,
+				[VarSet, slMessage, [StrMerge, #slMessage, " and "]]
+			,]
+			[VarSet, slNanoStat, [IGetStatus, "Tool:NanoMesh:m.Nano Mesh On"]]
+			[If, #slNanoStat ,
+				[VarSet, slNanoFlags, [IgetFlags,"Tool:NanoMesh:m.Nano Mesh On"]]
+				[If, (#slNanoFlags == 9) || (#slNanoFlags == 11),
+					[VarSet, slMessage, [StrMerge, #slMessage, "Nano Mesh"]]
+					[VarSet, slNanoMeshOn, 1]
+				,]
+			,]
+			[If, ((#slArrayOn == 1) && (#slNanoMeshOn == 0)) || ((#slArrayOn == 0) && (#slNanoMeshOn == 1))  ,
+				[VarSet, slMessage, [StrMerge, #slMessage, " is on. It would may slow the response time."]]
+			,]
+			[If, (#slArrayOn == 1) && (#slNanoMeshOn == 1)   ,
+				[VarSet, slMessage, [StrMerge, #slMessage, " are on. These would may slow the response time."]]
+			,]
+		]
+	]
+	[VarSet, slMessageStr, [StrLength,#slMessage ]]
+	[If, #slMessageStr > 0 ,
+		[Note, #slMessage]
+	,]
+	
+	[If, #slHasNoValidityError ,
+		[IFreeze,
+			[Loop, 1,
+				[VarSet, slSubToolID, [SubToolGetActiveIndex]]
+				[VarSet, slToolID, [ToolGetActiveIndex]]
+				[MVarSet, jmemToolSubToolID, 0, #slToolID]
+				[MVarSet, jmemToolSubToolID, 1, #slSubToolID]
+				[VarSet, slCurrentBrush, ""]
+				[RoutineCall, J_GetCurrentBrush,slCurrentBrush ]
+				[RoutineCall, J_WriteStringVar, "jmemLastBrush", #slCurrentBrush]
+				[IPress, Brush:Standard]
+				[VarSet, slStrokeFlags, [IGetFlags, "Stroke:Curve Mode"]]
+				[MVarSet, jmemStrokeSettings, 0, #slStrokeFlags]
+				[If, (#slStrokeFlags == 8) || (#slStrokeFlags == 10) || (#slStrokeFlags == 12) || (#slStrokeFlags == 0) ,
+					[IPress, "Stroke:Curve Mode"]
+				,]
+				[VarSet, slAsLineFlags, [IGetFlags, Stroke:AsLine]]
+				[MVarSet, jmemStrokeSettings, 1, #slAsLineFlags]
+				[If, (#slAsLineFlags == 9) || (#slAsLineFlags == 11) || (#slAsLineFlags == 13) || (#slAsLineFlags == 1) ,
+					[IUnPress, Stroke:AsLine]
+				,]
+				[VarSet, slCurveStep, [IGet, Stroke:CurveStep]]
+				[MVarSet, jmemStrokeSettings, 2, #slCurveStep]
+				[ISet, Stroke:CurveStep, 0]
+				[VarSet, slBend, [IGetFlags, Stroke:Bend]]
+				[MVarSet, jmemStrokeSettings, 3, #slBend]
+				[If, (#slBend == 8) || (#slBend == 10) || (#slBend == 12) || (#slBend == 0) ,
+					[IPress, Stroke:Bend]
+				,]
+				[VarSet, slSnap, [IGetFlags, Stroke:Snap]]
+				[MVarSet, jmemStrokeSettings, 4, #slSnap]
+				[If, (#slSnap == 9) || (#slSnap == 11) || (#slSnap == 13) || (#slSnap == 1) ,
+					[IUnPress, Stroke:Snap]
+				,]
+				[VarSet, slElastic, [IGetFlags, Stroke:Elastic]]
+				[MVarSet, jmemStrokeSettings, 5, #slElastic]
+				[If, (#slElastic == 9) || (#slElastic == 11) || (#slElastic == 13) || (#slElastic == 1) ,
+					[IUnPress, Stroke:Elastic]
+				,]
+				[VarSet, slLiquid, [IGetFlags, Stroke:Liquid]]
+				[MVarSet, jmemStrokeSettings, 6, #slLiquid]
+				[If, (#slLiquid == 9) || (#slLiquid == 11) || (#slLiquid == 13) || (#slLiquid == 1) ,
+					[IUnPress, Stroke:Liquid]
+				,]
+				[VarSet, slLockStart, [IGetFlags, "Stroke:Lock Start"]]
+				[MVarSet, jmemStrokeSettings, 7, #slLockStart]
+				[If, (#slLockStart == 9) || (#slLockStart == 11) || (#slLockStart == 13) || (#slLockStart == 1) ,
+					[IUnPress,  "Stroke:Lock Start"]
+				,]
+				[VarSet, slLockEnd, [IGetFlags, "Stroke:Lock End"]]
+				[MVarSet, jmemStrokeSettings, 8, #slLockEnd]
+				[If, (#slLockEnd == 9) || (#slLockEnd == 11) || (#slLockEnd == 13) || (#slLockEnd == 1) ,
+					[IUnPress, "Stroke:Lock End"]
+				,]
+				[VarSet, slLazyBrush, [IgetFlags, Stroke:LazyMouse]]
+				[MVarSet, jmemStrokeSettings, 9, #slLazyBrush]
+				[If, (#slLazyBrush == 9) || (#slLazyBrush == 11) || (#slLazyBrush == 13) || (#slLazyBrush == 1) ,
+					[IUnPress, Stroke:LazyMouse]
+				,]
+				[VarSet, slDrawSize, [IGet, "Draw:Draw Size"]]
+				[MVarSet, jmemStrokeSettings, 10, #slDrawSize]
+				[ISet, "Draw:Draw Size", 1]
+				[RoutineCall, J_SaveUndoPoint]
+				
+				[Notebar, "Click on the mesh and drag to the desired height sample."]
+				[IShowActions, 1]
+				[IUpdate, 1,1]
+				[RoutineCall, J_SleepChangeEventAdv, #LMOUSEDOWN, "J_SampleHeightPress", 0, 1, 1]

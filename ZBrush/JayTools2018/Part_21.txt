@@ -1,0 +1,300 @@
+			[IPRess, Tool:Geometry:Copy]
+			[RoutineCall, J_ProgressUpdate, 7303, 0, 0, 0,0]
+			[ISet, Edit:Tool:UndoCounter, [IGetMax , "Edit:Tool:UndoCounter"]]
+			[MergeUndo]
+			[VarSet, slDelMTStat, [IGetStatus, "Tool:Morph Target:DelMT"]]
+			[If, #slDelMTStat,
+				[MergeUndo]
+				[IPress, "Tool:Morph Target:DelMT"]
+			,]
+			[RoutineCall, J_ProgressUpdate, 7311, 0, 0, 0,0]
+			[MergeUndo]
+			[IPress, "Tool:Morph Target:StoreMT"]
+			[MergeUndo]
+			[IPress, "Tool:Geometry:Paste Replace"]
+			
+			[MergeUndo]
+			
+			[VarSet, slUndoCntA, [IGet, Edit:Tool:UndoCounter]]
+			[ISet, Tool:Geometry:SDiv, #slSubDivLvl]
+			[VarSet, slUndoCntB, [IGet, Edit:Tool:UndoCounter]]
+			[If, #slUndoCntB > #slUndoCntA,
+				[MergeUndo]
+			,]
+			
+			[RoutineCall, J_ProgressUpdate, 7316, 0, 0, 0,0]
+			
+			[IPress, "Tool:Morph Target:Switch"]
+			[IPRess, Tool:Geometry:Copy]
+			[RoutineCall, J_RestoreUndoPoint]
+			[RoutineCall, J_ProgressUpdate, 7321, 0, 0, 0,0]
+			[VarSet, slDelMTStat, [IGetStatus, "Tool:Morph Target:DelMT"]]
+			[If, #slDelMTStat,
+				[IPress, "Tool:Morph Target:DelMT"]
+				[MergeUndo]
+			,]
+			
+			[IPress, "Tool:Morph Target:StoreMT"]
+			[IPress, "Tool:Geometry:Paste Replace"]
+			[MergeUndo]
+			[VarSet, slUndoCntA, [IGet, Edit:Tool:UndoCounter]]
+			[ISet, Tool:Geometry:SDiv, #slSubDivLvl]
+			[VarSet, slUndoCntB, [IGet, Edit:Tool:UndoCounter]]
+			[If, #slUndoCntB > #slUndoCntA,
+				[MergeUndo]
+			,]
+			
+			[IPress, Tool:Masking:Inverse]
+			
+			[RoutineCall, J_ProgressUpdate, 7323, 0, 0, 0,0]
+			[MergeUndo]
+			[ISet, "Tool:Morph Target:Morph", 100]
+			[MergeUndo]
+			[IPress, "Tool:Morph Target:DelMT"]
+			[IPress, Tool:Masking:Inverse]
+			[IPRess, Tool:Geometry:Copy]
+			[RoutineCall, J_RestoreUndoPoint]
+			[IPress, "Tool:Geometry:Paste Replace"]
+			[MergeUndo]
+			[ISet, Tool:Geometry:SDiv, #slSubDivLvl]
+			[RoutineCall, J_MemoryOptimize, 0]
+			[RoutineCall, J_ProgressUpdate, 7325, 0, 0, 0,0]
+			[RoutineCall, J_ProgressEnd]
+			[RoutineCall, J_RestoreUndoHistoryMax]
+			
+		]// END OF MAIN LOOP
+		[If, #slAutoCollapseFlags > -1 ,
+			[RoutineCall, J_CanvasClickInsertMesh]
+			[RoutineCall, J_RestoreCameraCanvas]
+			[RoutineCall, J_SoloRestore]
+			[RoutineCall, J_RestoreScrollBarStatus]
+			[IShow, 1011]
+			
+		,]
+	
+	]// END OF IFREEZE
+	
+	[If, #slHasError ,
+		[NoteBar, ""]
+		[Note, #slErrorToDisplay]
+	,]
+	
+	[IShowActions, 1]
+	[IUpdate, 1, 1]
+
+
+, jInput]
+
+[ISlider, PolishFeaturesByPass , 0, 1, 0, 100,,
+	[RoutineCall, J_PolishFeaturesByPassAdj]
+	
+, 0, 200 ]
+
+[RoutineDef, J_PolishFeaturesByPassAdj,
+	[IKeyPress, '1',
+		[RoutineCall, J_PolishFeaturesByPass, [IGet, "ZScript:PolishFeaturesByPass"]]
+		[ISet,"ZScript:PolishFeaturesByPass", 0]
+	
+	]
+
+]
+[RoutineDef, J_PolishCrispEdgesByPass,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VarSet, slErrorToDisplay, ""]
+	[VarSet, slAutoCollapseFlags, -1]
+	
+	[IFreeze,
+		[Loop, 1,
+			[If, #jInput == 0 ,
+				[LoopExit]
+			,]
+			[RoutineCall, J_CatchValidityError,slHasError, slErrorToDisplay]
+			//..continue
+			[RoutineCall, J_CatchGeometryError, slHasError, slErrorToDisplay, 0, 0, 1, 0, 1]
+			//..continue
+			[Note, "Polishing. Please wait..."]
+			[RoutineCall, J_SetSaveScrollBarStatus]
+			[RoutineCall, J_GetAutoCollapseFlags, slAutoCollapseFlags]
+			[IUnPress, Transform:Edit]
+			[IHide, 1011]
+			[RoutineCall, J_SetUndoHistoryMax]
+			[RoutineCall, J_StoreCameraCanvas]
+			[RoutineCall, J_SoloOn]
+			[RoutineCall, J_HideCanvas]
+			[RoutineCall, J_SaveUndoPoint]
+			[RoutineCall, J_InitiateProgressBar, 7279,7325]
+			[VarSet, slSubDivLvl, [IGet, Tool:Geometry:SDiv]]
+			
+			[VarSet, slCoverage, [IGet, "Tool:Polygroups:Coverage"]]
+			[VarSet, slClstr, [IGet, "Tool:Polygroups:Clstr"]]
+			[RoutineCall, J_ProgressUpdate, 7282, 0, 0, 0,0]
+			[ISet, "Tool:Polygroups:Coverage", 1]
+			[ISet, "Tool:Polygroups:Clstr", .75]
+			[RoutineCall, J_ProgressUpdate, 7285, 0, 0, 0,0]
+			[IPress, Tool:Masking:Clear]
+			[MergeUndo]
+			[IPress, "Tool:Masking:GroupVisible"]
+			[RoutineCall, J_ProgressUpdate, 7289, 0, 0, 0,0]
+			[ISet, "Tool:Polygroups:Coverage", #slCoverage]
+			[ISet, "Tool:Polygroups:Clstr", #slClstr]
+
+			[IMOdSet, "Tool:Deformation:Polish Crisp Edges", 1]
+			[If, #jInput > 0 ,
+				[MergeUndo]
+			,]
+			[RoutineCall, J_ProgressUpdate, 7297, 0, 0, 0,0]
+			[VarSet, slUndoCntA, [IGet, Edit:Tool:UndoCounter]]
+			[ISet, Tool:Geometry:SDiv, #slSubDivLvl]
+			[VarSet, slUndoCntB, [IGet, Edit:Tool:UndoCounter]]
+			[If, #slUndoCntB > #slUndoCntA,
+				[MergeUndo]
+			,]
+			[ISet, "Tool:Deformation:Polish Crisp Edges", #jInput ]
+			
+			[RoutineCall, J_RestoreUndoPoint]
+			
+			[IPRess, Tool:Geometry:Copy]
+			[RoutineCall, J_ProgressUpdate, 7303, 0, 0, 0,0]
+			[ISet, Edit:Tool:UndoCounter, [IGetMax , "Edit:Tool:UndoCounter"]]
+			[MergeUndo]
+			[VarSet, slDelMTStat, [IGetStatus, "Tool:Morph Target:DelMT"]]
+			[If, #slDelMTStat,
+				[MergeUndo]
+				[IPress, "Tool:Morph Target:DelMT"]
+			,]
+			[RoutineCall, J_ProgressUpdate, 7311, 0, 0, 0,0]
+			[MergeUndo]
+			[IPress, "Tool:Morph Target:StoreMT"]
+			[MergeUndo]
+			[IPress, "Tool:Geometry:Paste Replace"]
+			
+			[MergeUndo]
+			
+			[VarSet, slUndoCntA, [IGet, Edit:Tool:UndoCounter]]
+			[ISet, Tool:Geometry:SDiv, #slSubDivLvl]
+			[VarSet, slUndoCntB, [IGet, Edit:Tool:UndoCounter]]
+			[If, #slUndoCntB > #slUndoCntA,
+				[MergeUndo]
+			,]
+			
+			[RoutineCall, J_ProgressUpdate, 7316, 0, 0, 0,0]
+			
+			[IPress, "Tool:Morph Target:Switch"]
+			[IPRess, Tool:Geometry:Copy]
+			[RoutineCall, J_RestoreUndoPoint]
+			[RoutineCall, J_ProgressUpdate, 7321, 0, 0, 0,0]
+			[VarSet, slDelMTStat, [IGetStatus, "Tool:Morph Target:DelMT"]]
+			[If, #slDelMTStat,
+				[IPress, "Tool:Morph Target:DelMT"]
+				[MergeUndo]
+			,]
+			
+			[IPress, "Tool:Morph Target:StoreMT"]
+			[IPress, "Tool:Geometry:Paste Replace"]
+			[MergeUndo]
+			[VarSet, slUndoCntA, [IGet, Edit:Tool:UndoCounter]]
+			[ISet, Tool:Geometry:SDiv, #slSubDivLvl]
+			[VarSet, slUndoCntB, [IGet, Edit:Tool:UndoCounter]]
+			[If, #slUndoCntB > #slUndoCntA,
+				[MergeUndo]
+			,]
+			
+			[IPress, Tool:Masking:Inverse]
+			
+			[RoutineCall, J_ProgressUpdate, 7323, 0, 0, 0,0]
+			[MergeUndo]
+			[ISet, "Tool:Morph Target:Morph", 100]
+			[MergeUndo]
+			[IPress, "Tool:Morph Target:DelMT"]
+			[IPress, Tool:Masking:Inverse]
+			[IPRess, Tool:Geometry:Copy]
+			[RoutineCall, J_RestoreUndoPoint]
+			[IPress, "Tool:Geometry:Paste Replace"]
+			[MergeUndo]
+			[ISet, Tool:Geometry:SDiv, #slSubDivLvl]
+			[RoutineCall, J_MemoryOptimize, 0]
+			[RoutineCall, J_ProgressUpdate, 7325, 0, 0, 0,0]
+			[RoutineCall, J_ProgressEnd]
+			[RoutineCall, J_RestoreUndoHistoryMax]
+		]// END OF MAIN LOOP
+		[If, #slAutoCollapseFlags > -1 ,
+			[RoutineCall, J_CanvasClickInsertMesh]
+			[RoutineCall, J_RestoreCameraCanvas]
+			[RoutineCall, J_SoloRestore]
+			[RoutineCall, J_RestoreScrollBarStatus]
+			[IShow, 1011]
+			
+		,]
+	
+	]// END OF IFREEZE
+	
+	[If, #slHasError ,
+		[NoteBar, ""]
+		[Note, #slErrorToDisplay]
+	,]
+	
+	[IShowActions, 1]
+	[IUpdate, 1, 1]
+
+, jInput]
+
+[ISlider, PolishCrispEdgesByPass , 0, 1, 0, 100,,
+	[IKeyPress, '1',
+		[RoutineCall, J_PolishCrispEdgesByPass, [IGet, "ZScript:PolishCrispEdgesByPass"]]
+		[ISet,"ZScript:PolishCrispEdgesByPass", 0]
+	
+	]
+	
+, 0, 200 ]
+
+
+
+[RoutineDef, J_ZPointsOpDec,
+	[RoutineCall, J_DeclareVarQuiet, "jMemFaceOperation", 1, 99]
+	[RoutineCall, J_DeclareVarQuiet, "jMemEdgeOperation", 1, 100]
+	[RoutineCall, J_DeclareVarQuiet, "jMemPointOperation", 1, 100]
+	
+]
+[RoutineCall,J_ZPointsOpDec ]
+
+
+[RoutineDef, J_GetFaceOperation,
+	[Loop, 1,
+		[VarSet, slAddToCurve, [IGetFlags, "PopUp:POLYGON ACTIONS:Add To Curve"]]
+		[If, (#slAddToCurve == 9) || (#slAddToCurve == 11)|| (#slAddToCurve == 13) || (#slAddToCurve == 1) ,
+			[VarSet, [Var, jOutPut], 0]
+			[LoopExit]
+		,]
+		[VarSet, slBevel, [IGetFlags, "PopUp:POLYGON ACTIONS:Bevel"]]
+		[If, (#slBevel == 9) || (#slBevel == 11)|| (#slBevel == 13) || (#slBevel == 1) ,
+			[VarSet, [Var, jOutPut], 1]
+			[LoopExit]
+		,]
+		
+		[VarSet, slBridge, [IGetFlags, "PopUp:POLYGON ACTIONS:Bridge"]]
+		[If, (#slBridge == 9) || (#slBridge == 11)|| (#slBridge == 13) || (#slBridge == 1) ,
+			[VarSet, [Var, jOutPut], 2]
+			[LoopExit]
+		,]
+		[VarSet, slCrease, [IGetFlags, "PopUp:POLYGON ACTIONS:Crease"]]
+		[If, (#slCrease == 9) || (#slCrease == 11)|| (#slCrease == 13) || (#slCrease == 1) ,
+			[VarSet, [Var, jOutPut], 3]
+			[LoopExit]
+		,]
+		[VarSet, slDelete, [IGetFlags, "PopUp:POLYGON ACTIONS:Delete"]]
+		[If, (#slDelete == 9) || (#slDelete == 11)|| (#slDelete == 13) || (#slDelete == 1) ,
+			[VarSet, [Var, jOutPut], 4]
+			[LoopExit]
+		,]
+		[VarSet, slDoNothing, [IGetFlags, "PopUp:POLYGON ACTIONS:Do Nothing"]]
+		[If, (#slDoNothing == 9) || (#slDoNothing == 11)|| (#slDoNothing == 13) || (#slDoNothing == 1) ,
+			[VarSet, [Var, jOutPut], 5]
+			[LoopExit]
+		,]
+		[VarSet, slEqualize, [IGetFlags, "PopUp:POLYGON ACTIONS:Equalize"]]
+		[If, (#slEqualize == 9) || (#slEqualize == 11)|| (#slEqualize == 13) || (#slEqualize == 1) ,
+			[VarSet, [Var, jOutPut], 6]
+			[LoopExit]
+		,]
+		[VarSet, slExtrude, [IGetFlags, "PopUp:POLYGON ACTIONS:Extrude"]]

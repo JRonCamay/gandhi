@@ -1,0 +1,300 @@
+		[If, (#slExtrude == 9) || (#slExtrude == 11)|| (#slExtrude == 13) || (#slExtrude == 1) ,
+			[VarSet, [Var, jOutPut], 7]
+			[LoopExit]
+		,]
+		[VarSet, slFlipFaces, [IGetFlags, "PopUp:POLYGON ACTIONS:Flip Faces"]]
+		[If, (#slFlipFaces == 9) || (#slFlipFaces == 11)|| (#slFlipFaces == 13) || (#slFlipFaces == 1) ,
+			[VarSet, [Var, jOutPut], 8]
+			[LoopExit]
+		,]
+		
+		[VarSet, slInflate, [IGetFlags, "PopUp:POLYGON ACTIONS:Inflate"]]
+		[If, (#slInflate == 9) || (#slInflate == 11)|| (#slInflate == 13) || (#slInflate == 1) ,
+			[VarSet, [Var, jOutPut], 9]
+			[LoopExit]
+		,]
+		[VarSet, slInsertNano, [IGetFlags, "PopUp:POLYGON ACTIONS:Insert NanoMesh"]]
+		[If, (#slInsertNano == 9) || (#slInsertNano == 11)|| (#slInsertNano == 13) || (#slInsertNano == 1) ,
+			[VarSet, [Var, jOutPut], 10]
+			[LoopExit]
+		,]
+		[VarSet, slInsertPoint, [IGetFlags, "PopUp:POLYGON ACTIONS:Insert Point"]]
+		[If, (#slInsertPoint == 9) || (#slInsertPoint == 11)|| (#slInsertPoint == 13) || (#slInsertPoint == 1) ,
+			[VarSet, [Var, jOutPut], 11]
+			[LoopExit]
+		,]
+		[VarSet, slInsertLoops, [IGetFlags, "PopUp:POLYGON ACTIONS:Insert Polyloops"]]
+		[If, (#slInsertLoops == 9) || (#slInsertLoops == 11)|| (#slInsertLoops == 13) || (#slInsertLoops == 1) ,
+			[VarSet, [Var, jOutPut], 12]
+			[LoopExit]
+		,]
+		[VarSet, slInset, [IGetFlags, "PopUp:POLYGON ACTIONS:Inset"]]
+		[If, (#slInset == 9) || (#slInset == 11)|| (#slInset == 13) || (#slInset == 1) ,
+			[VarSet, [Var, jOutPut], 13]
+			[LoopExit]
+		,]
+		[VarSet, slMask, [IGetFlags, "PopUp:POLYGON ACTIONS:Mask"]]
+		[If, (#slMask == 9) || (#slMask == 11)|| (#slMask == 13) || (#slMask == 1) ,
+			[VarSet, [Var, jOutPut], 14]
+			[LoopExit]
+		,]
+		[VarSet, slMeshToBrush, [IGetFlags, "PopUp:POLYGON ACTIONS:Mesh To Brush"]]
+		[If, (#slMeshToBrush == 9) || (#slMeshToBrush == 11)|| (#slMeshToBrush == 13) || (#slMeshToBrush == 1) ,
+			[VarSet, [Var, jOutPut], 15]
+			[LoopExit]
+		,]
+		[VarSet, slMove, [IGetFlags, "PopUp:POLYGON ACTIONS:Move"]]
+		[If, (#slMove == 9) || (#slMove == 11)|| (#slMove == 13) || (#slMove == 1) ,
+			[VarSet, [Var, jOutPut], 16]
+			[LoopExit]
+		,]
+		[VarSet, slPolyGrp, [IGetFlags, "PopUp:POLYGON ACTIONS:PolyGroup"]]
+		[If, (#slPolyGrp == 9) || (#slPolyGrp == 11)|| (#slPolyGrp == 13) || (#slPolyGrp == 1) ,
+			[VarSet, [Var, jOutPut], 17]
+			[LoopExit]
+		,]
+		[VarSet, slQMesh, [IGetFlags, "PopUp:POLYGON ACTIONS:QMesh"]]
+		[If, (#slQMesh == 9) || (#slQMesh == 11)|| (#slQMesh == 13) || (#slQMesh == 1) ,
+			[VarSet, [Var, jOutPut], 18]
+			[LoopExit]
+		,]
+		[VarSet, slScale, [IGetFlags, "PopUp:POLYGON ACTIONS:Scale"]]
+		[If, (#slScale == 9) || (#slScale == 11)|| (#slScale == 13) || (#slScale == 1) ,
+			[VarSet, [Var, jOutPut], 19]
+			[LoopExit]
+		,]
+		[VarSet, slSpherize, [IGetFlags, "PopUp:POLYGON ACTIONS:Spherize"]]
+		[If, (#slSpherize == 9) || (#slSpherize == 11)|| (#slSpherize == 13) || (#slSpherize == 1) ,
+			[VarSet, [Var, jOutPut], 20]
+			[LoopExit]
+		,]
+		[VarSet, slSpin, [IGetFlags, "PopUp:POLYGON ACTIONS:Spin"]]
+		[If, (#slSpin == 9) || (#slSpin == 11)|| (#slSpin == 13) || (#slSpin == 1) ,
+			[VarSet, [Var, jOutPut], 21]
+			[LoopExit]
+		,]
+		[VarSet, slSpinEdges, [IGetFlags, "PopUp:POLYGON ACTIONS:Spin Edges"]]
+		[If, (#slSpinEdges == 9) || (#slSpinEdges == 11)|| (#slSpinEdges == 13) || (#slSpinEdges == 1) ,
+			[VarSet, [Var, jOutPut], 22]
+			[LoopExit]
+		,]
+		[VarSet, slSplit, [IGetFlags, "PopUp:POLYGON ACTIONS:Split"]]
+		[If, (#slSplit == 9) || (#slSplit == 11)|| (#slSplit == 13) || (#slSplit == 1) ,
+			[VarSet, [Var, jOutPut], 23]
+			[LoopExit]
+		,]
+		[VarSet, slTranspose, [IGetFlags, "PopUp:POLYGON ACTIONS:Transpose"]]
+		[If, (#slTranspose == 9) || (#slTranspose == 11)|| (#slTranspose == 13) || (#slTranspose == 1) ,
+			[VarSet, [Var, jOutPut], 24]
+			[LoopExit]
+		,]
+		[VarSet, slUnweld, [IGetFlags, "PopUp:POLYGON ACTIONS:Unweld"]]
+		[If, (#slUnweld == 9) || (#slUnweld == 11)|| (#slUnweld == 13) || (#slUnweld == 1) ,
+			[VarSet, [Var, jOutPut], 25]
+			[LoopExit]
+		,]
+		
+		
+	]
+
+, jOutPut]
+
+[RoutineDef, J_GetFaceOperationName,
+	[Loop, 1,
+		[If, #jOpID == 0,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:Add To Curve"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 1,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:Bevel"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 2,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:Bridge"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 3,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:Crease"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 4,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:Delete"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 5,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:Delete"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 6,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:Equalize"]
+			[LoopExit]
+		,]	
+		[If, #jOpID == 7,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:Extrude"]
+			[LoopExit]
+		,]	
+		[If, #jOpID == 8,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:Flip Faces"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 9,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:Inflate"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 10,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:Insert NanoMesh"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 11,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:Insert Point"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 12,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:Insert Polyloops"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 13,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:Inset"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 14,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:Mask"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 15,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:Mesh To Brush"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 16,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:Move"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 17,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:PolyGroup"]
+			[LoopExit]
+		,]	
+		[If, #jOpID == 18,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:QMesh"]
+			[LoopExit]
+		,]	
+		[If, #jOpID == 19,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:Scale"]
+			[LoopExit]
+		,]	
+		[If, #jOpID == 20,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:Spherize"]
+			[LoopExit]
+		,]	
+		[If, #jOpID == 21,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:Spin"]
+			[LoopExit]
+		,]	
+		[If, #jOpID == 22,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:Spin Edges"]
+			[LoopExit]
+		,]	
+		[If, #jOpID == 23,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:Split"]
+			[LoopExit]
+		,]	
+		[If, #jOpID == 24,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:Transpose"]
+			[LoopExit]
+		,]	
+		[If, #jOpID == 25,
+			[VarSet, [Var, jOutputName], "PopUp:POLYGON ACTIONS:Unweld"]
+			[LoopExit]
+		,]	
+	]
+
+, jOpID, jOutputName]
+
+[RoutineDef, J_GetEdgeOperation,
+	[Loop, 1,
+		[VarSet, slAddToCurve, [IGetFlags, "PopUp:EDGE ACTIONS:Add To Curve"]]
+		[If, (#slAddToCurve == 9) || (#slAddToCurve == 11)|| (#slAddToCurve == 13) || (#slAddToCurve == 1) ,
+			[VarSet, [Var, jOutPut], 0]
+			[LoopExit]
+		,]
+		[VarSet, slAlign, [IGetFlags, "PopUp:EDGE ACTIONS:Align"]]
+		[If, (#slAlign == 9) || (#slAlign == 11)|| (#slAlign == 13) || (#slAlign == 1) ,
+			[VarSet, [Var, jOutPut], 1]
+			[LoopExit]
+		,]
+		[VarSet, slBevel, [IGetFlags, "PopUp:EDGE ACTIONS:Bevel"]]
+		[If, (#slBevel == 9) || (#slBevel == 11)|| (#slBevel == 13) || (#slBevel == 1) ,
+			[VarSet, [Var, jOutPut], 2]
+			[LoopExit]
+		,]
+		
+		[VarSet, slBridge, [IGetFlags, "PopUp:EDGE ACTIONS:Bridge"]]
+		[If, (#slBridge == 9) || (#slBridge == 11)|| (#slBridge == 13) || (#slBridge == 1) ,
+			[VarSet, [Var, jOutPut], 3]
+			[LoopExit]
+		,]
+		[VarSet, slClose, [IGetFlags, "PopUp:EDGE ACTIONS:Close"]]
+		[If, (#slClose == 9) || (#slClose == 11)|| (#slClose == 13) || (#slClose == 1) ,
+			[VarSet, [Var, jOutPut], 4]
+			[LoopExit]
+		,]
+		[VarSet, slCollapse, [IGetFlags, "PopUp:EDGE ACTIONS:Collapse"]]
+		[If, (#slCollapse == 9) || (#slCollapse == 11)|| (#slCollapse == 13) || (#slCollapse == 1) ,
+			[VarSet, [Var, jOutPut], 5]
+			[LoopExit]
+		,]
+		[VarSet, slCrease, [IGetFlags, "PopUp:EDGE ACTIONS:Crease"]]
+		[If, (#slCrease == 9) || (#slCrease == 11)|| (#slCrease == 13) || (#slCrease == 1) ,
+			[VarSet, [Var, jOutPut], 6]
+			[LoopExit]
+		,]
+		[VarSet, slDelete, [IGetFlags, "PopUp:EDGE ACTIONS:Delete"]]
+		[If, (#slDelete == 9) || (#slDelete == 11)|| (#slDelete == 13) || (#slDelete == 1) ,
+			[VarSet, [Var, jOutPut], 7]
+			[LoopExit]
+		,]
+		[VarSet, slDoNothing, [IGetFlags, "PopUp:EDGE ACTIONS:Do Nothing"]]
+		[If, (#slDoNothing == 9) || (#slDoNothing == 11)|| (#slDoNothing == 13) || (#slDoNothing == 1) ,
+			[VarSet, [Var, jOutPut], 8]
+			[LoopExit]
+		,]
+		
+		[VarSet, slExtrude, [IGetFlags, "PopUp:EDGE ACTIONS:Extrude"]]
+		[If, (#slExtrude == 9) || (#slExtrude == 11)|| (#slExtrude == 13) || (#slExtrude == 1) ,
+			[VarSet, [Var, jOutPut], 9]
+			[LoopExit]
+		,]
+		
+		[VarSet, slInsert, [IGetFlags, "PopUp:EDGE ACTIONS:Insert"]]
+		[If, (#slInsert == 9) || (#slInsert == 11)|| (#slInsert == 13) || (#slInsert == 1) ,
+			[VarSet, [Var, jOutPut], 10]
+			[LoopExit]
+		,]
+		[VarSet, slInset, [IGetFlags, "PopUp:EDGE ACTIONS:Inset"]]
+		[If, (#slInset == 9) || (#slInset == 11)|| (#slInset == 13) || (#slInset == 1) ,
+			[VarSet, [Var, jOutPut], 11]
+			[LoopExit]
+		,]
+		[VarSet, slMask, [IGetFlags, "PopUp:EDGE ACTIONS:Mask"]]
+		[If, (#slMask == 9) || (#slMask == 11)|| (#slMask == 13) || (#slMask == 1) ,
+			[VarSet, [Var, jOutPut], 12]
+			[LoopExit]
+		,]
+		
+		[VarSet, slMove, [IGetFlags, "PopUp:EDGE ACTIONS:Move"]]
+		[If, (#slMove == 9) || (#slMove == 11)|| (#slMove == 13) || (#slMove == 1) ,
+			[VarSet, [Var, jOutPut], 13]
+			[LoopExit]
+		,]
+		[VarSet, slMoveAutoRadius, [IGetFlags, "PopUp:EDGE ACTIONS:Move Auto Radius"]]
+		[If, (#slMoveAutoRadius == 9) || (#slMoveAutoRadius == 11)|| (#slMoveAutoRadius == 13) || (#slMoveAutoRadius == 1) ,
+			[VarSet, [Var, jOutPut], 14]
+			[LoopExit]
+		,]
+		
+		[VarSet, slMoveBrushRadius, [IGetFlags, "PopUp:EDGE ACTIONS:Move Brush Radius"]]
+		[If, (#slMoveBrushRadius == 9) || (#slMoveBrushRadius == 11)|| (#slMoveBrushRadius == 13) || (#slMoveBrushRadius == 1) ,
+			[VarSet, [Var, jOutPut], 15]
+			[LoopExit]
+		,]
+		[VarSet, slMoveInfiniteRadius, [IGetFlags, "PopUp:EDGE ACTIONS:Move Infinite Radius"]]
+		[If, (#slMoveInfiniteRadius == 9) || (#slMoveInfiniteRadius == 11)|| (#slMoveInfiniteRadius == 13) || (#slMoveInfiniteRadius == 1) ,

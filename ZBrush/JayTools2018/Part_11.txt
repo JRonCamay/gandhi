@@ -1,0 +1,300 @@
+	[IFreeze,
+		[Loop, 1,
+			[RoutineCall, J_CatchValidityError, slHasError, slErrorToDisplay]
+			//...continue
+			[VarSet, slSharpnessVal, [IGet, "ZScript:MaskSharpness"]]
+			[VarSet, slCtr, 0]
+			[If, (#slSharpnessVal > 0) || (#slSharpnessVal < 0),
+				[RoutineCall, J_CatchValidityError, slHasError, slErrorToDisplay]
+				//..continue
+				
+				[VarSet, slIsSharp, 0]
+				[If, #slSharpnessVal > 0 ,
+					[VarSet, slIsSharp, 1]
+					[Note, "Sharpening masks. Please wait..."]
+				,]
+				[If, #slSharpnessVal < 1 ,
+					[VarSet, slIsSharp, 0]
+					[Note, "Blurring masks. Please wait..."]
+				,]
+				
+				[IHide, 1011]
+				[RoutineCall, J_StoreCameraCanvas]
+				[RoutineCall, J_SoloOn]
+				[RoutineCall, J_HideCanvas]
+				[IUnPress, Transform:Edit]
+				[RoutineCall, J_InitiateProgressBar, 4929,4979]
+				[RoutineCall, J_ProgressUpdate, 4930, 0,0,0,0]
+				[RoutineCall, J_SetUndoHistoryMax]
+				[RoutineCall, J_SaveUndoPoint]
+				[VarSet, slHiddenPoints, 0]
+				[RoutineCall, J_GetPointsInfo, slHiddenPoints, 0]
+				[If, #slHiddenPoints > 0 ,
+					[IPress, Tool:Visibility:ShowPt]
+					[RoutineCall, J_GetPointsInfo, slHiddenPoints, 0]
+					[MergeUndo]
+				,]
+				[VarSet, slHiddenPointsBefore, #slHiddenPoints]
+				[IPress, Tool:Visibility:HidePt] // Hide the points
+				[VarSet, slHiddenPoints, 0]
+				[RoutineCall, J_GetPointsInfo, slHiddenPoints, 0]
+				[If, slHiddenPointsBefore == slHiddenPoints,
+					[RoutineCall, J_RestoreUndoPoint]
+					[RoutineCall, J_MemoryOptimize, 0]
+					[VarSet, slHasError, 1]
+					[RoutineCall, J_RestoreUndoHistoryMax]
+					[IPress, Transform:Edit]
+					[RoutineCall, J_RestoreCameraCanvas]
+					[RoutineCall, J_SoloRestore]
+					[VarSet, slErrorToDisplay, "There is no mask to evaluate. Action cancelled."]
+					[LoopExit] 
+				,]
+				
+				[RoutineCall, J_RestoreUndoPoint]
+				
+				[VarSet, slSharpnessVal, ABS(#slSharpnessVal)]
+				
+				[Loop, #slSharpnessVal,
+					[RoutineCall, J_ProgressUpdate, 4930,#slSharpnessVal,#slCtr,4937,4970]
+					[If, #slIsSharp,
+						[IPress, "Tool:Masking:Mask Adjust Profile"]
+						[IPress, "Tool:Masking:Mask Adjust Profile:Reset"]
+						[IPress, "Tool:Masking:Mask Adjust Profile:fV"]
+						[ISet, "Tool:Masking:Blur", 0]
+						[ISet, "Tool:Masking:Mask Adjust Profile:Focal Shift", 30]
+						[If, #slCtr > 0 ,
+							[MergeUndo]
+						,]
+						[IPress, "Tool:Masking:Apply"]
+						[MergeUndo]
+						[IPress, "Tool:Masking:Apply"]
+					,
+						[IPress, "Tool:Masking:Mask Adjust Profile"]
+						[IPress, "Tool:Masking:Mask Adjust Profile:Reset"]
+						[IPress, "Tool:Masking:Mask Adjust Profile:fV"]
+						[ISet, "Tool:Masking:Blur", 1]
+						[If, #slCtr > 0 ,
+							[MergeUndo]
+						,]
+						[IPress, "Tool:Masking:Apply"]
+						[MergeUndo]
+						[IPress, "Tool:Masking:Apply"]
+					]
+					[RoutineCall, J_ProgressUpdate, 4962,#slSharpnessVal,#slCtr,4937,4970]
+					
+					
+					
+					[VarInc, slCtr ]
+					[If, #slCtr == #slSharpnessVal,
+						[IUpdate, 1]
+						[LoopExit]
+					,]
+				]
+				[RoutineCall, J_ProgressUpdate, 4972, 0, 0, 0, 0]
+				[RoutineCall, J_RestoreUndoHistoryMax]
+				
+				[IPress, Transform:Edit]
+				[RoutineCall, J_RestoreCameraCanvas]
+				[RoutineCall, J_SoloRestore]
+				[RoutineCall, J_ProgressUpdate, 4978, 0, 0, 0, 0]
+				[RoutineCall, J_ProgressEnd]
+			,]
+		]
+	]
+	
+	[If, #slHasError ,
+		[NOte, #slErrorToDisplay]
+	,]
+	[IShowActions, 1]
+	[IUpdate, 1, 1]
+]
+
+[RoutineDef, J_MaskBrushDec,
+	[RoutineCall, J_DeclareVarQuiet, "jmemMaskBrushMode", 1, 0]
+	[RoutineCall, J_DeclareVarQuiet, "jmemMaskBrushSetting", 12, 1]
+
+]
+
+[RoutineCall, J_MaskBrushDec]
+
+[IButton,MaskPenHardSize, "",
+	[RoutineCall, J_MaskBrushHardSize]
+
+]
+
+[RoutineDef, J_MaskBrushHardSize,
+	[IShowActions, 0]
+	[VArSet, slHasError, 0]
+	[VarSet, slErrorToDisplay, ""]
+	[IFreeze,
+		[Loop, 1,
+			[RoutineCall, J_CatchValidityError, slHasError, slErrorToDisplay]
+			//...continue
+			[VarSet, slMaskMode, [MVarGet,jmemMaskBrushMode, 0]]
+			[If, #slMaskMode == 0 ,
+				
+				[IKeyPress, CTRL,
+					
+					[IPress, "Brush:Tablet Pressure:Size"]
+					
+					[VarSet,slFolderName,"MaskCurves"]
+					[VarSet,slFolderName,[FileNameResolvePath,"MaskCurves"]]
+					
+					//check to see if folder exists
+					[VarSet,slFolderExists,[FileExecute,[Var,gFileUtilsPath],"FolderExists",#slFolderName]]
+					[If,#slFolderExists,
+					 ,//else
+						[VArSet, slHasError, 1]
+						[VarSet, slErrorToDisplay, [StrMerge, #slFolderName," folder is missing. Action cancelled."]]
+						[LoopExit]
+					 ]
+					[VarSet, slFileName, [StrMerge, #slFolderName,"/MaskSizeCurve.zcv"]]
+					[VarSet, slFileName, [FileNameResolvePath, #slFileName]]
+					 [VarSet, slFileExists,#slFileName ]
+					 [If, #slFileExists ,
+					 	[VarSet, slErr, [FileExecute, [Var,gFileUtilsPath],"FileDelete",#slFileName]] 
+					 ,]
+					[FileNameSetNext, #slFileName]
+					[IPress,"Brush:Tablet Pressure:Size:Save" ]
+					 
+					[VarSet, slSizeFocal, [IGet,"Brush:Tablet Pressure:Size:Focal Shift"]]
+					[MVarSet, jmemMaskBrushSetting, 0, #slSizeFocal]
+					[VarSet, slSizeOffset, [IGet,"Brush:Tablet Pressure:Size:Offset"]]
+					[MVarSet, jmemMaskBrushSetting, 1, #slSizeOffset]
+					[VarSet, slSizeNoise, [IGet,"Brush:Tablet Pressure:Size:Noise"]]
+					[MVarSet, jmemMaskBrushSetting, 2, #slSizeNoise]
+					[VarSet, slSizeTile, [IGet,"Brush:Tablet Pressure:Size:Tile"]]
+					[MVarSet, jmemMaskBrushSetting, 3, #slSizeTile]
+					[VarSet, slSizeStrength, [IGet,"Brush:Tablet Pressure:Size:Strength"]]
+					[MVarSet, jmemMaskBrushSetting, 4, #slSizeStrength]
+					[IPress, "Brush:Tablet Pressure:RGB Intensity"]
+					[VarSet, slFileName, [StrMerge, #slFolderName,"/MaskRGBCurve.zcv"]]
+					[VarSet, slFileName, [FileNameResolvePath, #slFileName]]
+					 [VarSet, slFileExists,#slFileName ]
+					 [If, #slFileExists ,
+					 	[VarSet, slErr, [FileExecute, [Var,gFileUtilsPath],"FileDelete",#slFileName]] 
+					 ,]
+					[FileNameSetNext, #slFileName]
+					[IPress,"Brush:Tablet Pressure:RGB Intensity:Save" ]
+					[VarSet, slRGBFocal, [IGet,"Brush:Tablet Pressure:RGB Intensity:Focal Shift"]]
+					[MVarSet, jmemMaskBrushSetting, 5, #slRGBFocal]
+					[VarSet, slRGBOffset, [IGet,"Brush:Tablet Pressure:RGB Intensity:Offset"]]
+					[MVarSet, jmemMaskBrushSetting, 6, #slRGBOffset]
+					[VarSet, slRGBNoise, [IGet,"Brush:Tablet Pressure:RGB Intensity:Noise"]]
+					[MVarSet, jmemMaskBrushSetting, 7, #slRGBNoise]
+					[VarSet, slRGBTile, [IGet,"Brush:Tablet Pressure:RGB Intensity:Tile"]]
+					[MVarSet, jmemMaskBrushSetting, 8, #slRGBTile]
+					[VarSet, slRGBStrength, [IGet,"Brush:Tablet Pressure:RGB Intensity:Strength"]]
+					[MVarSet, jmemMaskBrushSetting, 9, #slRGBStrength]
+					[VArSet, slDrawFocal, [IGet, "Draw:Focal Shift"]]
+					[MVarSet, jmemMaskBrushSetting, 10, #slDrawFocal]
+					[VarSet, slUseGlobalFlags, [IGetFlags, "Brush:Tablet Pressure:Use Global Settings"]]
+					[MVarSet, jmemMaskBrushSetting, 11, #slUseGlobalFlags]
+					[MVarSet, jmemMaskBrushMode, 0, 1]
+				]
+			,]
+			[IKeyPress, CTRL,
+				
+				[IUnPress, "Brush:Tablet Pressure:Use Global Settings"]
+				[IPress, "Brush:Tablet Pressure:Size"]
+				[IPress, "Brush:Tablet Pressure:Size:Reset"]
+				[ISet, "Brush:Tablet Pressure:Size:Focal Shift", 0]
+				[ISet, "Brush:Tablet Pressure:Size:Offset", (0.25 * -1)]
+				[ISet, "Brush:Tablet Pressure:Size:Noise", 0]
+				[ISet, "Brush:Tablet Pressure:Size:Tile", 1]
+				[ISet, "Brush:Tablet Pressure:Size:Strength", 0]
+				[IPress, "Brush:Tablet Pressure:RGB Intensity"]
+				[IPress, "Brush:Tablet Pressure:RGB Intensity:Reset"]
+				[ISet, "Brush:Tablet Pressure:RGB Intensity:Focal Shift", -100]
+				[ISet, "Brush:Tablet Pressure:RGB Intensity:Offset", 0]
+				[ISet, "Brush:Tablet Pressure:RGB Intensity:Noise", 0]
+				[ISet, "Brush:Tablet Pressure:RGB Intensity:Tile", 1]
+				[ISet, "Brush:Tablet Pressure:RGB Intensity:Strength", 0]
+				
+				[ISet, "Draw:Focal Shift", -100]
+				
+			]
+		]
+	]
+	[If,  #slHasError ,
+		[NOte, #slErrorToDisplay]
+	,]
+	[IShowActions, 1]
+	[IUpdate, 1,1]
+]
+
+[IButton, MaskPenHardOnly, "",
+	[RoutineCall, J_MaskBrushHard]
+
+]
+
+[RoutineDef, J_MaskBrushHard,
+	[IShowActions, 0]
+	[VArSet, slHasError, 0]
+	[VarSet, slErrorToDisplay, ""]
+	[IFreeze,
+		[Loop, 1,
+			[RoutineCall, J_CatchValidityError, slHasError, slErrorToDisplay]
+			//...continue
+			[VarSet, slMaskMode, [MVarGet,jmemMaskBrushMode, 0]]
+			[If, #slMaskMode == 0 ,
+				[IKeyPress, CTRL,
+				
+					[IPress, "Brush:Tablet Pressure:Size"]
+					
+					[VarSet,slFolderName,"MaskCurves"]
+					[VarSet,slFolderName,[FileNameResolvePath,"MaskCurves"]]
+					
+					//check to see if folder exists
+					[VarSet,slFolderExists,[FileExecute,[Var,gFileUtilsPath],"FolderExists",#slFolderName]]
+					[If,#slFolderExists,
+					 ,//else
+						[VArSet, slHasError, 1]
+						[VarSet, slErrorToDisplay, [StrMerge, #slFolderName," folder is missing. Action cancelled."]]
+						[LoopExit]
+					 ]
+					[VarSet, slFileName, [StrMerge, #slFolderName,"/MaskSizeCurve.zcv"]]
+					[VarSet, slFileName, [FileNameResolvePath, #slFileName]]
+					 [VarSet, slFileExists,#slFileName ]
+					 [If, #slFileExists ,
+					 	[VarSet, slErr, [FileExecute, [Var,gFileUtilsPath],"FileDelete",#slFileName]] 
+					 ,]
+					[FileNameSetNext, #slFileName]
+					[IPress,"Brush:Tablet Pressure:Size:Save" ]
+					 
+					[VarSet, slSizeFocal, [IGet,"Brush:Tablet Pressure:Size:Focal Shift"]]
+					[MVarSet, jmemMaskBrushSetting, 0, #slSizeFocal]
+					[VarSet, slSizeOffset, [IGet,"Brush:Tablet Pressure:Size:Offset"]]
+					[MVarSet, jmemMaskBrushSetting, 1, #slSizeOffset]
+					[VarSet, slSizeNoise, [IGet,"Brush:Tablet Pressure:Size:Noise"]]
+					[MVarSet, jmemMaskBrushSetting, 2, #slSizeNoise]
+					[VarSet, slSizeTile, [IGet,"Brush:Tablet Pressure:Size:Tile"]]
+					[MVarSet, jmemMaskBrushSetting, 3, #slSizeTile]
+					[VarSet, slSizeStrength, [IGet,"Brush:Tablet Pressure:Size:Strength"]]
+					[MVarSet, jmemMaskBrushSetting, 4, #slSizeStrength]
+					[IPress, "Brush:Tablet Pressure:RGB Intensity"]
+					[VarSet, slFileName, [StrMerge, #slFolderName,"/MaskRGBCurve.zcv"]]
+					[VarSet, slFileName, [FileNameResolvePath, #slFileName]]
+					 [VarSet, slFileExists,#slFileName ]
+					 [If, #slFileExists ,
+					 	[VarSet, slErr, [FileExecute, [Var,gFileUtilsPath],"FileDelete",#slFileName]] 
+					 ,]
+					[FileNameSetNext, #slFileName]
+					[IPress,"Brush:Tablet Pressure:RGB Intensity:Save" ]
+					[VarSet, slRGBFocal, [IGet,"Brush:Tablet Pressure:RGB Intensity:Focal Shift"]]
+					[MVarSet, jmemMaskBrushSetting, 5, #slRGBFocal]
+					[VarSet, slRGBOffset, [IGet,"Brush:Tablet Pressure:RGB Intensity:Offset"]]
+					[MVarSet, jmemMaskBrushSetting, 6, #slRGBOffset]
+					[VarSet, slRGBNoise, [IGet,"Brush:Tablet Pressure:RGB Intensity:Noise"]]
+					[MVarSet, jmemMaskBrushSetting, 7, #slRGBNoise]
+					[VarSet, slRGBTile, [IGet,"Brush:Tablet Pressure:RGB Intensity:Tile"]]
+					[MVarSet, jmemMaskBrushSetting, 8, #slRGBTile]
+					[VarSet, slRGBStrength, [IGet,"Brush:Tablet Pressure:RGB Intensity:Strength"]]
+					[MVarSet, jmemMaskBrushSetting, 9, #slRGBStrength]
+					[VArSet, slDrawFocal, [IGet, "Draw:Focal Shift"]]
+					[MVarSet, jmemMaskBrushSetting, 10, #slDrawFocal]
+					[VarSet, slUseGlobalFlags, [IGetFlags, "Brush:Tablet Pressure:Use Global Settings"]]
+					[MVarSet, jmemMaskBrushSetting, 11, #slUseGlobalFlags]
+					[MVarSet, jmemMaskBrushMode, 0, 1]
+				]
+			,]

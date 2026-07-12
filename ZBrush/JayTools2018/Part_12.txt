@@ -1,0 +1,300 @@
+			[IKeyPress, CTRL,
+				[IUnPress, "Brush:Tablet Pressure:Use Global Settings"]
+				[IPress, "Brush:Tablet Pressure:Size"]
+				[IPress, "Brush:Tablet Pressure:Size:Reset"]
+				[ISet, "Brush:Tablet Pressure:Size:Focal Shift", (100 * -1)]
+				[ISet, "Brush:Tablet Pressure:Size:Offset", (0.25 * -1)]
+				[ISet, "Brush:Tablet Pressure:Size:Noise", 0]
+				[ISet, "Brush:Tablet Pressure:Size:Tile", 1]
+				[ISet, "Brush:Tablet Pressure:Size:Strength", 0]
+				[IPress, "Brush:Tablet Pressure:RGB Intensity"]
+				[IPress, "Brush:Tablet Pressure:RGB Intensity:Reset"]
+				[ISet, "Brush:Tablet Pressure:RGB Intensity:Focal Shift", -100]
+				[ISet, "Brush:Tablet Pressure:RGB Intensity:Offset", 0]
+				[ISet, "Brush:Tablet Pressure:RGB Intensity:Noise", 0]
+				[ISet, "Brush:Tablet Pressure:RGB Intensity:Tile", 1]
+				[ISet, "Brush:Tablet Pressure:RGB Intensity:Strength", 0]
+				
+				[ISet, "Draw:Focal Shift", -100]
+				
+			]
+		]
+	]
+	[If,  #slHasError ,
+		[NOte, #slErrorToDisplay]
+	,]
+	[IShowActions, 1]
+	[IUpdate, 1,1]
+]
+[IButton,MaskPenRestore, "",
+	[RoutineCall, J_MaskBrushRestore]
+
+]
+
+[RoutineDef, J_MaskBrushRestore,
+	[IShowActions, 0]
+	[VArSet, slHasError, 0]
+	[VarSet, slErrorToDisplay, ""]
+	[IFreeze,
+		[Loop, 1,
+			[RoutineCall, J_CatchValidityError, slHasError, slErrorToDisplay]
+			//...continue
+			[VarSet, slMaskMode, [MVarGet,jmemMaskBrushMode, 0]]
+			[If, #slMaskMode == 1 ,
+				[IKeyPress, CTRL,
+					[IPress, "Brush:Tablet Pressure:Size"]
+					
+					[VarSet,slFolderName,"MaskCurves"]
+					[VarSet,slFolderName,[FileNameResolvePath,"MaskCurves"]]
+					
+					//check to see if folder exists
+					[VarSet,slFolderExists,[FileExecute,[Var,gFileUtilsPath],"FolderExists",#slFolderName]]
+					[If,#slFolderExists,
+					 ,//else
+						[VArSet, slHasError, 1]
+						[VarSet, slErrorToDisplay, [StrMerge, #slFolderName," folder is missing. Action cancelled."]]
+						[LoopExit]
+					 ]
+					[VarSet, slFileName, [StrMerge, #slFolderName,"/MaskSizeCurve.zcv"]]
+					[VarSet, slFileName, [FileNameResolvePath, #slFileName]]
+					[VarSet, slFileExists,#slFileName ]
+					[If, #slFileExists ,
+					 	[FileNameSetNext, #slFileName]
+						[IPress,"Brush:Tablet Pressure:Size:Load" ]
+					,
+					 	
+					]
+					
+					[VarSet, slSizeFocal, [MVarGet, jmemMaskBrushSetting, 0]]
+					[ISet,"Brush:Tablet Pressure:Size:Focal Shift", #slSizeFocal]
+					[VarSet, slSizeOffset, [MVarGet, jmemMaskBrushSetting, 1]]
+					[ISet,"Brush:Tablet Pressure:Size:Offset", #slSizeOffset]
+					[VarSet, slSizeNoise, [MVarGet, jmemMaskBrushSetting, 2]]
+					[ISet,"Brush:Tablet Pressure:Size:Noise", #slSizeNoise]
+					[VarSet, slSizeTile, [MVarGet, jmemMaskBrushSetting, 3]]
+					[ISet,"Brush:Tablet Pressure:Size:Tile", #slSizeTile]
+					[VarSet, slSizeStrength, [MVarGet, jmemMaskBrushSetting, 4]]
+					[ISet,"Brush:Tablet Pressure:Size:Strength", #slSizeStrength]
+					[IPress, "Brush:Tablet Pressure:RGB Intensity"]
+					[VarSet, slFileName, [StrMerge, #slFolderName,"/MaskRGBCurve.zcv"]]
+					[VarSet, slFileName, [FileNameResolvePath, #slFileName]]
+					[VarSet, slFileExists,#slFileName ]
+					[If, #slFileExists ,
+						[FileNameSetNext, #slFileName]
+						[IPress,"Brush:Tablet Pressure:RGB Intensity:Load" ]
+					,]
+					
+					[VarSet, slRGBFocal, [MVarGet, jmemMaskBrushSetting, 5]]
+					[ISet,"Brush:Tablet Pressure:RGB Intensity:Focal Shift", #slRGBFocal]
+					[VarSet, slRGBOffset, [MVarGet, jmemMaskBrushSetting, 6]]
+					[MVarSet, jmemMaskBrushSetting, 6, #slRGBOffset]
+					[ISet,"Brush:Tablet Pressure:RGB Intensity:Offset", #slRGBOffset]
+					[VarSet, slRGBNoise, [MVarGet, jmemMaskBrushSetting, 7]]
+					[ISet,"Brush:Tablet Pressure:RGB Intensity:Noise", #slRGBNoise]
+					[VarSet, slRGBTile, [MVarGet, jmemMaskBrushSetting, 8]]
+					[ISet,"Brush:Tablet Pressure:RGB Intensity:Tile", #slRGBTile]
+					[VarSet, slRGBStrength, [MVarGet, jmemMaskBrushSetting, 9]]
+					[ISet,"Brush:Tablet Pressure:RGB Intensity:Strength", #slRGBStrength]
+					[VArSet, slDrawFocal,[MVarGet, jmemMaskBrushSetting, 10]]
+					
+					[ISet, "Draw:Focal Shift", #slDrawFocal]
+					[VarSet, slUseGlobalFlags, [MVarGet, jmemMaskBrushSetting, 11]]
+					[If, (#slUseGlobalFlags == 9) || (#slUseGlobalFlags == 11)|| (#slUseGlobalFlags == 13)|| (#slUseGlobalFlags == 1)   ,
+						[IPress, "Brush:Tablet Pressure:Use Global Settings"]
+					,
+						[IUnPress, "Brush:Tablet Pressure:Use Global Settings"]
+					]
+				
+					
+					[MVarSet, jmemMaskBrushMode, 0, 0]
+				]
+			,]
+			
+		]
+	]
+	[If,  #slHasError ,
+		[NOte, #slErrorToDisplay]
+	,]
+	[IShowActions, 1]
+	[IUpdate, 1,1]
+]
+
+[RoutineDef, J_DuplicatePolyMesh,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VarSet, slErrorToDisplay, ""]
+	[VarSet, slAutoCollapseFlags, -1]
+	[IFreeze,
+		[Loop, 1,
+			[RoutineCall, J_CatchValidityError, slHasError, slErrorToDisplay]
+			//...continue
+			[RoutineCall, J_CatchGeometryError, slHasError, slErrorToDisplay,1, 1, 0, 0, 1]
+			//...Continue
+			[Note, "Duplicating polys. Please wait..."]
+			[RoutineCall, J_SetSaveScrollBarStatus]
+			[RoutineCall, J_GetAutoCollapseFlags, slAutoCollapseFlags]
+			[RoutineCall, J_FixGhostingCrash]
+			
+			[RoutineCall, J_StoreCameraCanvas]
+			[RoutineCall, J_SoloOn]
+			[RoutineCall, J_HideCanvas]
+			[IUnPress, Transform:Edit]
+			[IHide, 1011]
+			[RoutineCall, J_SetUndoHistoryMax]
+			[RoutineCall, J_InitiateProgressBar, 5256,5284 ]
+			[RoutineCall, J_ProgressUpdate, 5257, 0, 0 , 0, 0]
+			[RoutineCall, J_SaveUndoPoint]
+			
+			[IPress, Tool:Masking:Inverse] // Inverse mask
+			[RoutineCall, J_ProgressUpdate, 5261, 0, 0 , 0, 0]
+			[MergeUndo]
+			[IPress, Tool:Visibility:HidePt] // hide
+			[MergeUndo]
+			[IPress, Tool:Masking:Clear]
+			[RoutineCall, J_ProgressUpdate, 5266, 0, 0 , 0, 0]
+			[MergeUndo]
+			[IPress, Tool:Polygroups:GroupVisible]
+			[RoutineCall, J_ProgressUpdate, 5269, 0, 0 , 0, 0]
+			[IPress, Tool:Geometry:Copy] 
+			[RoutineCall, J_RestoreUndoPoint]
+			[RoutineCall, J_ProgressUpdate, 5272, 0, 0 , 0, 0]
+			[IPress, Tool:Masking:MaskAll]
+			[MergeUndo]
+			[IPress, "Tool:Geometry:Paste Append"]
+			[RoutineCall, J_ProgressUpdate, 5276, 0, 0 , 0, 0]
+			[RoutineCall, J_MemoryOptimize, 0]
+			[RoutineCall, J_ProgressUpdate, 5278, 0, 0 , 0, 0]
+			[IPress, Transform:Edit]
+			[IPress, Transform:Move]
+			[RoutineCall, J_ProgressUpdate, 5281, 0, 0 , 0, 0]
+			[IPress, "Transform:Gizmo 3D"]
+			[RoutineCall, J_SetGizmoUnmasked]
+			[RoutineCall, J_ProgressUpdate, 5284, 0, 0 , 0, 0]
+			[RoutineCall, J_ProgressEnd]
+		]// END OF LOOP
+		[If, #slAutoCollapseFlags > -1 ,
+			[RoutineCall, J_RestoreUndoHistoryMax]
+			[RoutineCall, J_RestoreCameraCanvas]
+			[RoutineCall, J_SoloRestore]
+			[RoutineCall, J_RestoreScrollBarStatus]
+			[IShow, 1011]
+			
+		,]
+		
+	]
+	
+	[If, #slHasError == 1,
+		[Note, #slErrorToDisplay]
+	,]
+	
+	[IShowActions, 1]
+	[IUpdate, 1,1]
+	
+]
+[IButton, DuplicatePolyMesh, "",
+	[IKeyPress, '1',
+		[RoutineCall, J_DuplicatePolyMesh]
+	]
+	
+	
+]
+
+[RoutineDef, J_RemeshAdaptDec,
+	[RoutineCall, J_DeclareVarQuiet, "jMemRemeshAdapt", 1,1]
+	
+	[If, [MVarGet, jMemRemeshAdapt, 0] < 0 ,
+		[MVarSet, jMemRemeshAdapt, 0, 1]
+	,]
+	[RoutineCall, J_DeclareVarQuiet, "jMemRemeshAlternate", 1,0]
+	
+	[If, [MVarGet, jMemRemeshAlternate, 0] < 0 ,
+		[MVarSet, jMemRemeshAlternate, 0, 0]
+	,]
+	[RoutineCall, J_DeclareVarQuiet, "jMemHighestLevelSubD", 1,4]
+	[If, [MVarGet, jMemHighestLevelSubD, 0] < 1 ,
+		[MVarSet, jMemHighestLevelSubD, 0, 4]
+	,]
+	[RoutineCall, J_DeclareVarQuiet, "jMemLowestLevel", 1,4.5]
+	[If, [MVarGet, jMemLowestLevel, 0] < 4.5 ,
+		[MVarSet, jMemLowestLevel, 0, 4.5]
+	,]
+	
+	[RoutineCall, J_DeclareVarQuiet, "jMemHighestLevel", 1,288]
+	[VarSet, slTCtr, ([MVarGet, jMemHighestLevelSubD, 0] - 1)]
+	[VarSet, slPolyCount, [MVarGet, jMemLowestLevel, 0]]
+	[Loop, #slTCtr,
+		[VarSet,slPolyCount,(#slPolyCount * 4)]
+	]
+	
+	[MVarSet, jMemHighestLevel, 0, #slPolyCount]
+	
+	[RoutineCall, J_DeclareVarQuiet, "jMemRemeshAdjusted", 1,0]
+
+]
+
+[RoutineCall, J_RemeshAdaptDec]
+
+[ISwitch, AdaptRes, [MVarGet, jMemRemeshAdapt, 0],"", 
+	[RoutineCall, J_AdaptResPress]
+,	
+	[RoutineCall, J_AdaptResUnPress]
+]
+[RoutineDef, J_AdaptResPress,
+	[MVarSet, jMemRemeshAdapt, 0, 1]
+	[IDisable, "ZScript:Lowest Lvl Polys 1=1k"]
+	[IDisable, "ZScript:Highest Lvl Polys 1=1k"]
+	[IDisable, "ZScript:Highest SubD Lvl"]
+
+]
+[RoutineDef, J_AdaptResUnPress,
+	[MVarSet, jMemRemeshAdapt, 0, 0]
+	[IEnable, "ZScript:Lowest Lvl Polys 1=1k"]
+	[IEnable, "ZScript:Highest Lvl Polys 1=1k"]
+	[IEnable, "ZScript:Highest SubD Lvl"]
+
+]
+
+[ISlider, "Lowest Lvl Polys 1=1k", [MVarGet, jMemLowestLevel, 0], .01, 4.5,50, "",
+	
+	[RoutineCall, J_AdjustLowestLvlPoly]
+	
+, [MVarGet, jMemRemeshAdapt, 0],  160]
+
+[ISlider, "Highest Lvl Polys 1=1k", [MVarGet, jMemHighestLevel, 0], .01, 18, 3000, "", 
+	
+	[RoutineCall, J_AdjustHighestLvlPoly]
+,[MVarGet, jMemRemeshAdapt, 0], 170]
+
+[ISlider, "Highest SubD Lvl", [MVarGet, jMemHighestLevelSubD, 0], 1, 1, 10, "", 
+	[RoutineCall, J_AdjustHighestLvl]
+,[MVarGet, jMemRemeshAdapt, 0], 130]
+
+
+[RoutineDef, J_AdjustLowestLvlPoly,
+	
+	[If, [MVarGet, jMemRemeshAdjusted, 0] == 0 ,
+		[Loop, 1,
+			[VarSet,slTheLowestVal , [IGet,"ZScript:Lowest Lvl Polys 1=1k"]]
+			[MVarSet, jMemLowestLevel, 0, #slTheLowestVal]
+			//Adjusting this slider will automatically adjusts the highest poly slider
+			[VarSet, slSubDlvl,[IGet,"ZScript:Highest SubD Lvl"]]
+			[VarSet, slCtr, 0]
+			[VarSet,slLimit, 3000]
+			[Loop,(#slSubDlvl - 1),
+				[VarSet, slTempCtr,(#slTheLowestVal * 4) ]
+				
+				[If, #slTempCtr > #slLimit,
+					[LoopExit]
+				,]
+				[VarSet,slTheLowestVal, #slTempCtr]
+				[VarInc, slCtr]
+			]
+			[MVarSet, jMemRemeshAdjusted, 0,1]
+			[MVarSet, jMemHighestLevel, 0, #slTheLowestVal ]
+			[ISet, "ZScript:Highest Lvl Polys 1=1k", #slTheLowestVal]
+			[MVarSet, jMemHighestLevelSubD, 0,(#slCtr + 1)]
+			[ISet, "ZScript:Highest SubD Lvl", (#slCtr + 1)]
+			[MVarSet, jMemRemeshAdjusted, 0,0]
+		]
+
+	,]

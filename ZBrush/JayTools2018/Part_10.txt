@@ -1,0 +1,300 @@
+				[IKeyPress, CTRL, 
+				
+					[CanvasClick, #slMouseH, #slMouseV, (#slMouseH + ([IWidth, 1004]*.5)), #slMouseV]
+				,#slMouseH, #slMouseV]
+				
+				[MergeUndo]
+				[IPress, "Tool:Visibility:HidePt"]
+				[TransformSet, 0, -4000,0, 100, 100, 100, 0, 0, 0]
+				[MergeUndo]
+				[IPress,Tool:Masking:Clear]
+			]
+			
+			[MergeUndo]
+			[IKeyPress, SHIFT + CTRL, //Reverse Visibility
+				[CanvasClick, ([IGEt, Document:Width] *.5), ([IGEt, Document:Height] *.5), (([IGEt, Document:Width] *.5)+50), ([IGEt, Document:Height] *.5)]
+			, ([IGEt, Document:Width] *.5), ([IGEt, Document:Height] *.5)]
+			[MergeUndo]
+			[IPress,Tool:Masking:Clear]
+			[MergeUndo]
+			[IKeyPress, SHIFT + CTRL, //Reverse Visibility
+				[CanvasClick, ([IGEt, Document:Width] *.5), ([IGEt, Document:Height] *.5), (([IGEt, Document:Width] *.5)+50), ([IGEt, Document:Height] *.5)]
+			, ([IGEt, Document:Width] *.5), ([IGEt, Document:Height] *.5)]
+		
+			[RoutineCall, J_ProgressUpdate, 4419, 0,0,0,0]
+			[IUnPress, Transform:Edit]
+			[RoutineCall, J_HideCanvas]
+			[If, #sliSSoftMask ,
+				[VarSet, slBorderFlag, [IGetFlags, "Tool:Masking:Border"]]
+				[VarSet, slGroupsFlag, [IGetFlags, "Tool:Masking:Groups"]]
+				[VarSet, slCreaseFlag, [IGetFlags, "Tool:Masking:Crease"]]
+				[IPress, "Tool:Masking:Border"]
+				[IUnPress, "Tool:Masking:Groups"]
+				[IUnPress, "Tool:Masking:Crease"]
+				[MergeUndo]
+				[IPress, Tool:Masking:MaskByFeature]
+				[If, (#slBorderFlag == 8) || (#slBorderFlag == 10) || (#slBorderFlag == 12) || (#slBorderFlag == 0),
+				[IUnPress, "Tool:Masking:Border"]
+				,]
+				[If, (#slGroupsFlag == 9) || (#slGroupsFlag == 11) || (#slGroupsFlag == 13) || (#slGroupsFlag == 1),
+					[IPress, "Tool:Masking:Groups"]
+				,]
+				[If, (#slCreaseFlag == 9) || (#slCreaseFlag == 11) || (#slCreaseFlag == 13) || (#slCreaseFlag == 1),
+					[IPress, "Tool:Masking:Crease"]
+				,]
+			,]
+			
+			[MergeUndo]
+			[IPress, "Tool:Masking:Inverse"]
+			
+			[MergeUndo]
+			[IPress, "Tool:Visibility:ShowPt"]
+			
+			[If, #sliSSoftMask ,
+				
+				[VarSet, slResetMasks, [IExists,"Tool:Masking:Mask Adjust Profile:Reset"]]
+				[If, #slResetMasks == 0 ,
+					[IPress,"Tool:Masking:Mask Adjust Profile"]
+				,]
+				[IPress,"Tool:Masking:Mask Adjust Profile:Reset"]
+				[ISet, "Tool:Masking:Blur",12]
+				[ISet, "Tool:Masking:Mask Adjust Profile:Focal Shift",100]
+				[ISet, "Tool:Masking:Mask Adjust Profile:Offset",-.0001]
+				[ISet, "Tool:Masking:Mask Adjust Profile:Strength",1]
+				[MergeUndo]
+				[IPress, Tool:Masking:Apply]
+				[IPress,"Tool:Masking:Mask Adjust Profile:Reset"]
+				[If, #slResetMasks == 0 ,
+					[IPress,"Tool:Masking:Mask Adjust Profile:Close"]
+				,]
+				
+			,
+				
+			]
+			[If, #slHasLayers == 0,
+				[IPress, "Tool:Geometry:Copy"]
+				[RoutineCall, J_RestoreUndoPoint]
+				[IPress, Tool:Masking:MaskAll]
+				[MergeUndo]
+				[IPress, "Tool:Geometry:Paste Replace"]
+			,]
+			
+			[RoutineCall,J_MemoryOptimize, 0]
+			[IPress, Transform:Edit]
+			[RoutineCall, J_RestoreCameraCanvas]
+			[RoutineCall, J_ProgressUpdate, 4439, 0,0,0,0]
+			
+			[IKeyPress, '1',
+				[IPress, [StrMerge, "Brush:", #slShiftCtrlBrush]]
+			]
+			[If, (#slGizmoFlags == 9) || (#slGizmoFlags == 11)  || (#slGizmoFlags == 13)  || (#slGizmoFlags == 1) ,
+				[IPress, "Transform:Gizmo 3D"]
+			,]
+			[RoutineCall, J_ProgressUpdate, 4447, 0,0,0,0]
+			[IPress, [StrMerge, "Brush:", #slCurrentTransformBrush]]
+			[VarSet,slAlphaMergeName, [StrMerge, "Alpha:",#slAlphaName ]]
+			[IPress, #slAlphaMergeName]
+			[If, #slTransformMode == 1 ,
+				[IPress,  "Transform:Draw Pointer"]
+			,][If, #slTransformMode == 2 ,
+				[IPress, "Transform:Move"]
+			,][If, #slTransformMode == 3 ,
+				[IPress,  "Transform:Scale"]
+			,][If, #slTransformMode == 4 ,
+				[IPress,  "Transform:Rotate"]
+			,]
+			
+			[RoutineCall, J_RestoreUndoHistoryMax]
+			[RoutineCall, J_ProgressUpdate, 4447, 0,0,0,0]
+			[RoutineCall, J_ProgressEnd]
+			[VarSet, slSuccessful, 1]
+			
+		] // ----- END OF LOOP
+		
+		[If, #slAutoCollapseFlags > -1 ,
+			
+			[RoutineCall, J_RestoreExtraCameraCanvas]
+			[RoutineCall, J_SoloRestore]
+			[RoutineCall, J_RestoreScrollBarStatus]
+			[IShow, 1011]
+			
+		,]
+		
+	] // -------- END OF FREEZE
+	[If, #slHasError ,
+		[Note, #slErrorToDisplay]
+	,]
+	
+	[IShowActions, 1]
+	[IUpdate, 1,1]
+	[RoutineCall, J_SleepChangeEvent, #TIMER, ""]
+	
+]
+
+[IButton, FrontMaskOnly, "",
+	[IKeyPress, '1',
+		[RoutineCall, J_FrontMaskOnly]
+	]
+	
+	
+]
+[ISlider, GrowMask , 0, 1, -100, 100,,
+	[IKeyPress, '1',
+		[RoutineCall, J_GrowMaskFunc]
+	]
+, 0, 100 ]
+
+[RoutineDef, J_GrowMaskFunc,
+	[VarSet, slAdjust, 1]
+	[If, #slAdjust ,
+		[RoutineCall, J_GrowMask]
+		[VarSet, slAdjust, 0]
+	,]
+	[If, #slAdjust == 0,
+		[ISet, "ZScript:GrowMask", 0]
+	,]
+	
+]
+
+[RoutineDef, J_GrowMask,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VArSet, slErrorToDisplay, ""]
+	[IFreeze,
+		[Loop, 1,
+			[RoutineCall, J_CatchValidityError, slHasError, slErrorToDisplay]
+			//...continue
+			
+			
+			[VarSet, slGrowVal, [IGet, "ZScript:GrowMask"]]
+			[VarSet, slCtr, 0]
+			[If, (#slGrowVal > 0) || (#slGrowVal < 0),
+				[RoutineCall, J_CatchValidityError, slHasError, slErrorToDisplay]
+				[VarSet, slIsPositive, 0]
+				[If, #slGrowVal > 0 ,
+					[VarSet, slIsPositive, 1]
+					[Note, "Growing masks. Please wait..."]
+				,]
+				[If, #slGrowVal < 1 ,
+					[VarSet, slIsPositive, 0]
+					[Note, "Shrinking masks. Please wait..."]
+				,]
+				[IHide, 1011]
+				[RoutineCall, J_StoreCameraCanvas]
+				[RoutineCall, J_SoloOn]
+				[RoutineCall, J_HideCanvas]
+				[IUnPress, Transform:Edit]
+				[RoutineCall, J_InitiateProgressBar, 4813,4866]
+				[RoutineCall, J_ProgressUpdate, 4814, 0,0,0,0]
+				[RoutineCall, J_SaveUndoPoint]
+				[RoutineCall, J_SetUndoHistoryMax]
+				[VarSet, slHiddenPoints, 0]
+				[RoutineCall, J_GetPointsInfo, slHiddenPoints, 0]
+				[If, #slHiddenPoints > 0 ,
+					[IPress, Tool:Visibility:ShowPt]
+					[RoutineCall, J_GetPointsInfo, slHiddenPoints, 0]
+					[MergeUndo]
+				,]
+				[VarSet, slHiddenPointsBefore, #slHiddenPoints]
+				[IPress, Tool:Visibility:HidePt] // Hide the points
+				[VarSet, slHiddenPoints, 0]
+				[RoutineCall, J_GetPointsInfo, slHiddenPoints, 0]
+				[If, slHiddenPointsBefore == slHiddenPoints,
+					[RoutineCall, J_RestoreUndoPoint]
+					[RoutineCall, J_MemoryOptimize, 0]
+					[VarSet, slHasError, 1]
+					[RoutineCall, J_RestoreUndoHistoryMax]
+					[IPress, Transform:Edit]
+					[RoutineCall, J_RestoreCameraCanvas]
+					[RoutineCall, J_SoloRestore]
+					[VarSet, slErrorToDisplay, "There is no mask to evaluate. Action cancelled."]
+					[LoopExit] 
+				,]
+				//..continue
+				[RoutineCall, J_RestoreUndoPoint]
+				[VarSet, slGrowVal, ABS(#slGrowVal)]
+				[Loop, #slGrowVal,
+					[RoutineCall, J_ProgressUpdate, 4820, #slGrowVal,#slCtr,4820,4859]
+					[If, #slIsPositive ,
+						[IPress, "Tool:Masking:Mask Adjust Profile"]
+						[IPress, "Tool:Masking:Mask Adjust Profile:Reset"]
+						[ISet, "Tool:Masking:Blur", 1]
+						[ISet, "Tool:Masking:Mask Adjust Profile:Focal Shift", -50]
+						[If, #slCtr > 0 ,
+							[MergeUndo]
+						,]
+					,
+						[IPress, "Tool:Masking:Mask Adjust Profile"]
+						[IPress, "Tool:Masking:Mask Adjust Profile:Reset"]
+						[ISet, "Tool:Masking:Blur", 1]
+						[ISet, "Tool:Masking:Mask Adjust Profile:Focal Shift", 30]
+						[If, #slCtr > 0 ,
+							[MergeUndo]
+						,]
+						
+					]
+					
+					[IPress, "Tool:Masking:Apply"]
+					[RoutineCall, J_ProgressUpdate, 4841, #slGrowVal,#slCtr,4820,4859]
+					[If, #slIsPositive ,
+						[IPress, "Tool:Masking:Mask Adjust Profile:fV"]
+						[ISet, "Tool:Masking:Mask Adjust Profile:Focal Shift", 30]
+						[ISet, "Tool:Masking:Blur", 0]
+						[MergeUndo]
+						[IPress, "Tool:Masking:Apply"]
+						[MergeUndo]
+						[IPress, "Tool:Masking:Apply"]
+					,
+						
+					
+					]
+					[RoutineCall, J_ProgressUpdate, 4854, #slGrowVal,#slCtr,4820,4859]
+					[VarInc, slCtr ]
+					[If, #slCtr == #slGrowVal,
+						[IUpdate, 1]
+						[LoopExit]
+					,]
+				]
+				[RoutineCall, J_ProgressUpdate, 4861, 0, 0, 0, 0]
+				[RoutineCall, J_RestoreUndoHistoryMax]
+				[IPress, Transform:Edit]
+				[RoutineCall, J_RestoreCameraCanvas]
+				[RoutineCall, J_SoloRestore]
+				[RoutineCall, J_ProgressUpdate, 4866, 0, 0, 0, 0]
+				[RoutineCall, J_ProgressEnd]
+			,]
+		]
+	]
+	[If, #slHasError ,
+		[NOte, #slErrorToDisplay]
+	,]
+	[IShowActions, 1]
+	[IUpdate, 1, 1]
+
+]
+
+
+
+[ISlider, MaskSharpness , 0, 1, -100, 100,,
+	[IkeyPress, '1',
+		[RoutineCall,J_MaskSharpnessFunc ]
+	]
+, 0, 100 ]
+
+[RoutineDef, J_MaskSharpnessFunc,
+	[VarSet, slAdjust, 1]
+	[If, #slAdjust ,
+		[RoutineCall, J_MaskSharpness]
+		[VarSet, slAdjust, 0]
+	,]
+	[If, #slAdjust == 0,
+		[ISet, "ZScript:MaskSharpness", 0]
+	,]
+
+]
+
+
+[RoutineDef, J_MaskSharpness,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VArSet, slErrorToDisplay, ""]

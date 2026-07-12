@@ -1,0 +1,300 @@
+			[If, #slInsertID > -1,
+				[VarSet, slIsInsertBrush, 1]
+			,]
+			[If, #slIsInsertBrush == 1,
+				[IPress, Brush:Standard]
+			,]
+			[RoutineCall, J_ResetSleep]
+			[RoutineCall, J_StoreExtraCameraCanvas]
+			[VarSet,slSymmetryFlags,[IGetFlags, "Transform:Activate Symmetry"]]
+			
+			[If, (#slSymmetryFlags == 9) || (#slSymmetryFlags == 11)  || (#slSymmetryFlags == 13) || (#slSymmetryFlags == 1),
+				[RoutineCall, J_TrueFitToCanvas]
+			,]
+			
+			[NoteBar, "Click the mask area to isolate." ]
+			[VarSet, slSuccessful, 1]
+		
+		]
+	]
+	
+	[If, #slHasError == 1,
+		[Note, #slErrorToDisplay]
+	,]
+	
+	[IShowActions, 1]
+	[IUpdate, 1,1]
+	[If, #slSuccessful,
+		//[RoutineCall, J_StoreExtraCameraCanvas]
+		//[RoutineCall, J_RegisterOnMeshSecondaryRoutine, "J_FrontRotateOffMesh"]
+		[RoutineCall, J_SleepChangeEventAdv, #LMOUSEDOWN, "J_FrontOnlyClick", 0, 1, 1]
+	,]
+]
+
+// [RoutineDef, J_FrontRotateOffMesh,
+// 	[Loop,1,
+// 		[RoutineCall, J_SleepChangeEvent, #LMOUSEUP, "J_FrontRotateOffMeshUnPress"]
+// 	]
+// ]
+// 
+// [RoutineDef, J_FrontRotateOffMeshUnPress,
+// 	[IShowActions,0]
+// 	[VarSet, slSuccessful, 0]
+// 	[Loop,1,
+// 		[RoutineCall, J_TrueFitToCanvas]
+// 		[VArSet, slSuccessful, 1]
+// 	]
+// 	[IShowActions,1]
+// 	[IUpdate, 1,1]
+// 	[If, #slSuccessful,
+// 		[RoutineCall, J_StoreExtraCameraCanvas]
+// 		[RoutineCall, J_RegisterOnMeshSecondaryRoutine, "J_FrontRotateOffMesh"]
+// 		[RoutineCall, J_SleepChangeEventAdv, #LMOUSEDOWN, "J_FrontOnlyClick", 0, 1, 1]
+// 	,]
+// ]
+
+[RoutineDef, J_FrontOnlyClick,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VarSet, slErrorToDisplay, ""]
+	[VarSet, slAutoCollapseFlags, -1]
+	[VarSet, slSuccessful, 0]
+	[VarSet, slNoteMessage, "Evaluating clicked mask.Please wait."]
+	[IFreeze,
+		[Loop, 1,
+			[Varset, slMouseH, [MouseHPos]]//Gets the mouse X position
+			[Varset, slMouseV, [MouseVPos]]//Gets the mouse Y position
+			[RoutineCall, J_CatchValidityError, slHasError, slErrorToDisplay]
+			//...continue
+			[RoutineCall, J_CatchGeometryError, slHasError, slErrorToDisplay, 0, 0, 1, 0, 1]
+			//...continue
+			[Note, #slNoteMessage] // The overlay message.
+			
+			[RoutineCall, J_SetSaveScrollBarStatus]
+			[RoutineCall, J_GetAutoCollapseFlags, slAutoCollapseFlags]
+			
+			[VarSet, slMaxUndoHistory, [IGet, "Preferences:Undo History:Max Undo History"]]
+			[ISet, "Preferences:Undo History:Max Undo History", 10000]
+			[IUnPress, Transform:Edit]
+			[IHide, 1011]
+			[RoutineCall, J_SetUndoHistoryMax]
+			[RoutineCall, J_StoreCameraCanvas]
+			[RoutineCall, J_SoloOn]
+			[RoutineCall, J_SaveUndoPoint]
+			[VarSet, slIsInTransformationBox, 0]
+			[VarSet, slCanvasWindowWidth,[IWidth, 1004]]
+			[VarSet, slCanvasWindowHeight,[IHeight, 1004]]
+			[VarSet, slCanvasWidth, [IGet, "Document:Width"]]
+			[VarSet, slCanvasHeight, [IGet, "Document:Height"]]
+			[VarSet, slPanH, [CanvasPangetH]]
+			[VarSet, slPanV, [CanvasPangetV]]
+			[VarSet, slZoomFact, [CanvasZoomGet]]
+			[VarSet, slWinMultH, ((((#slCanvasWindowWidth * .5)-38)/#slZoomFact))]
+			[VarSet, slWinMultV, ((((#slCanvasWindowHeight * .5)-38)/#slZoomFact))]
+			[VarSet, slTop, (#slPanV-#slWinMultV)] 
+			[If, #slTop < 0 ,
+				[VarSet, slTop, 0] 
+			,]
+			[VarSet, slLeft, (#slPanH-#slWinMultH)] 
+			[If, #slLeft < 0 ,
+				[VarSet, slLeft, 0] 
+			,]
+			[VarSet, slBottom, (#slPanV+#slWinMultV)] 
+			[If, #slBottom > #slCanvasHeight ,
+				[VarSet, slBottom, #slCanvasHeight] 
+			,]
+			[VarSet, slRight, (#slPanH+#slWinMultH)] 
+			[If, #slRight > #slCanvasWidth ,
+				[VarSet, slRight, #slCanvasWidth] 
+			,]
+			[VArSet, slOffsetH,0]
+			[VArSet, slOffsetV,0]
+			[If, (#slMouseH <= #slLeft) &&  (#slLeft >= 0) ,
+				[VarSet, slOffsetH, (-38/#slZoomFact)]
+			,]
+			[If, (#slMouseH >= #slRight) &&  (#slRight <= #slCanvasWidth) ,
+				[VarSet, slOffsetH, (38/#slZoomFact)]
+			,]
+			[If, (#slMouseV <= #slTop) &&  (#slTop >= 0) ,
+				
+				[VarSet, slOffsetV, (-38/#slZoomFact)]
+			,]
+			[If, (#slMouseV >= #slBottom) &&  (#slBottom <= #slCanvasHeight) ,
+				[VarSet, slOffsetV, (38/#slZoomFact)]
+			,]
+			[IPress, Transform:Edit]
+			[VarSet, slDepthClicked, [PixolPick, 1,#slMouseH,#slMouseV ]]
+			
+			[IUnPress, Transform:Edit]
+			[VArSet, slHasLayers, 0]
+			[VArSet, slHasLayersFlags, [IGetStatus,"Tool:Layers:Delete"]]
+			[If, #slHasLayersFlags,
+				[VArSet, slHasLayers, 1]
+			,]
+			[VarSet,sliSSoftMask, 0]
+			[VarSet, slMaskReset, [IExists,"Tool:Masking:Mask Adjust Profile:Reset"]]
+			[If, #slMaskReset == 0 ,
+				[IPress, "Tool:Masking:Mask Adjust Profile"]
+				
+			,]
+			[IPress,"Tool:Masking:Mask Adjust Profile:Reset"]
+			[VarSet, slPreUndo, [Iget, Edit:Tool:UndoCounter]]
+			[ISet, "Tool:Masking:Mask Adjust Profile:Focal Shift", -70]
+			[ISet, "Tool:Masking:Blur", 0]
+			[ISet, "Tool:Masking:Mask Adjust Profile:Strength", 2]
+			[IPress,"Tool:Masking:Apply"]
+			[IPress,"Tool:Masking:Mask Adjust Profile:Reset"]
+			[VarSet, slPostUndo, [Iget, Edit:Tool:UndoCounter]]
+			[If, #slPostUndo > #slPreUndo ,
+				[MergeUndo]
+				[VarSet,sliSSoftMask, 1]
+				
+			,]
+			[If, #slMaskReset == 0,
+				[IExists,"Tool:Masking:Mask Adjust Profile:Close"]
+			,]
+			[VarSet, slHiddenPoints, 0]
+			[RoutineCall, J_GetPointsInfo, slHiddenPoints, 0]
+			[If, #slHiddenPoints > 0 ,
+				[IPress, Tool:Visibility:ShowPt]
+				[RoutineCall, J_GetPointsInfo, slHiddenPoints, 0]
+				[MergeUndo]
+			,]
+			[VarSet, slHiddenPointsBefore, #slHiddenPoints]
+			[IPress, Tool:Visibility:HidePt] // Hide the points. Hide the outline
+			[IPress, Transform:Edit]
+			[VarSet, slDepthClicked2, [PixolPick, 1,#slMouseH,#slMouseV ]]
+			[VarSet, slDepthDiff, (ABS(#slDepthClicked2 - #slDepthClicked))]
+			[If, #slDepthDiff <=.0008, // This means you clicked the masked area
+			,
+				[RoutineCall, J_RestoreUndoPoint]
+				[IPress, "Tool:Masking:Clear"]
+				[IPress,Edit:Tool:Undo]
+				[RoutineCall, J_MemoryOptimize, 0]
+				[VarSet, slHasError, 1]
+				[VarSet, slSuccessful, 0]
+				[IPress, Transform:Edit]
+				[RoutineCall, J_RestoreUndoHistoryMax]
+				[VarSet, slErrorToDisplay, "You must clicked on a masked area. Action cancelled."]
+				[LoopExit] 
+			]
+			[VarSet, slHiddenPoints, 0]
+			[RoutineCall, J_GetPointsInfo, slHiddenPoints, 0]
+			[If, slHiddenPointsBefore == slHiddenPoints,
+				[RoutineCall, J_RestoreUndoPoint]
+				[RoutineCall, J_MemoryOptimize, 0]
+				[VarSet, slHasError, 1]
+				[VarSet, slSuccessful, 0]
+				[IPress, Transform:Edit]
+				[RoutineCall, J_RestoreUndoHistoryMax]
+				[VarSet, slErrorToDisplay, "There is no mask to fill. Action cancelled."]
+				[LoopExit] 
+			,]
+			//..continue
+			[MergeUndo]
+			[IPress, Tool:Masking:Clear]// Clear the masks of the mesh
+			[VarSet, slSymmetryFlags, [IGetFlags, "Transform:Activate Symmetry"]]
+			[VarSet,slHasSymmetry,0]
+			[If, (#slSymmetryFlags == 9) || (#slSymmetryFlags == 11) || (#slSymmetryFlags == 13) || (#slSymmetryFlags == 1),
+				[VarSet,slHasSymmetry,1]
+			,]
+			
+			[RoutineCall, J_InitiateProgressBar, 4363,4458]
+			[RoutineCall, J_ProgressUpdate, 4364, 0,0,0,0]
+			//Set the currentbrush to Standard then make the stroke to DragRect
+			[VarSet, slShiftCtrlBrush, ""]
+			[VarSet, slTempA, 0]
+			[VarSet, slTempB, 0]
+			[RoutineCall, J_GetSHIFTCTRLBrush, slShiftCtrlBrush, slTempA, slTempB]
+			[IKeyPress, '1',
+				[IPress, "Brush:SelectRect"]
+			]
+			
+			[VarSet, slTransformMode, -1]
+			[VarSet, slDrawMode, [IGetFlags, "Transform:Draw Pointer"]]
+			[RoutineCall, J_ProgressUpdate, 4368, 0,0,0,0]
+			[VarSet, slMoveMode, [IGetFlags, "Transform:Move"]]
+			[VarSet, slScaleMode, [IGetFlags, "Transform:Scale"]]
+			[VarSet, slRotateMode, [IGetFlags, "Transform:Rotate"]]
+			[If, (#slDrawMode == 9) || (#slDrawMode == 11)|| (#slDrawMode == 13) || (#slDrawMode == 1)  ,
+				[VarSet, slTransformMode, 1]
+			,][If, (#slMoveMode == 9) || (#slMoveMode == 11)|| (#slMoveMode == 13) || (#slMoveMode == 1)  ,
+				[VarSet, slTransformMode, 2]
+			,][If, (#slScaleMode == 9) || (#slScaleMode == 11)|| (#slScaleMode == 13) || (#slScaleMode == 1)  ,
+				[VarSet, slTransformMode, 3]
+			,][If, (#slRotateMode == 9) || (#slRotateMode == 11)|| (#slRotateMode == 13) || (#slRotateMode == 1)  ,
+				[VarSet, slTransformMode, 4]
+			,]
+			[RoutineCall, J_ProgressUpdate, 4381, 0,0,0,0]
+			[IPress, "Transform:Move"]
+			[VarSet, slGizmoFlags, [IGetFlags, "Transform:Gizmo 3D"]]
+			[If, (#slGizmoFlags == 9) || (#slGizmoFlags == 11)  || (#slGizmoFlags == 13)  || (#slGizmoFlags == 1) ,
+				[IUnPress, "Transform:Gizmo 3D"]
+			,]
+			[VarSet, slCurrentTransformBrush, ""]
+			[RoutineCall, J_GetCurrentBrush, slCurrentTransformBrush]
+			[RoutineCall, J_ProgressUpdate, 4392, 0,0,0,0]
+			[VarSet, slAlphaName,""]
+			[RoutineCall, J_GetCurrentBrushAlpha,slAlphaName]
+			[IPress, "Alpha:Alpha Off"]
+			[IPress, "Transform:Move"]
+			[IPress, "Brush:TransposeSmartMask"]
+			
+			[TransposeSet, -4000,-4000,-4000,-4000,-4000,-4000] // Sets the tranpose handle to somewhere hidden
+			[RoutineCall, J_ProgressUpdate, 4396, 0,0,0,0]
+			[If, #slHasSymmetry ,
+				
+				[VarSet, slPerpFlags,[IGetFlags,"Draw:Perspective"]]
+				[IUnPress, "Draw:Perspective"]
+				[VarSet, slZoomFac,[CanvasZoomGet]]
+				[IUnPress, "Transform:Activate Symmetry"]
+				[VarSet, slTX, 0]
+				[VarSet, slTX, 0]
+				[VarSet, slTY, 0]
+				[VarSet, slTZ, 0]
+				[VarSet, slSX, 0]
+				[VarSet, slSY, 0]
+				[VarSet, slSZ, 0]
+				[VarSet, slRX, 0]
+				[VarSet, slRY, 0]
+				[VarSet, slRZ, 0]
+				[TransformGet, slTX, slTY, slTZ, slSX, slSY,slSZ, slRX, slRY, slRZ]
+				
+				[VarSet, slCanvasPanHNow, [CanvasPanGetH]]
+				[VarSet, slCanvasPanVNow, [CanvasPanGetV]]
+				[CanvasPanSet, (#slCanvasPanHNow + #slOffsetH), (#slCanvasPanVNow + #slOffsetV)]
+				[VarSet, slMouseH, (#slMouseH -#slOffsetH)]
+				[VarSet, slMouseV, (#slMouseV -#slOffsetV)]
+				[MergeUndo]
+				[IKeyPress, CTRL, 
+					[CanvasClick, #slMouseH, #slMouseV, (#slMouseH + ([IWidth, 1004]*.5)), #slMouseV]
+				,#slMouseH, #slMouseV]
+				[TransformSet,#slTX, #slTY, #slTZ, (#slSX), (#slSY ),(#slSZ ), (#slRX ), (#slRY *-1), (#slRZ*-1)]
+				[IPress, Tool:Visibility:ShowPt]
+				[RoutineCall, J_TrueFitToCanvas]
+				[IPress, Edit:Tool:Undo]
+				[VArSet, slPosDiffX,( #slMouseH - [CanvasPanGetH])]
+				[VarSet, slNewMouseH, ([CanvasPanGetH] - #slPosDiffX) ]
+				[VarSet, slNewMouseV, #slMouseV ]
+				
+				[MergeUndo]
+				 [IKeyPress, CTRL+SHIFT, 
+					[CanvasClick, #slNewMouseH, #slNewMouseV, (#slNewMouseH + ([IWidth, 1004]*.5)), #slNewMouseV]
+				,#slNewMouseH, #slNewMouseV]
+				
+				[IPress, "Tool:Visibility:HidePt"]
+				
+				[TransformSet,#slTX, #slTY, #slTZ, (#slSX), (#slSY ),(#slSZ ), (#slRX ), (#slRY *-1), (#slRZ*-1)]
+				
+				[If, (#slPerpFlags == 9) || (#slPerpFlags == 11) || (#slPerpFlags == 13) || (#slPerpFlags == 1),
+					[IPress, "Draw:Perspective"]
+				,]
+				[IPress, "Transform:Activate Symmetry"]
+				[TransformSet, 0, -4000,0, 100, 100, 100, 0, 0, 0]
+			,
+				[VarSet, slCanvasPanHNow, [CanvasPanGetH]]
+				[VarSet, slCanvasPanVNow, [CanvasPanGetV]]
+				[CanvasPanSet, (#slCanvasPanHNow + #slOffsetH), (#slCanvasPanVNow + #slOffsetV)]
+				[VarSet, slMouseH, (#slMouseH -#slOffsetH)]
+				[VarSet, slMouseV, (#slMouseV -#slOffsetV)]
+				[MergeUndo]

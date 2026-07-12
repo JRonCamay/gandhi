@@ -1,0 +1,300 @@
+							[LoopExit]
+						,]
+					,
+						[VarSet, slHasError, 1]
+						[VarSet, slErrorToDisplay, "You must click FixProjq first.Action cancelled."]
+						[LoopExit]
+					]
+						
+					[VarSet, slValid, 1]
+					[VArSet, slSelection, 0]
+				,
+					[SubToolSelect, (#slSelSubTool - 1)]
+					[VarSet, slShadRes,[IGet, "Tool:Geometry:Res"]]
+					[VarSet, slShadPolish,[IGet, "Tool:Geometry:Polish"]]
+					
+					[If, (#slShadRes == 995) && (#slShadPolish == 64) ,
+						[VarSet, slIsVisible, 0]
+						[VarSet, slPolDisp, [IGet, "Tool:Display Properties:Polygons Draw Size"]]
+						
+						[If, #slPolDisp == .5 ,
+							[VArSet, slTheID, 0]
+							[RoutineCall, J_SubToolListGetSelected2, slTheID]
+							[VarSet, slIsVisible, -1]
+							[RoutineCall, J_SubToolVisibility, #slTheID, slIsVisible]
+							[SubToolSelect, #slSelSubTool]
+							[If, !#slIsVisible ,
+								[SubToolSelect, #slSelSubTool]
+								[VarSet, slHasError, 1]
+								[VarSet, slErrorToDisplay, "You must click FixProjq first.Action cancelled."]
+								[LoopExit]
+							,]
+						,	
+							[SubToolSelect, #slSelSubTool]
+							[VarSet, slHasError, 1]
+							[VarSet, slErrorToDisplay, "You must click FixProjq first.Action cancelled."]
+							[LoopExit]
+						]
+						[SubToolSelect, #slSelSubTool]
+						[VarSet, slValid, 1]
+						[VArSet, slSelection, 1]
+					,
+						[SubToolSelect, #slSelSubTool]
+						[VarSet, slHasError, 1]
+						[VarSet, slErrorToDisplay, "You must click FixProjq first.Action cancelled."]
+						[LoopExit]
+					]
+				]
+			,]
+			
+			[If, #slValid ,
+				[RoutineCall, J_InitiateProgressBar, 9331,9357]
+				[VarSet, slSelectedTool, [ToolGetActiveIndex]]
+				[RoutineCall, J_ProgressUpdate, 9333, 0,0,0,0]
+				[MVarSet, jmemIsoFixOrigID, 0, #slSelectedTool]
+				[If, #slSelection == 1 ,
+					[SubToolSelect, ([SubToolGetActiveIndex]-1)]
+				,]
+				[RoutineCall, J_ProgressUpdate, 9338, 0,0,0,0]
+				[IPress, Tool:SubTool:Clone]
+				[SubToolSelect, ([SubToolGetActiveIndex]+1)]
+				[RoutineCall, J_ProgressUpdate, 9341, 0,0,0,0]
+				[IPress, "Tool:Morph Target:Switch"]
+				[IPress, Tool:Geometry:Copy]
+				[MergeUndo]
+				[IPress, "Tool:Morph Target:Switch"]
+				[VarSet, slColorizeFlags, [IGetFlags, Tool:Polypaint:Colorize]]
+				[ToolSelect, ([ToolGetCount]-1)]
+				[VarSet, slFixID, ([ToolGetCount]-1)]
+				[RoutineCall, J_ProgressUpdate, 9345, 0,0,0,0]
+				[MVarSet, jmemIsoFixID, 0, #slFixID]
+				[VaRSet, slTemp, [MVarGet, jmemIsoFixID, 0]]
+				[RoutineCall, J_ProgressUpdate, 9348, 0,0,0,0]
+				[IPress, "Tool:SubTool:Insert"]
+				[IPress, "PopUp:PolyMesh3D"]
+				
+				[RoutineCall, J_ProgressUpdate, 9350, 0,0,0,0]
+				[MergeUndo]
+				[IPress, Tool:Geometry:Paste Replace]
+				[VarSet, slMorphStat, [IGetStatus, "Tool:Morph Target:DelMT"]]
+				[If, #slMorphStat ,
+					[MergeUndo]
+					[IPress, "Tool:Morph Target:DelMT"]
+					
+				,]
+				[MergeUndo]
+				[IPress, "Tool:Morph Target:StoreMT"]
+				[ToolSelect, #slSelectedTool]
+				[IPress, Tool:Geometry:Copy]
+				[ToolSelect, ([ToolGetCount]-1)]
+				[MergeUndo]
+				[IPress, "Tool:Morph Target:Switch"]
+				[MergeUndo]
+				[IPress, "Tool:Geometry:Paste Replace"]
+				
+				[VarSet, slPolyDrawSize, [IGet, "Tool:Display Properties:Polygons Draw Size"]]
+				[If, #slPolyDrawSize < 1,
+					[MergeUndo]
+				,]
+				[ISet, "Tool:Display Properties:Polygons Draw Size", 1]
+				[If, (#slColorizeFlags == 9) || (#slColorizeFlags == 11) || (#slColorizeFlags == 13) || (#slColorizeFlags == 1),
+					[VarSet, slCurrentColorize, [IGetFLags, Tool:Polypaint:Colorize]]
+					[If, (#slCurrentColorize == 8) || (#slCurrentColorize == 10) || (#slCurrentColorize == 0)|| (#slCurrentColorize == 10),
+						[MergeUndo]
+						[IPress, Tool:Polypaint:Colorize]
+					,]
+				,]
+				[RoutineCall, J_ProgressUpdate, 9354, 0,0,0,0]
+				[IPress, Edit:Tool:DelUH]
+				[RoutineCall, J_MemoryOptimize, 0]
+				[RoutineCall, J_ProgressUpdate, 9357, 0,0,0,0]
+				[RoutineCall, J_ProgressEnd]
+			,]
+			
+		]// END OF MAIN LOOP
+		[If, #slAutoCollapseFlags > -1 ,
+			[RoutineCall, J_RestoreUndoHistoryMax]
+			[RoutineCall, J_CanvasClickInsertMesh]
+			[RoutineCall, J_RestoreCameraCanvas]
+			[RoutineCall, J_SoloRestore]
+			
+			[RoutineCall, J_RestoreScrollBarStatus]
+			[IShow, 1011]
+			
+		,]
+	
+	]// END OF IFREEZE
+	
+	[If, #slHasError ,
+		[Note, #slErrorToDisplay]
+	,]
+	
+	[IShowActions, 1]
+	[IUpdate, 1, 1]
+
+]
+
+
+[IButton, IsolateProjq, "",
+	[IKeyPress, '1',
+		[RoutineCall, J_IsolateProjQ]
+	]
+	
+]
+
+[RoutineDef, J_ProjQ,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VarSet, slErrorToDisplay, ""]
+	[VarSet, slAutoCollapseFlags, -1]
+	[VarSet,slProjectMessage, "Projecting the details. Please wait."]
+	[IFreeze,
+		[Loop, 1,
+			[RoutineCall, J_CatchValidityError, slHasError, slErrorToDisplay]
+			//..continue
+			[RoutineCall, J_CatchGeometryError, slHasError, slErrorToDisplay, 0, 0, 0, 0, 1]
+			//..continue
+			[Note, "Projecting. Please wait..."]
+			[RoutineCall, J_SetSaveScrollBarStatus]
+			[RoutineCall, J_GetAutoCollapseFlags, slAutoCollapseFlags]
+			[IUnPress, Transform:Edit]
+			[IHide, 1011]
+			[RoutineCall, J_SetUndoHistoryMax]
+			[RoutineCall, J_StoreCameraCanvas]
+			[RoutineCall, J_SoloOn]
+			[RoutineCall, J_HideCanvas]
+			
+			[VarSet, slSelSubTool, [SubToolGetActiveIndex]]
+			
+			[VArSet, slValid, 0]
+			[VArSet, slSelection, 0]
+			//Check if it is the clone
+			[VArSet, slSubToolCount, [SubToolGetCount]]
+			[If,  #slSubToolCount < 2,
+				[VarSet, slHasError, 1]
+				[VarSet, slErrorToDisplay, "The ZTool has only 1 subtool.Action cancelled."]
+				[LoopExit]
+			,]
+			
+			//..continue
+			[VArSet, slFixID, [MVarGet, jmemIsoFixID, 0]]
+				
+			[If, #slSubToolCount == 2 ,
+				[VarSet, slToolID, [ToolGetActiveIndex]]
+				[VArSet, slFixID, [MVarGet, jmemIsoFixID, 0]]
+				[If, #slToolID ==  #slFixID,
+					[SubToolSelect, 0]
+					[VarSet, slColorizeFlags0,[IGetFlags, Tool:Polypaint:Colorize]]
+					[If, (#slColorizeFlags0 == 9) || (#slColorizeFlags0 == 11)  || (#slColorizeFlags0 == 13)  || (#slColorizeFlags0 == 1) ,
+						[IUnPress, Tool:Polypaint:Colorize]
+					,]
+					[SubToolSelect, 1]
+					[VarSet, slColorizeFlags1,[IGetFlags, Tool:Polypaint:Colorize]]
+					[If, (#slColorizeFlags1 == 9) || (#slColorizeFlags1 == 11)  || (#slColorizeFlags1 == 13)  || (#slColorizeFlags1 == 1) ,
+						[IUnPress, Tool:Polypaint:Colorize]
+					,]
+					[ISet, Tool:SubTool:Mean, 25]
+					[ISet, "Tool:SubTool:PA Blur", 2]
+					[IModSet, Tool:SubTool:ProjectionShell, 7]
+					[VarSet, slFarthest, [IGetFlags, Tool:SubTool:Farthest]]
+					[VarSet, slInnerFlags, [IGetFlags, Tool:SubTool:Inner]]
+					[VarSet, slOuterFlags, [IGetFlags, Tool:SubTool:Outer]]
+					[If, (#slFarthest == 9) || (#slFarthest == 11) || (#slFarthest == 13) || (#slFarthest == 1),
+						[IUnPress, Tool:SubTool:Farthest]
+					,]
+					
+					[IUnPress, Tool:SubTool:Outer]
+					[IUnPress, Tool:SubTool:Inner]
+					[ISet, Tool:SubTool:Dist, .025]
+					[ISet, Tool:SubTool:ProjectionShell, .001]
+					[IShow, 1011]
+					[Note, #slProjectMessage]
+					[IKeyPress,'2',
+						[IPress, Tool:SubTool:ProjectAll]
+					]
+					[IHide, 1011]
+					
+					[SubToolSelect, 0]
+					
+					[If, (#slColorizeFlags0 == 9) || (#slColorizeFlags0 == 11)  || (#slColorizeFlags0 == 13)  || (#slColorizeFlags0 == 1) ,
+						[IPress, Tool:Polypaint:Colorize]
+					,]
+					[SubToolSelect, 1]
+					[If, (#slColorizeFlags1 == 9) || (#slColorizeFlags1 == 11)  || (#slColorizeFlags1 == 13)  || (#slColorizeFlags1 == 1) ,
+						[IPress, Tool:Polypaint:Colorize]
+					,]
+					[If, (#slInnerFlags == 9) || (#slInnerFlags == 11)  || (#slInnerFlags == 13)  || (#slInnerFlags == 1) ,
+						[IPress, Tool:SubTool:Inner]
+					,]
+					[If, (#slOuterFlags == 9) || (#slOuterFlags == 11)  || (#slOuterFlags == 13)  || (#slOuterFlags == 1) ,
+						[IPress, Tool:SubTool:Outer]
+					,]
+					[VarSet, slHasError, 1]
+					[VarSet, slErrorToDisplay, "Projection successful."]
+					[LoopExit]
+				,]
+				
+				//..continue...
+				
+				[VarSet, slSelSubTool, [SubToolGetActiveIndex]]
+				[SubToolSelect, 0]
+				[VarSet, slShadRes,[IGet, "Tool:Geometry:Res"]]
+				[VarSet, slShadPolish,[IGet, "Tool:Geometry:Polish"]]
+				
+				[If, (#slShadRes == 995) && (#slShadPolish == 64) ,
+					
+					[VarSet, slIsVisible, 0]
+					[VarSet, slPolDisp, [IGet, "Tool:Display Properties:Polygons Draw Size"]]
+					[If, #slPolDisp == .5 ,
+						[VArSet, slTheID, 0]
+						[RoutineCall, J_SubToolListGetSelected2, slTheID]
+						[VarSet, slIsVisible, -1]
+						[RoutineCall, J_SubToolVisibility, #slTheID, slIsVisible]
+						
+						[If, !#slIsVisible ,
+							[SubToolSelect, #slSelSubTool]
+							[VarSet, slHasError, 1]
+							[VarSet, slErrorToDisplay, "You must click FixProjq first.Action cancelled."]
+							[LoopExit]
+						,	
+						
+							[IPress, "Tool:Clone"]
+							[SubToolSelect, 1]
+							[IPress, Tool:Geometry:Copy]
+							[ToolSelect, ([ToolGetCount] - 1)]
+							[MergeUndo]
+							[IUnPress, Tool:Polypaint:Colorize]
+							[IPress, Tool:SubTool:Insert]
+							[IPress, PopUp:PolyMesh3D]
+							[MergeUndo]
+							[IPress, "Tool:Geometry:Paste Replace"]
+							[MergeUndo]
+							[IUnPress, Tool:Polypaint:Colorize]
+							[IPress, Edit:Tool:DelUH]
+							[ISet, Tool:SubTool:Mean, 25]
+							[ISet, "Tool:SubTool:PA Blur", 2]
+							[IModSet, Tool:SubTool:ProjectionShell, 7]
+							[VarSet, slFarthest, [IGetFlags, Tool:SubTool:Farthest]]
+							[IPress, Tool:SubTool:Farthest]
+// 							[If, (#slFarthest == 9) || (#slFarthest == 11) || (#slFarthest == 13) || (#slFarthest == 1),
+// 								[IUnPress, Tool:SubTool:Farthest]
+// 							,]
+							[IUnPress, Tool:SubTool:Inner]
+							[IUnPress, Tool:SubTool:Outer]
+							[ISet, Tool:SubTool:Dist, .25]
+							[ISet, Tool:SubTool:ProjectionShell, .025]
+							[Note, #slProjectMessage]
+							[IShow, 1011]
+							[IKeyPress,'2',
+								[MergeUndo]
+								[IPress, Tool:SubTool:ProjectAll]
+							]
+							[IHide, 1011]
+							[IPress, Tool:Geometry:Copy]
+							
+							[IKeyPress, '2',
+								[IPress, "Tool:SubTool:Del All"]
+							]
+							[ToolSelect, #slToolID]
+							[IPress, "Tool:Geometry:Paste Replace"]
+							[VarSet, slHasError, 1]

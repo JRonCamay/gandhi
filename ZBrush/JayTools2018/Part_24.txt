@@ -1,0 +1,300 @@
+			[VarSet, [Var, jOutputName], "PopUp:POINT ACTION:Move"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 8,
+			[VarSet, [Var, jOutputName], "PopUp:POINT ACTION:QMesh"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 9,
+			[VarSet, [Var, jOutputName], "PopUp:POINT ACTION:Slide"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 10,
+			[VarSet, [Var, jOutputName], "PopUp:POINT ACTION:Split"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 11,
+			[VarSet, [Var, jOutputName], "PopUp:POINT ACTION:Stitch"]
+			[LoopExit]
+		,]
+		[If, #jOpID == 12,
+			[VarSet, [Var, jOutputName], "PopUp:POINT ACTION:Transpose"]
+			[LoopExit]
+		,]
+		
+		
+		
+	]
+
+, jOpID, jOutputName]
+
+
+[RoutineDef, J_FaceMode,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VarSet, slErrorToDisplay, ""]
+	[VarSet, slAutoCollapseFlags, -1]
+	[IFreeze,
+		[Loop, 1,
+			[RoutineCall, J_CatchValidityError,slHasError, slErrorToDisplay]
+			//...continue
+			[RoutineCall, J_CatchGeometryError,slHasError, slErrorToDisplay, 1, 1, 0, 0, 0]
+			//...continue
+			[VarSet, slBrushName, ""]
+			[RoutineCall, J_GetCurrentBrush, slBrushName]
+			[VarSet, slIsSame, 0]
+			[RoutineCall,J_CompareStringsIfSame, #slBrushName, "ZModeler", slIsSame]
+			[If, !#slIsSame ,
+				[VarSet, slHasError, 1]
+				[VarSet, slErrorToDisplay, "Brush is not ZModeler. Action cancelled."]
+				[LoopExit]
+			,]
+			//...continue
+			[Note, "Switching to FACE MODE only.Please wait..."]
+			[IHide, 1011]
+			[VarSet, slAutoCollapseFlags, 0]
+			[RoutineCall, J_InitiateProgressBar, 7540,7580]
+			[RoutineCall, J_ProgressUpdate, 7541, 0,0,0,0]
+			[RoutineCall, J_StoreCameraCanvas]
+			[RoutineCall, J_SoloOn]
+			[RoutineCall, J_CenterCanvasFrontOrtho]
+			[VarSet, slSelTool, [ToolGetActiveIndex]]
+			[IPress, Tool:Clone]
+			[RoutineCall, J_ProgressUpdate, 7547, 0,0,0,0]
+			[ToolSelect, ([ToolGetCount]-1)]
+			
+			[VArSet, slSaveFaceOp, [MVarGet, jMemFaceOperation, 0]]
+			
+			[If, #slSaveFaceOp < 99 ,
+				
+				[ISet, "Tool:Initialize:X Res", 1]
+				[ISet, "Tool:Initialize:Y Res", 1]
+				[ISet, "Tool:Initialize:Z Res", 1]
+				[IPress, "Tool:Initialize:QCube"]
+				[RoutineCall, J_TrueFitToCanvas]
+				[IKeyPress, 32,
+					[Delay,.001]
+					
+					[VarSet, slFaceOpName, ""]
+					[RoutineCall,J_GetFaceOperationName, #slSaveFaceOp,slFaceOpName]
+					[IPress, #slFaceOpName]
+					
+				,([IGEt, Document:Width] *.5), ([IGEt, Document:Height] *.5)]
+			,]
+			[If, #slSaveFaceOp >= 99 ,
+				
+				[ISet, "Tool:Initialize:X Res", 1]
+				[ISet, "Tool:Initialize:Y Res", 1]
+				[ISet, "Tool:Initialize:Z Res", 1]
+				[IPress, "Tool:Initialize:QCube"]
+				[RoutineCall, J_TrueFitToCanvas]
+				[IKeyPress, 32,
+					[Delay,.001]
+					[VarSet, slFaceOpID, -1]
+					[RoutineCall,J_GetFaceOperation, slFaceOpID]
+					[MVarSet, jMemFaceOperation, 0, #slFaceOpID]
+				,([IGEt, Document:Width] *.5), ([IGEt, Document:Height] *.5)]
+			,]
+			[IKeyPress, 32,
+				
+			,0,0]
+			
+			[ISet, "Tool:Initialize:X Res", 3]
+			[ISet, "Tool:Initialize:Y Res", 2]
+			[ISet, "Tool:Initialize:Z Res", 2]
+			[RoutineCall, J_ProgressUpdate, 7553, 0,0,0,0]
+			[IPress, "Tool:Initialize:QCube"]
+			[RoutineCall, J_TrueFitToCanvas]
+			[RoutineCall, J_ProgressUpdate, 7556, 0,0,0,0]
+			
+			[IKeyPress, 32,
+				[Delay,.001]
+				[VArSet, slSaveEdgeOp, -1]
+				[RoutineCall,J_GetEdgeOperation, slSaveEdgeOp]
+				
+				[If, #slSaveEdgeOp == 8 ,
+				
+				,
+					
+					[MVarSet, jMemEdgeOperation,0, #slSaveEdgeOp]
+				]
+				
+				[IPress, "PopUp:EDGE ACTIONS:Do Nothing"]
+				
+			,([IGEt, Document:Width] *.5), ([IGEt, Document:Height] *.5)]
+			[RoutineCall, J_ProgressUpdate, 7561, 0,0,0,0]
+			[IKeyPress, 32,
+				
+			,0,0]
+			[RoutineCall, J_ProgressUpdate, 7565, 0,0,0,0]
+			[ISet, "Tool:Initialize:X Res", 2]
+			[ISet, "Tool:Initialize:Y Res", 2]
+			[ISet, "Tool:Initialize:Z Res", 2]
+			[IPress, "Tool:Initialize:QCube"]
+			[RoutineCall, J_ProgressUpdate, 7570, 0,0,0,0]
+			[RoutineCall, J_TrueFitToCanvas]
+			[IKeyPress, 32,
+				[Delay,.001]
+				[VArSet, slSavePointOp, -1]
+				[RoutineCall,J_GetPointOperation, slSavePointOp]
+				[If, #slSavePointOp == 3 ,
+				,
+					[MVarSet, jMemPointOperation, 0, #slSavePointOp]
+				]
+				[IPress, "PopUp:POINT ACTION:Do Nothing"]
+				
+			,([IGEt, Document:Width] *.5), ([IGEt, Document:Height] *.5)]
+			[RoutineCall, J_ProgressUpdate, 7576, 0,0,0,0]
+			[IKeyPress, '2',
+				[IPress, "Tool:SubTool:Delete"]
+			]
+			[RoutineCall, J_ProgressUpdate, 7580, 0,0,0,0]
+			[ToolSelect, #slSelTool]
+			[RoutineCall, J_ProgressEnd]
+		]
+		[If, #slAutoCollapseFlags > -1,
+			[RoutineCall, J_SoloRestore]
+			[RoutineCall, J_RestoreCameraCanvas]
+		,]
+		
+		[IShow, 1011]
+
+	]
+	
+	[If, #slHasError ,
+		[NoteBar, ""]
+		[Note, #slErrorToDisplay]
+	,]
+	
+	[IShowActions, 1]
+	[IUpdate, 1, 1]
+
+]
+
+[IButton, FaceMode,"",
+	[IKeyPress, '1',
+		[RoutineCall, J_FaceMode]
+	
+	]
+
+]
+
+[RoutineDef, J_EdgeMode,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VarSet, slErrorToDisplay, ""]
+	[VarSet, slAutoCollapseFlags, -1]
+	[IFreeze,
+		[Loop, 1,
+			[RoutineCall, J_CatchValidityError,slHasError, slErrorToDisplay]
+			//...continue
+			[RoutineCall, J_CatchGeometryError,slHasError, slErrorToDisplay, 1, 1, 0, 0, 0]
+			//...continue
+			
+			[VarSet, slBrushName, ""]
+			[RoutineCall, J_GetCurrentBrush, slBrushName]
+			[VarSet, slIsSame, 0]
+			[RoutineCall,J_CompareStringsIfSame, #slBrushName, "ZModeler", slIsSame]
+			[If, !#slIsSame ,
+				[VarSet, slHasError, 1]
+				[VarSet, slErrorToDisplay, "Brush is not ZModeler. Action cancelled."]
+				[LoopExit]
+			,]
+			//...continue
+			[Note, "Switching to EDGE MODE only.Please wait..."]
+			[VarSet, slAutoCollapseFlags, 0]
+			[IHide, 1011]
+			[RoutineCall, J_InitiateProgressBar, 7540,7580]
+			[RoutineCall, J_ProgressUpdate, 7541, 0,0,0,0]
+			[RoutineCall, J_StoreCameraCanvas]
+			[RoutineCall, J_SoloOn]
+			[RoutineCall, J_CenterCanvasFrontOrtho]
+			[VarSet, slSelTool, [ToolGetActiveIndex]]
+			[IPress, Tool:Clone]
+			[RoutineCall, J_ProgressUpdate, 7547, 0,0,0,0]
+			[ToolSelect, ([ToolGetCount]-1)]
+			[VArSet, slSaveEdgeOp, [MVarGet, jMemEdgeOperation, 0]]
+			[If, #slSaveEdgeOp < 100 ,
+				
+				[ISet, "Tool:Initialize:X Res", 3]
+				[ISet, "Tool:Initialize:Y Res", 2]
+				[ISet, "Tool:Initialize:Z Res", 2]
+				[IPress, "Tool:Initialize:QCube"]
+				[RoutineCall, J_TrueFitToCanvas]
+				[IKeyPress, 32,
+					[Delay,.001]
+					[VarSet, slEdgeOpName, ""]
+					[RoutineCall,J_GetEdgeOperationName, #slSaveEdgeOp,slEdgeOpName]
+					
+					
+					[IPress, #slEdgeOpName]
+					
+				,([IGEt, Document:Width] *.5), ([IGEt, Document:Height] *.5)]
+			,]
+			[If, #slSaveEdgeOp == 100 ,
+				
+				[ISet, "Tool:Initialize:X Res", 3]
+				[ISet, "Tool:Initialize:Y Res", 2]
+				[ISet, "Tool:Initialize:Z Res", 2]
+				[IPress, "Tool:Initialize:QCube"]
+				[RoutineCall, J_TrueFitToCanvas]
+				[IKeyPress, 32,
+					[Delay,.001]
+					[VarSet, slEdgeOpID, -1]
+					[RoutineCall,J_GetEdgeOperation, slEdgeOpID]
+					[MVarSet, jMemEdgeOperation, 0, #slEdgeOpID]
+				,([IGEt, Document:Width] *.5), ([IGEt, Document:Height] *.5)]
+			,]
+			
+			[IKeyPress, 32,
+				
+			,0,0]
+			
+			
+			[ISet, "Tool:Initialize:X Res", 1]
+			[ISet, "Tool:Initialize:Y Res", 1]
+			[ISet, "Tool:Initialize:Z Res", 1]
+			[RoutineCall, J_ProgressUpdate, 7553, 0,0,0,0]
+			[IPress, "Tool:Initialize:QCube"]
+			[RoutineCall, J_TrueFitToCanvas]
+			[RoutineCall, J_ProgressUpdate, 7556, 0,0,0,0]
+			[IKeyPress, 32,
+				[Delay,.001]
+				[VArSet, slSaveFaceOp, -1]
+				[RoutineCall,J_GetFaceOperation, slSaveFaceOp]
+				[If, #slSaveFaceOp == 5 ,
+				
+				,
+					[MVarSet, jMemFaceOperation,0, #slSaveFaceOp]
+				]
+				
+				[IPress, "PopUp:POLYGON ACTIONS:Do Nothing"]
+				
+			,([IGEt, Document:Width] *.5), ([IGEt, Document:Height] *.5)]
+			[RoutineCall, J_ProgressUpdate, 7561, 0,0,0,0]
+			[IKeyPress, 32,
+				
+			,0,0]
+			[RoutineCall, J_ProgressUpdate, 7565, 0,0,0,0]
+			[ISet, "Tool:Initialize:X Res", 2]
+			[ISet, "Tool:Initialize:Y Res", 2]
+			[ISet, "Tool:Initialize:Z Res", 2]
+			[IPress, "Tool:Initialize:QCube"]
+			[RoutineCall, J_ProgressUpdate, 7570, 0,0,0,0]
+			[RoutineCall, J_TrueFitToCanvas]
+			[IKeyPress, 32,
+				[Delay,.001]
+				[VArSet, slSavePointOp, -1]
+				[RoutineCall,J_GetPointOperation, slSavePointOp]
+				[If, #slSavePointOp == 3 ,
+				
+				,
+					[MVarSet, jMemPointOperation,0, #slSavePointOp]
+				]
+				
+				[IPress, "PopUp:POINT ACTION:Do Nothing"]
+				
+			,([IGEt, Document:Width] *.5), ([IGEt, Document:Height] *.5)]
+			[RoutineCall, J_ProgressUpdate, 7576, 0,0,0,0]
+			[IKeyPress, '2',
+				[IPress, "Tool:SubTool:Delete"]

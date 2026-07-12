@@ -1,0 +1,300 @@
+					[VArSet, slTheMid,#slCtr]
+					[IPress, Edit:Tool:Undo]
+					[IPress,Edit:Tool:DelUH]
+					[LoopExit]
+				]
+				[VarInc, slCtr]
+			]
+			[ISet,"Draw:Draw Size", #slDrawSize]
+			
+			[SubToolSelect,#slTheMid]
+			[RoutineCall, J_HideCanvas]
+			[IUnPress, Transform:Edit]
+			[IKeyPress, '2',
+				[IPress, "Tool:SubTool:Del Other"]
+			]  
+			[MergeUndo]
+			[Ipress, "Tool:Initialize:QCube"]
+			[MergeUndo]
+			[IPress, "Tool:Polygroups:Auto Groups"]
+			[IPress, Tool:Geometry:Copy]
+			[IPress, Edit:Tool:Undo]
+			[MergeUndo]
+			[IPress, "Tool:Geometry:Paste Append"]
+			[VArSet, slHasOtherGroups, 0]
+			[MergeUndo]
+			[IPress, "Tool:Masking:Clear"]
+			[MergeUndo]
+			[IPress, Tool:Geometry:Unweld Groups Border]
+			[MergeUndo]
+			[IPress, "Tool:Polygroups:Auto Groups"]
+			
+			[VArSet, slUndoStepBefore, [IGet,"Edit:Tool:UndoCounter"]]
+			[VarSet,slBorderMask, [IGetFlags, "Tool:Masking:Border"]]
+			[VarSet,slGroupsMask, [IGetFlags, "Tool:Masking:Groups"]]
+			[VarSet,slCreaseMask, [IGetFlags, "Tool:Masking:Crease"]]
+			[IPress, "Tool:Masking:Border"]
+			[IUnPress, "Tool:Masking:Groups"]
+			[IUnPress, "Tool:Masking:Crease"]
+			[IPress, Tool:Masking:MaskByFeature]
+			[VArSet, slUndoStepAfter, [IGet,"Edit:Tool:UndoCounter"]]
+			[If, (#slBorderMask == 8) || (#slBorderMask == 10) || (#slBorderMask == 12) || (#slBorderMask == 0),
+				[IUnPress,"Tool:Masking:Border"]
+			,]
+			[If, (#slGroupsMask == 9) || (#slGroupsMask == 11) || (#slGroupsMask == 13) || (#slGroupsMask == 1),
+				[IPress,"Tool:Masking:Groups"]
+			,]
+			[If, (#slCreaseMask == 9) || (#slCreaseMask == 11) || (#slCreaseMask == 13) || (#slCreaseMask == 1),
+				[IPress,"Tool:Masking:Crease"]
+			,]
+			[If, #slUndoStepAfter > #slUndoStepBefore ,
+				[VArSet, slHasOtherGroups, 1]
+			,]
+		
+			[If, #slHasOtherGroups ,
+				[IKeyPress, 32,
+					[IKeyPress, '2',
+						[IPress, "Tool:SubTool:Split To Parts"]
+					]
+					[VarSet, slSelectedSub,[SubtoolGetActiveIndex]]
+					[SubToolSelect, ([SubToolGetCount] - 1)]
+					[IKeyPress, '2',
+						[IPress, "Tool:SubTool:Delete"]
+					]
+					[SubToolSelect, #slSelectedSub]
+				]
+				
+				[VarSet,#slNewCount, [SubToolGetCount]]
+				
+				[If, #slNewCount >1 ,
+					[VarSet, slDrawSize,[IGet,"Draw:Draw Size"]]
+					[ISet,"Draw:Draw Size", (#slDrawSize * .8)]
+					[VarSet, slCtr,0]
+					[RoutineCall, J_CanvasClickInsertMesh]
+					[RoutineCall, J_RestoreCameraCanvas]
+					[VarSet, slFirstCopy,0]
+					[Loop, #slNewCount,
+						[SubToolSelect, #slCtr]
+						[VarSet,slPCount, 0]
+						[RoutineCall, J_GetPointsCount, slPCount]
+						[CanvasStroke, #slLastStroke]
+						[VarSet,slPCount2, 0]
+						[RoutineCall, J_GetPointsCount, slPCount2]
+						[If, #slPCount2 == #slPCount ,
+							
+						,
+							[If, #slFirstCopy == 0,
+								[IPress, Edit:Tool:Undo]
+								[IPress,"Tool:Geometry:Copy"]
+								[VarSet, slFirstCopy,1]
+							,
+								[IPress, Edit:Tool:Undo]
+								[MergeUndo]
+								[IPress,"Tool:Geometry:Paste Append"]
+								[IPress,"Tool:Geometry:Copy"]
+								[IPress,"Edit:Tool:DelUH"]
+							]
+						]
+						[VarInc, #slCtr]
+					]
+					[ISet,"Draw:Draw Size", #slDrawSize]
+					[IPress,"Tool:Geometry:Paste Replace"]
+					[IUnPress, Transform:Edit]
+					[RoutineCall, J_HideCanvas]
+				,]
+				
+			,
+				[VArSet, slUndoStepBefore, [IGet,"Edit:Tool:UndoCounter"]]
+				[VarSet,slBorderMask, [IGetFlags, "Tool:Masking:Border"]]
+				[VarSet,slGroupsMask, [IGetFlags, "Tool:Masking:Groups"]]
+				[VarSet,slCreaseMask, [IGetFlags, "Tool:Masking:Crease"]]
+				[IUnPress, "Tool:Masking:Border"]
+				[IPress, "Tool:Masking:Groups"]
+				[IUnPress, "Tool:Masking:Crease"]
+				[IPress, Tool:Masking:MaskByFeature]
+				[VArSet, slUndoStepAfter, [IGet,"Edit:Tool:UndoCounter"]]
+				[If, (#slBorderMask == 9) || (#slBorderMask == 11) || (#slBorderMask == 13) || (#slBorderMask == 1),
+					[IPress,"Tool:Masking:Border"]
+				,]
+				[If, (#slGroupsMask == 8) || (#slGroupsMask == 10) || (#slGroupsMask == 12) || (#slGroupsMask == 0),
+					[IUnPress,"Tool:Masking:Groups"]
+				,]
+				[If, (#slCreaseMask == 9) || (#slCreaseMask == 11) || (#slCreaseMask == 13) || (#slCreaseMask == 1),
+					[IPress,"Tool:Masking:Crease"]
+				,]
+				[VarSet, slHasGroups2, 0]
+				[If, #slUndoStepAfter > #slUndoStepBefore ,
+					[VArSet, slHasGroups2, 1]
+				,]
+				[If, #slHasGroups2 ,
+					[IKeyPress, '2',
+						[IPress, "Tool:SubTool:Groups Split"]
+					]
+					[VarSet,#slNewCount, [SubToolGetCount]]
+					[If, #slNewCount > 1 ,
+						[VarSet, slFirstCopy,0]
+						[VarSet, slDrawSize,[IGet,"Draw:Draw Size"]]
+						[ISet,"Draw:Draw Size", (#slDrawSize * .8)]
+						[VarSet, slCtr,0]
+						[RoutineCall, J_CanvasClickInsertMesh]
+						[RoutineCall, J_RestoreCameraCanvas]
+						[Loop, #slNewCount,
+							[SubToolSelect, #slCtr]
+							[VarSet,slPCount, 0]
+							[RoutineCall, J_GetPointsCount, slPCount]
+							[CanvasStroke,#slLastStroke]
+							[VarSet,slPCount2, 0]
+							[RoutineCall, J_GetPointsCount, slPCount2]
+							[If, #slPCount2 == #slPCount ,
+								
+							,
+								[If, #slFirstCopy == 0,
+									[IPress, Edit:Tool:Undo]
+									[IPress,"Tool:Geometry:Copy"]
+									[VarSet, slFirstCopy,1]
+								,
+									[IPress, Edit:Tool:Undo]
+									[MergeUndo]
+									[IPress,"Tool:Geometry:Paste Append"]
+									[IPress,"Tool:Geometry:Copy"]
+									[IPress,"Edit:Tool:DelUH"]
+								]
+								
+							]
+							[VarInc, #slCtr]
+						]
+						
+						[ISet,"Draw:Draw Size", #slDrawSize]
+						[IPress,"Tool:Geometry:Paste Replace"]
+						[IUnPress, Transform:Edit]
+						[RoutineCall, J_HideCanvas]
+					,]
+					
+				,]
+			
+			]
+			[IUnPress, Transform:Edit]
+			[RoutineCall, J_HideCanvas]
+			[VarSet, slFrBorderFlag, [IGetFlags, "Tool:Geometry:FreezeBorder"]]
+			[VarSet, slFrGroupsFlag, [IGetFlags, "Tool:Geometry:FreezeGroups"]]
+			[VarSet, slKpGroupsFlag, [IGetFlags, "Tool:Geometry:KeepGroups"]]
+			[IUnPress, "Tool:Geometry:FreezeBorder"]
+			[IUnPress, "Tool:Geometry:FreezeGroups"]
+			[IPress, "Tool:Geometry:KeepGroups"]
+			[VArSet, slSmGrpBorder, [IGet, "Tool:Geometry:SmoothGroups"]]
+			[ISet,"Tool:Geometry:SmoothGroups", .5 ]
+			[VarSet, slTargetPolyCount,[ IGet,"Tool:Geometry:Target Polygons Count"]]
+			[ISet, "Tool:Geometry:Target Polygons Count", 2]
+			[VarSet, slAdaptFlags, [IGetFlags, "Tool:Geometry:Adapt"]]
+			[IPress, "Tool:Geometry:Adapt"]
+			[VarSet, slSameFlag,[IGetFlags,"Tool:Geometry:Same" ]]
+			[VarSet, slDoubleFlag,[IGetFlags,"Tool:Geometry:Double"]]
+			[IUnPress, "Tool:Geometry:Same"]
+			[IUnPress, "Tool:Geometry:Double"]
+			[VarSet, slAdaptiveSize, [IGet, "Tool:Geometry:AdaptiveSize"]]
+			[ISet, "Tool:Geometry:AdaptiveSize", 50]
+			[VarSet, slCurvesStrength, [IGet, "Tool:Geometry:Curves Strength"]]
+			[ISet, "Tool:Geometry:Curves Strength", 50]
+			[VarSet, slUsePpFlags, [IGetFlags, "Tool:Geometry:Use Polypaint"]]
+			[IUnPress, "Tool:Geometry:Use Polypaint"]
+			[MergeUndo]
+			[IPress, "Tool:Geometry:ZRemesher"]
+			[ISet, "Tool:Geometry:Target Polygons Count", 5]
+			
+			
+			[ISet, "Tool:Geometry:P.Loops", 5]
+			[IUnPress, "Tool:Geometry:P.Append"]
+			[IUnPress, "Tool:Geometry:P.Inner"]
+			[ISet,"Tool:Geometry:P.Polish", 5]
+			[IMOdSet, "Tool:Geometry:P.Polish", 1]
+			[IUnPress, "Tool:Geometry:P.Ignore Groups"]
+			[IUnPress, "Tool:Geometry:P.RegroupPanels"]
+			[IUnPress, "Tool:Geometry:P.RegroupLoops"]
+			[VarSet, slFlatEdgesFlags, [IGetFlags, "ZScript:FlatEdges"]]
+			[If, (#slFlatEdgesFlags == 11) || (#slFlatEdgesFlags == 13)  || (#slFlatEdgesFlags == 9)|| (#slFlatEdgesFlags == 1),
+				[ISet, "Tool:Geometry:P.Bevel", 0]
+			,
+				[ISet, "Tool:Geometry:P.Bevel", [IGet, "ZScript:PanelGrpBevel"]]
+			]
+			
+			[ISet, "Tool:Geometry:P.Elevation", 100]
+			[MergeUndo]
+			[IPress, "Tool:Geometry:P.Panel Loops"]
+			[IPress,"Tool:Geometry:Copy"]
+			[IKeyPress, '2',
+				[IPress, "Tool:SubTool:Del All"]
+			]
+			[ToolSelect, #slToolLast]
+			[RoutineCall, J_CanvasClickInsertMesh]
+			[RoutineCall, J_RestoreCameraCanvas]
+			[RoutineCall, J_RestoreUndoPoint]
+			[IPress, Tool:SubTool:Duplicate]
+			[MergeUndo]
+			[IPress,"Tool:Geometry:Paste Replace"]
+			[IPress,Edit:Tool:DelUH]
+			[RoutineCall, J_MemoryOptimize, 0]
+			[SubToolSelect,([SubToolGetActiveIndex] - 1)]
+			[VarSet, slRadiusFlags, [MVarGet,jmemSHIFTCTRLBrushSettings, 0]]
+			[If, (#slRadiusFlags == 8) || (#slRadiusFlags == 10) || (#slRadiusFlags == 12) || (#slRadiusFlags == 0),
+				[IUnPRess, "Brush:Clip Brush Modifiers:BRadius"]
+			,
+			]
+			[ISet, "Draw:Focal Shift", [MVarGet, jmemSHIFTCTRLBrushSettings, 1]]
+			[IkeyPress, '1',
+				[VarSet, slShiftCtrlBrushID, [MVarGet, jmemSHIFTCTRLBrushSettings, 2]]
+				
+				[ISet, "Brush:Item Info",#slShiftCtrlBrushID ]
+				
+			]
+			[ISet, "Draw:Draw Size", #slBrushSize]
+			[VArSet, slISSuccess, 1]
+			
+		] // ----- END OF LOOP
+		[If, #slAutoCollapseFlags > -1 ,
+			
+			[RoutineCall, J_CanvasClickInsertMesh]
+			[RoutineCall, J_RestoreUndoHistoryMax]
+			[RoutineCall, J_SoloOff]
+			 
+			[RoutineCall, J_RestoreCameraCanvas]
+			[RoutineCall, J_RestoreScrollBarStatus]
+			[IShow,1011]
+		,]
+	]// END OF FREEZE
+	
+	[If, #slHasError,
+		[Note, #slErrorToDisplay]
+		
+	,]
+	[IShowActions, 1]
+	[IUpdate, 1,1]
+	[If, #slISSuccess ,
+		
+		[RoutineCall, J_SleepChangeEvent, #TIMER,""]
+	,
+		
+		[NoteBar, "Use the SliceCurve to create a band mesh. Hold SHIFT + CTRL to draw the curve."]
+		[RoutineCall, J_SleepChangeEventAdv, #LMOUSEDOWN,"J_CreateBandPressed", 3, 1, 0]
+	
+	]
+	
+]
+[IButton, CreateBand, "",
+	[IKeyPress, '1',
+		[RoutineCall, J_CreateBand]
+	]
+
+]
+
+
+
+[ISlider, UndoCountToDelete , 200, 1, 1, 900,,, 0, 100 ]
+[IButton, DeleteUndoCount, "",
+	[RoutineCall, J_DeleteUndoCount]
+]
+
+[RoutineDef, J_DeleteUndoCount,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VArSet, slErrorToDisplay, ""]
+	[IFreeze,

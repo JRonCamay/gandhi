@@ -1,0 +1,300 @@
+			[ISet, "Tool:Geometry:GPolish", 60]
+			[IPress,"Tool:Geometry:Triangle"]
+			[MergeUndo]
+			[IPress, "Tool:Geometry:GroupsLoops"]
+			[ISet,  "Tool:Geometry:Loops", #slLoopCount]
+			[ISet,  "Tool:Geometry:GPolish", #slGPolish]
+			[IModSet, "Tool:Geometry:GPolish", #slGPolishMod]
+			[If, (#slTrianglesFlag == 8) || (#slTrianglesFlag == 12) || (#slTrianglesFlag == 10),
+				[IUnPress,"Tool:Geometry:Triangle"]
+			,]
+			[ISet, Tool:Polygroups:Coverage, 1]
+			[ISet, Tool:Polygroups:Clstr, .75]
+			[MergeUndo]
+			[IPress, Tool:Polygroups:GroupVisible]
+			[ISet, Tool:Polygroups:Coverage, #slPolyCov]
+			[ISet, Tool:Polygroups:Clstr, .#slPolyClstr]
+			
+			
+			
+			[IModSet, "Tool:Geometry:P.Polish", 1]
+			[ISet, "Tool:Geometry:P.Polish", 5]
+			[ISet, "Tool:Geometry:P.Loops", 5]
+			[RoutineCall, J_ProgressUpdate, 8577, 0,0,0,0]
+			[IPress, "Tool:Geometry:P.Double"]
+			[IUnPress, "Tool:Geometry:P.Ignore Groups"]
+			[IUnPress, "Tool:Geometry:P.RegroupPanels"]
+			[IUnPress, "Tool:Geometry:P.RegroupLoops"]
+			[ISet, "Tool:Geometry:P.Elevation", 100]
+			[RoutineCall, J_ProgressUpdate, 8583, 0,0,0,0]
+			[If, (#slFlatEdges == 9) || (#slFlatEdges == 11) || (#slFlatEdges == 13) || (#slFlatEdges == 1),
+				[ISet, "Tool:Geometry:P.Bevel", 0]
+			,
+				[VarSet, slScriptBevel, [IGet, "ZScript:PanelGrpBevel"]]
+				[VarSet, slThickness, [IGet, "Tool:Geometry:P.Thickness"]]
+				[VarSet, slFac,(((5 - #slThickness)/5)*#slScriptBevel)]
+				[ISet, "Tool:Geometry:P.Bevel", #slFac]
+			]
+			[RoutineCall, J_ProgressUpdate, 8593, 0,0,0,0]
+			[IPress, Tool:Geometry:P.Append]
+			[MergeUndo]
+			[IPress, "Tool:Geometry:P.Panel Loops"]
+			[VarSet,slPolishMod, [IModGet, "Tool:Deformation:Polish By Features"]]
+			[IModSet, "Tool:Deformation:Polish By Features", 1]
+			[MergeUndo]
+			[Iset, "Tool:Deformation:Polish By Features",20]
+			[IModSet, "Tool:Deformation:Polish By Features", #slPolishMod]
+			[RoutineCall, J_ProgressUpdate, 8597, 0,0,0,0]
+			[If, #slToSeparate ,
+				[IPress, Tool:SubTool:Duplicate]
+				[IPress, Edit:Tool:DelUH]
+				[SubToolSelect, ([SubToolGetActiveIndex] -1)]
+				[RoutineCall, J_RestoreUndoPoint]
+				[IPress, Tool:Masking:Clear]
+				[IPress,Edit:Tool:Undo]
+			,
+				
+				[IPress, Tool:Geometry:Copy]
+				[RoutineCall, J_RestoreUndoPoint]
+				[IPress, "Tool:Geometry:Paste Append"]
+				[RoutineCall, J_MemoryOptimize, 0]
+			]
+			[RoutineCall, J_ProgressUpdate, 8623, 0,0,0,0]
+			[IPress, Transform:Edit]
+			[RoutineCall, J_ProgressEnd]
+		]
+		
+		[If, #slAutoCollapseFlags > -1 ,
+			[RoutineCall, J_RestoreUndoHistoryMax]
+			[RoutineCall, J_CanvasClickInsertMesh]
+			[RoutineCall, J_RestoreCameraCanvas]
+			[RoutineCall, J_SoloRestore]
+			[RoutineCall, J_RestoreScrollBarStatus]
+			[IShow, 1011]
+		,]
+	]
+	
+	[If, #slHasError ,
+		[Note, #slErrorToDisplay]
+	,]
+	[IShowActions, 1]
+	[IUpdate, 1,1]
+]
+
+[IButton, PanelGrpAdv, "", 
+	[IKeyPress, '1',
+		[RoutineCall, J_PanelGrpAdv]
+	]
+
+]
+
+
+
+
+[RoutineDef, J_SampleBandWidth,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VarSet, slErrorToDisplay , ""]
+	[VarSet, slMessage, ""]
+	[VArSet, slHasNoValidityError, 0]
+	[IFreeze,
+		[Loop, 1,
+			[RoutineCall, J_ResetSleep]
+			[RoutineCall, J_CatchValidityError, slHasError, slErrorToDisplay]
+			//..continue
+			[VArSet, slHasNoValidityError, 1]
+			[VarSet, slArrayOn, 0]
+			[VarSet, slNanoMeshOn, 0]
+			[VarSet, slArrayFlags, [IgetFlags, "Tool:ArrayMesh:a.Array Mesh"]]
+			[If, (#slArrayFlags == 9) || (#slArrayFlags == 11),
+				[VarSet, slMessage, [StrMerge, #slMessage, "Array Mesh"]]
+				[VarSet, slArrayOn, 1]
+			,]
+			[If, #slArrayOn ,
+				[VarSet, slMessage, [StrMerge, #slMessage, " and "]]
+			,]
+			[VarSet, slNanoStat, [IGetStatus, "Tool:NanoMesh:m.Nano Mesh On"]]
+			[If, #slNanoStat ,
+				[VarSet, slNanoFlags, [IgetFlags,"Tool:NanoMesh:m.Nano Mesh On"]]
+				[If, (#slNanoFlags == 9) || (#slNanoFlags == 11),
+					[VarSet, slMessage, [StrMerge, #slMessage, "Nano Mesh"]]
+					[VarSet, slNanoMeshOn, 1]
+				,]
+			,]
+			[If, ((#slArrayOn == 1) && (#slNanoMeshOn == 0)) || ((#slArrayOn == 0) && (#slNanoMeshOn == 1))  ,
+				[VarSet, slMessage, [StrMerge, #slMessage, " is on. It would may slow the response time."]]
+			,]
+			[If, (#slArrayOn == 1) && (#slNanoMeshOn == 1)   ,
+				[VarSet, slMessage, [StrMerge, #slMessage, " are on. These would may slow the response time."]]
+			,]
+		]
+	]
+	[VarSet, slMessageStr, [StrLength,#slMessage ]]
+	[If, #slMessageStr > 0 ,
+		[Note, #slMessage]
+	,]
+	
+	[If, #slHasNoValidityError ,
+		[IFreeze,
+			[Loop, 1,
+				[VarSet, slSubToolID, [SubToolGetActiveIndex]]
+				[VarSet, slToolID, [ToolGetActiveIndex]]
+				[MVarSet, jmemToolSubToolID, 0, #slToolID]
+				[MVarSet, jmemToolSubToolID, 1, #slSubToolID]
+				[VarSet, slCurrentBrush, ""]
+				[RoutineCall, J_GetCurrentBrush,slCurrentBrush ]
+				[RoutineCall, J_WriteStringVar, "jmemLastBrush", #slCurrentBrush]
+				[IPress, Brush:Standard]
+				[VarSet, slStrokeFlags, [IGetFlags, "Stroke:Curve Mode"]]
+				[MVarSet, jmemStrokeSettings, 0, #slStrokeFlags]
+				[If, (#slStrokeFlags == 8) || (#slStrokeFlags == 10) || (#slStrokeFlags == 12) || (#slStrokeFlags == 0) ,
+					[IPress, "Stroke:Curve Mode"]
+				,]
+				[VarSet, slAsLineFlags, [IGetFlags, Stroke:AsLine]]
+				[MVarSet, jmemStrokeSettings, 1, #slAsLineFlags]
+				[If, (#slAsLineFlags == 9) || (#slAsLineFlags == 11) || (#slAsLineFlags == 13) || (#slAsLineFlags == 1) ,
+					[IUnPress, Stroke:AsLine]
+				,]
+				[VarSet, slCurveStep, [IGet, Stroke:CurveStep]]
+				[MVarSet, jmemStrokeSettings, 2, #slCurveStep]
+				[ISet, Stroke:CurveStep, 0]
+				[VarSet, slBend, [IGetFlags, Stroke:Bend]]
+				[MVarSet, jmemStrokeSettings, 3, #slBend]
+				[If, (#slBend == 8) || (#slBend == 10) || (#slBend == 12) || (#slBend == 0) ,
+					[IPress, Stroke:Bend]
+				,]
+				[VarSet, slSnap, [IGetFlags, Stroke:Snap]]
+				[MVarSet, jmemStrokeSettings, 4, #slSnap]
+				[If, (#slSnap == 9) || (#slSnap == 11) || (#slSnap == 13) || (#slSnap == 1) ,
+					[IUnPress, Stroke:Snap]
+				,]
+				[VarSet, slElastic, [IGetFlags, Stroke:Elastic]]
+				[MVarSet, jmemStrokeSettings, 5, #slElastic]
+				[If, (#slElastic == 9) || (#slElastic == 11) || (#slElastic == 13) || (#slElastic == 1) ,
+					[IUnPress, Stroke:Elastic]
+				,]
+				[VarSet, slLiquid, [IGetFlags, Stroke:Liquid]]
+				[MVarSet, jmemStrokeSettings, 6, #slLiquid]
+				[If, (#slLiquid == 9) || (#slLiquid == 11) || (#slLiquid == 13) || (#slLiquid == 1) ,
+					[IUnPress, Stroke:Liquid]
+				,]
+				[VarSet, slLockStart, [IGetFlags, "Stroke:Lock Start"]]
+				[MVarSet, jmemStrokeSettings, 7, #slLockStart]
+				[If, (#slLockStart == 9) || (#slLockStart == 11) || (#slLockStart == 13) || (#slLockStart == 1) ,
+					[IUnPress,  "Stroke:Lock Start"]
+				,]
+				[VarSet, slLockEnd, [IGetFlags, "Stroke:Lock End"]]
+				[MVarSet, jmemStrokeSettings, 8, #slLockEnd]
+				[If, (#slLockEnd == 9) || (#slLockEnd == 11) || (#slLockEnd == 13) || (#slLockEnd == 1) ,
+					[IUnPress, "Stroke:Lock End"]
+				,]
+				[VarSet, slLazyBrush, [IgetFlags, Stroke:LazyMouse]]
+				[MVarSet, jmemStrokeSettings, 9, #slLazyBrush]
+				[If, (#slLazyBrush == 9) || (#slLazyBrush == 11) || (#slLazyBrush == 13) || (#slLazyBrush == 1) ,
+					[IUnPress, Stroke:LazyMouse]
+				,]
+				[VarSet, slDrawSize, [IGet, "Draw:Draw Size"]]
+				[MVarSet, jmemStrokeSettings, 10, #slDrawSize]
+				[ISet, "Draw:Draw Size", 1]
+				[RoutineCall, J_SaveUndoPoint]
+				
+				[Notebar, "Draw the desired band width sample on the mesh."]
+				[IShowActions, 1]
+				[IUpdate, 1,1]
+				[RoutineCall, J_SleepChangeEventAdv, #LMOUSEDOWN, "J_SampleBandWidthPress", 0, 1, 1]
+				[LoopExit]
+				
+			]//END OF LOOP
+			
+		]// END OF FREEZE
+	,]
+	
+	
+	[If, #slHasError,
+		[Note, #slErrorToDisplay]
+	,]
+	
+	[IShowActions, 1]
+	[IUpdate, 1,1]
+]
+
+
+[RoutineDef, J_SampleBandWidthPress,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VarSet, slErrorToDisplay, ""]
+	[IFreeze,
+		[Loop,1,
+			[VarSet, slEditMode, [IGetFlags, "Transform:Edit"]]
+			[If, (#slEditMode == 8) || (#slEditMode == 10) || (#slEditMode == 12) || (#slEditMode == 0),
+				[VarSet, slHasError, 1]
+				[VarSet, slErrorToDisplay, "The ZTool is currently out of Edit mode. Action cancelled"]
+				[LoopExit]
+			,]
+			[VarSet, slToolID, [MVarGet, jmemToolSubToolID, 0]]
+			[VarSet, slCurTool, [ToolGetActiveIndex]]
+			[If, #slToolID ==  #slCurTool,
+				
+			,
+				[VarSet, slHasError, 1]
+				[VarSet, slErrorToDisplay, "The ZTool has been changed. Action cancelled."]
+				[LoopExit]
+			]
+			
+			//...continue
+			[VarSet, slSubToolID, [MVarGet, jmemToolSubToolID, 1]]
+			[VarSet, slCurSubTool, [SubToolGetActiveIndex]]
+			[If, #slSubToolID ==  #slCurSubTool,
+				
+			,
+				[VarSet, slHasError, 1]
+				[VarSet, slErrorToDisplay, "The subtool selection has been changed. Action cancelled."]
+				[LoopExit]
+			]
+			//...continue
+			
+			
+			[MVarSet, jmemToolSubToolID, 0, #slToolID]
+			[MVarSet, jmemToolSubToolID, 1, #slSubToolID]
+			[RoutineCall, J_SaveMousePosition]
+			[IShowActions, 1]
+			[IUpdate, 1,1]
+			[RoutineCall, J_SleepChangeEventAdv, #LMOUSEUP, "J_SampleBandWidthUnPress", 0, 1, 0]
+			[LoopExit]
+		]
+	
+	]
+	[If, #slHasError ,
+		[RoutineCall, J_RestoreStrokeEtc]
+		[Note, slErrorToDisplay]
+		[RoutineCall, J_SleepChangeEvent, #TIMER, ""]
+		[IShowActions, 1]
+		[IUpdate, 1, 1]
+		[LoopExit]
+	,]
+	[IShowActions, 1]
+	[IUpdate, 1, 1]
+
+]
+
+
+
+[RoutineDef, J_SampleBandWidthUnPress,
+	[IShowActions , 0]
+	[IFreeze,
+		[Loop, 1,
+			[VarSet, slSavedXPos, 0]
+			[VarSet, slSavedYPos, 0]
+			[RoutineCall, J_GetSavedMousePosition, slSavedXPos,slSavedYPos]
+			[VArSet, slCurMouseX, [MouseHPos]]
+			[VArSet, slCurMouseY, [MouseVPos]]
+			[VArSet, slTX, 0]
+			[VArSet, slTY, 0]
+			[VArSet, slTZ, 0]
+			[VArSet, slSX, 0]
+			[VArSet, slSY, 0]
+			[VArSet, slSZ, 0]
+			[VArSet, slRX, 0]
+			[VArSet, slRY, 0]
+			[VArSet, slRZ, 0]
+			[TransformGet, slTX, slTY, slTZ, slSX, slSY, slSZ, slRX, slRY, slRZ ]

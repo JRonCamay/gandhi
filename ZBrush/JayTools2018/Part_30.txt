@@ -1,0 +1,234 @@
+		[Loop, 1,
+			[VarSet, slUndoCnt, [IGet, "ZScript:UndoCountToDelete"]]
+			[VArSet, slUndoCounter, [IGet, Edit:Tool:UndoCounter]]
+			[VarSet, slUndoHistoryMax, [IGet, "Preferences:Undo History:Max Undo History"]]
+			[If, #slUndoCounter <=  #slUndoCnt,
+				[IPress, Edit:Tool:DelUH]
+				[LoopExit]
+				//..continue
+			,]
+			[ISet, "Preferences:Undo History:Max Undo History", (#slUndoCounter - #slUndoCnt)]
+			[IKeyPress, '1',
+				[IPress, Tool:Masking:Clear]
+				[IPress, Edit:Tool:Undo]
+			]
+			[ISet, "Preferences:Undo History:Max Undo History", #slUndoHistoryMax]
+		]
+	
+	]
+	[IShowActions, 1]
+	[IUpdate,1,1]
+
+]
+[IButton,J_Test, "",
+	[RoutineCall, J_Testaaa]
+
+]
+
+[RoutineDef, J_Testaaa,
+	[VarSet, slTX, 0]
+				[VarSet, slTX, 0]
+				[VarSet, slTY, 0]
+				[VarSet, slTZ, 0]
+				[VarSet, slSX, 0]
+				[VarSet, slSY, 0]
+				[VarSet, slSZ, 0]
+				[VarSet, slRX, 0]
+				[VarSet, slRY, 0]
+				[VarSet, slRZ, 0]
+				[TransformGet, slTX, slTY, slTZ, slSX, slSY,slSZ, slRX, slRY, slRZ]
+	[TransformSet,#slTX, #slTY, #slTZ, (#slSX), (#slSY ),(#slSZ ), (#slRX ), (#slRY *-1), (#slRZ*-1)]
+	[TransformGet, slTX, slTY, slTZ, slSX, slSY,slSZ, slRX, slRY, slRZ]
+	[TransformSet,([CanvasPanGetH] + ([IWIDTH,1004] / 2)), #slTY, (#slTZ-(-1*([Iwidth,1004]/2)) ), (#slSX), (#slSY ),(#slSZ ), (#slRX ), (#slRY), (#slRZ)]
+	[TransformGet, slTX, slTY, slTZ, slSX, slSY,slSZ, slRX, slRY, slRZ]
+	[TransformSet,#slTX, #slTY, #slTZ, (#slSX), (#slSY ),(#slSZ ), (#slRX ), (#slRY), (#slRZ)]
+]
+
+// [RoutineDef, "J_CanvasInsertIMM",
+// 	[IShowActions, 0]
+// 	[VarSet, slHasError, 0]
+// 	[VarSet, slErrorToDisplay, ""]
+// 	[VarSet, slAutoCollapseFlags, -1]
+// 	[IFreeze,
+// 		[Loop, 1,
+// 			[RoutineCall,J_CatchValidityError, slHasError ,slErrorToDisplay]
+// 			//...continue
+// 			[RoutineCall,J_CatchGeometryError, slHasError ,slErrorToDisplay, 1, 1, 1, 0, 0]
+// 			//...continue
+// 			[Note, "Please wait..."]
+// 			[RoutineCall, J_SetSaveScrollBarStatus]
+// 			[RoutineCall, J_GetAutoCollapseFlags, slAutoCollapseFlags]
+// 			[RoutineCall, J_StoreCameraCanvas]
+// 			[RoutineCall, J_SoloOn]
+// 			[RoutineCall, J_CreateOnScreenPlane]
+// 		
+// 		] // End of Loop
+// 		[If, #slAutoCollapseFlags > -1 ,
+// 			[RoutineCall, J_CanvasClickInsertMesh]
+// 			[RoutineCall, J_RestoreScrollBarStatus]
+// 			[RoutineCall, J_RestoreCameraCanvas]
+// 			[RoutineCall, J_SoloOff]
+// 		,]
+// 	]// End of Freeze
+// 	
+// 	
+// 	[If, #slHasError ,
+// 		[Note, #slErrorToDisplay]
+// 	,]
+// 	
+// 	
+// 	[IShowActions, 1]
+// 	[IUpdate, 1, 1]
+// 	[If, #slHasError == 0 ,
+// 		[RoutineCall, J_SleepChangeEventAdv, #LMOUSEDOWN, "J_CanvasInsertIMMPress", 0, 1, 1]
+// 	,]
+// 	
+// ]
+// 
+// 
+// [RoutineDef, "J_CanvasInsertIMMPress",
+// 	[IShowActions, 0]
+// 	[VarSet, slHasError, 0]
+// 	[VarSet, slErrorToDisplay, ""]
+// 	[VarSet, slAutoCollapseFlags, -1]
+// 	[IFreeze,
+// 		[Loop, 1, 
+// 			[VarSet, slBrushName, ""]
+// 			[RoutineCall, J_GetCurrentBrush, slBrushName]
+// 			[VarSet, slFindIndex, [StrFind, "IMM",#slBrushName ]]
+// 			[If, #slFindIndex == -1 ,
+// 				[VarSet, slHasError, 1]
+// 				[VarSet, slErrorToDisplay, "Action cancelled. The IMM Brush has been changed or it could be in Mask or Select mode."]
+// 				
+// 			,
+// 			]
+// 			
+// 			
+// 			
+// 		]
+// 	] // END OF IFREEZE
+// 	[If, #slHasError,
+// 		[Note, #slErrorToDisplay]
+// 		[IFreeze,
+// 			[RoutineCall, J_SetSaveScrollBarStatus]
+// 			[RoutineCall, J_GetAutoCollapseFlags, slAutoCollapseFlags]
+// 			
+// 			[RoutineCall, J_StoreCameraCanvas]
+// 			[RoutineCall, J_SoloOn]
+// 			[RoutineCall, J_HideCanvas]
+// 			[IUnPress, Transform:Edit]
+// 			[VarSet, slSelSubTool, [SubToolGetActiveIndex]]
+// 			[SubToolSelect, (#slSelSubTool + 1)]
+// 			[IKeyPress, '2',
+// 				[IPress, "Tool:SubTool:Delete"]
+// 			]
+// 			[SubToolSelect, #slSelSubTool]
+// 			[IPress, Transform:Edit]
+// 			[RoutineCall, J_RestoreScrollBarStatus]
+// 			[RoutineCall, J_RestoreCameraCanvas]
+// 			[RoutineCall, J_SoloRestore]
+// 		
+// 		]
+// 		
+// 	,]
+// 	
+// 	[IShowActions, 1]
+// 	[Iupdate, 1,1]
+// 	[If, #slHasError ,
+// 		[RoutineCall, J_SleepChangeEvent, #TIMER, ""]
+// 	,
+// 		[RoutineCall, J_SleepChangeEvent, #LMOUSEUP, "J_CanvasInsertIMMUnPress"]
+// 	]
+// 	
+// ]
+// 
+// 
+// [RoutineDef, "J_CanvasInsertIMMUnPress",
+// 	[IShowActions, 0]
+// 	[VarSet, slHasError, 0]
+// 	[VarSet, slErrorToDisplay, ""]
+// 	[VarSet, slAutoCollapseFlags, -1]
+// 	[IFreeze,
+// 		[Loop, 1, 
+// 			[Note, "Please wait..."]
+// 			[RoutineCall, J_SetSaveScrollBarStatus]
+// 			[RoutineCall, J_GetAutoCollapseFlags, slAutoCollapseFlags]
+// 			
+// 			[RoutineCall, J_StoreCameraCanvas]
+// 			[RoutineCall, J_SoloOn]
+// 			[RoutineCall, J_HideCanvas]
+// 			[IUnPress, Transform:Edit]
+// 			[VarSet, slSelSubTool, [SubToolGetActiveIndex]]
+// 			[SubToolSelect, (#slSelSubTool + 1)]
+// 			[IKeyPress, '2',
+// 				[IPress, "Tool:SubTool:Delete"]
+// 			]
+// 			[SubToolSelect, #slSelSubTool]
+// 			[IPress, Transform:Edit]
+// 			
+// 		]//END OF LOOP
+// 		[If, #slSelSubTool > -1,
+// 			[RoutineCall, J_RestoreScrollBarStatus]
+// 			[RoutineCall, J_RestoreCameraCanvas]
+// 			[RoutineCall, J_SoloRestore]
+// 		,]
+// 	] // END OF IFREEZE
+// 	[If, #slHasError,
+// 		[Note, #slErrorToDisplay]
+// 	,]
+// 	
+// 	[IShowActions, 1]
+// 	[Iupdate, 1,1]
+// 	[RoutineCall, J_SleepChangeEvent, #TIMER, ""]
+// ]
+// 
+// [IButton, "CanvasInsertIMM", "",
+// 	[IKeyPress, '1',
+// 		[RoutineCall, J_CanvasInsertIMM]
+// 		
+// 	]
+// 	
+// ]
+
+
+// 	[FileNameSetNext, "DynaData/Empty.zsl"]
+
+	/*ROUTINES*/
+	
+// ----- Sets the path of the ZFileUtils -------------
+[RoutineDef, LoadFileUtils, 
+	[VarSet,slIsMac, [ZBrushInfo,6]]	//check Mac or PC
+ 	// Make sure we have the dll and set its path
+	[If,[ZBrushInfo,16]==64,//64 bit
+  		[If,slIsMac,
+  	 	
+  	 		[VarSet,gFileUtilsPath,"Dll/ZFileUtils.lib"]	
+  	 						
+ 	 	,	
+  	 	
+  	 		[VarSet,gFileUtilsPath,"Dll/ZFileUtils64.dll"]
+  	 	
+  		]
+	,//else 32 bit
+ 	 	[If,slIsMac,
+  	 	
+  	 		[VarSet,gFileUtilsPath,"Dll/ZFileUtils.lib"]	
+  	 						
+ 	 	,	
+  	 	
+  	 		[VarSet,gFileUtilsPath,"Dll/ZFileUtils64.dll"]
+  	 	
+  		]
+	]
+	
+]
+
+
+[RoutineDef, J_EndDec,
+	[NoteBar, ""]
+	[RoutineCall, LoadFileUtils]	
+	[RoutineCall, J_SleepStart]
+]
+[RoutineCall, J_EndDec]
+	
+	/*End of ZScript*/

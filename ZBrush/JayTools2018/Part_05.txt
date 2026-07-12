@@ -1,0 +1,300 @@
+// 										[VarSet, slLastOpMode, #slCurrOpMode]
+// 										[VarSet, slCurrOpMode, ]
+// 										[LoopExit]
+// 									,]
+// 									
+// 								]
+// 							,
+// 								
+// 								
+// 							]
+// 							
+// 							[If, ((#slCurrOpMode == 0) &&  (#slLastOpMode == 2)) ||  ((#slCurrOpMode == 1) &&  (#slLastOpMode == 2)) ||  ((#slCurrOpMode == 3) &&  (#slLastOpMode == 2)),
+// 								[If, #slClick == 1,
+// 									[IFreeze,
+// 										[VarSet, slFunction, 0]
+// 										[VarSet, slDoubleDispFlagsB, [IGetFlags, Tool:Display Properties:Double]]
+// 										[If, (slDoubleDispFlagsB == 9) || (slDoubleDispFlagsB == 11) ,
+// 											[If, (slDoubleDispFlags == 8) || (slDoubleDispFlags == 10) ,
+// 												[IToggle, Tool:Display Properties:Double]
+// 											,]
+// 										,]
+// 										
+// 										[IKeyPress,,
+// 											[CanvasClick, slMouseClickX, slMouseClickY, slMouseClickX, slMouseClickY]
+// 											[VarSet, slTempo, ""]
+// 										,slMouseClickX, slMouseClickY]
+// 										
+// 										[VarSet, slPrevMX, 0]
+// 										[VarSet, slPrevMY, 0]
+// 										[VarSet, slMouseClickX, 0]
+// 										[VarSet, slMouseClickY, 0]
+// 										[VarSet, slBrushSize, 0]
+// 										[VarSet, slIsSet, 0]
+// 										[VarSet, slClick, 0]
+// 										[IPress, Layer:Clear]
+// 									]
+// 								,]
+// 								
+// 							,]
+// 							[VarSet, slLastOpMode, #slCurrOpMode]
+// 							[VarSet, slCurrOpMode, ]
+// 							
+// 						
+// 							[VarSet, slIsAltPressed, ]
+// 							[VarSet, slIsMouseDown, ]
+// 							
+// 
+// 						
+// 						] // ---- END OF LOOP
+// // 						[If, #slIsAlt == 0 ,
+// // 							[VarSet, slIsCtrlPressed, 0]
+// // 							
+// // 							[RoutineCall, J_GetCTRLStatus,slIsCtrlPressed ]
+// // 							[VarSet, slIsMouseDown, 0]
+// // 							[VarSet, slIsMouseDown, [MouseLButton]]
+// // 							[If, (#slIsCtrlPressed == 1) && (#slIsMouseDown == 0) ,
+// // 								
+// // 								[If, #slIsSet == 0 ,
+// // 									[VarSet,slPrevMX, [MouseHPos]]
+// // 									[VarSet,slPrevMY, [MouseVPos]]
+// // 									[VarSet, slMouseClickX, #slPrevMX]
+// // 									[VarSet, slMouseClickY, #slPrevMY]
+// // 									[VarSet, slIsSet, 1]
+// // 									[VarSet, slClick, 0]
+// // 								,
+// // 									
+// // 									[VarSet,slCurrMX, [MouseHPos]]
+// // 									[VarSet,slCurrMY, [MouseVPos]]
+// // 									[VarSet, slPoint1,]
+// // 									[RoutineCall, J_NewPoint2D,slPoint1, #slPrevMX,#slPrevMY ]
+// // 									[VarSet, slPoint2,]
+// // 									[RoutineCall, J_NewPoint2D,slPoint2, #slCurrMX,#slCurrMY ]
+// // 									
+// // 									[VarSet, slMouseVect, ]
+// // 									[RoutineCall, J_NewVector2D,slMouseVect, slPoint1,slPoint2 ]
+// // 									[VarSet, slVectLength, ]
+// // 									[RoutineCall, J_GetVector2DLength,slMouseVect, slVectLength ]
+// // 									
+// // 									
+// // 									[VarSet, slPoint3,]
+// // 									[RoutineCall, J_NewPoint2D,slPoint3, #slPrevMX,#slPrevMY ]
+// // 									[VarSet, slPoint4,]
+// // 									[RoutineCall, J_NewPoint2D,slPoint4, #slPrevMX,(#slPrevMY + 100) ]
+// // 									[VarSet, slDirVect, ]
+// // 									[RoutineCall, J_NewVector2D,slDirVect, slPoint3,slPoint4 ]
+// // 									[VarSet, slAngle, ]
+// // 									[RoutineCall, J_GetDotProd2Vector2D,slMouseVect, slDirVect, slAngle,1 ]
+// // 									[VarSet, slAngle, ABS(#slAngle)]
+// // 									
+// // 									
+// // 									
+// // 									[If, #slAngle <= 10 ,
+// // 										[VarSet, slStrokeDist, (#slStrokeDist +#slVectLength)]
+// // 										
+// // 										
+// // 									,
+// // 										[VarSet, slStrokeDist, 0]
+// // 									]
+// // 									
+// // 									[If, #slStrokeDist >= 20 ,
+// // 										[If, #slClick == 0 ,
+// // 											[VarSet, slStrokeSize, [IGetFlags, Stroke:Size]]
+// // 											[NoteBar, [StrMerge, slStrokeSize, "    ",slStrokeSize , "      ", slStrokeSize]]
+// // 											[If, (#slStrokeSize == 8) || (#slStrokeSize == 10) ,
+// // 												[IPress, Stroke:Size]
+// // 											,
+// // 												
+// // 											]
+// // 											
+// // 											
+// // 											
+// // 											[VarSet, slStrokeSize, ]
+// // 											
+// // 											[VarSet, slClick, 1]
+// // 										,]
+// // 										
+// // 										
+// // 										[VarSet, slStrokeDist, 0]
+// // 									,]
+// // 									
+// // 									[VarSet,slPrevMX, #slCurrMX]
+// // 									[VarSet,slPrevMY, #slCurrMY]
+// // 									[VarSet,slCurrMX, ]
+// // 									[VarSet,slCurrMY, ]
+// // 									[VarSet, slPoint1,]
+// // 									[VarSet, slPoint2,]
+// // 									[VarSet, slMouseVect, ]
+// // 									[VarSet, slPoint3,]
+// // 									[VarSet, slPoint4,]
+// // 									[VarSet, slDirVect, ]
+// // 									[VarSet, slAngle, ]
+// // 									[VarSet, slVectLength, ]
+// // 								]
+// // 							,
+// // 							   [If, #slClick == 1 ,
+// // 								   [IKeyPress, ,
+// // 										[IPress, Stroke:Size]
+// // 										[CanvasClick, #slMouseClickX, #slMouseClickY, #slMouseClickX, #slMouseClickY]
+// // 									,#slMouseClickX, #slMouseClickY]
+// // 									[VarSet, slPrevMX, 0]
+// // 									[VarSet, slPrevMY, 0]
+// // 									[VarSet, slMouseClickX, 0]
+// // 									[VarSet, slMouseClickY, 0]
+// // 									[VarSet, slStrokeDist, 0]
+// // 									[VarSet, slClick, 0]
+// // 									[VarSet, slIsSet, 0]
+// // 							   ,]
+// // 								
+// // 							]
+// // 							
+// // 							[VarSet, slIsCtrlPressed, ]
+// // 						,]
+// // 						[VarSet,  slIsAlt , ]
+// 
+// 						[SleepAgain, .001, 2]
+// 					,]
+// 					[If, #gInsCurveFinished == 1,
+// 						[IToggle, "Stroke:Delete"]
+// 						[VarSet, slTemp, 0]
+// 						[VarSet, slTemp, ]
+// 						[NoteBar, ""]
+// 						
+// 						[VarSet, gInsCurveFinished, 0]
+// 					,]
+// 				,]
+// 			
+// 			,2,slWindowID ]
+// 		]
+// 	]
+// 	[If, #slHasError == 1,
+// 		[Note, #slErrorToDisplay]
+// 		[VarSet, slHasError,]
+// 		[VarSet, slErrorToDisplay,]
+// 		[IUnPress, ZScript:DrawInsertCurve]
+// 	,]
+// 
+// , // UNPRESS STATE
+// 	
+// 	[IFreeze,
+// 		
+// 		[VarSet, gInsCurveFinished, 1]
+// 		
+// 		//[IPress, Stroke:Delete]
+// 		[ISet, Document:Border, #gInsCurvePrevBorder]
+// 		[ISet, Document:Border2, #gInsCurvePrevBorder2]
+// 		[IPress, [StrMerge, "Brush:", #gInsCurvePrevBrush]]
+// 		
+// 	]
+// ]
+// // Create a hole in the mesh instead of just clipping, then Dynamesh.
+// [VarDef, gHoleUndo, 1]
+// [VarDef, gHoleShiftCtrlBrush, ""]
+// [VarDef, gClipCenter, 0]
+// [VarDef, gClipSquare, 0]
+// [VarDef, gHoleSquare, 0]
+// [VarDef, gHoleCircle, 0]
+// [VarDef, gHoleToolID, 0]
+// [VarDef, gHoleSubToolID, 0]
+// [VarDef, gClipUndo, 0]
+// [VarDef, gMeshVol, -1]
+// //FOR THE CIRCULAR HOLE
+// [IButton, HoleCirc, "",
+// 	[IShowActions, 0]
+// 	[VarSet, slHasError, 0]
+// 	[VarSet, slErrorToDisplay, ""]
+// 	
+// 	[Loop,1,
+// 	
+// 		[VarSet, slEditFlags, [IGetFlags, Transform:Edit]]
+// 		[If, (slEditFlags == 8) || (slEditFlags == 10),
+// 			[VarSet, slHasError, 1]
+// 			[VarSet, slErrorToDisplay, "Edit mode is off. Action cancelled"]
+// 			[LoopExit]
+// 		,]
+// 		
+// 		//..continue
+// 		[VarSet, slToolInfo, [IGetInfo, Tool:Current Tool]]
+// 		[VarSet, slHiddenPolysID, [StrFind, "HiddenPolys=", slToolInfo]]
+// 		[If, slHiddenPolysID == -1,
+// 			[VarSet, slHasError, 1]
+// 			[VarSet, slErrorToDisplay, "The mesh is not a Polymesh3D. Action cancelled"]
+// 			[LoopExit]
+// 		,]
+// 		
+// 		//..continue
+// 		[VarSet, slSubD, [IGetMax, Tool:Geometry:SDiv]]
+// 		[If, slSubD > 1,
+// 			[VarSet, slHasError, 1]
+// 			[VarSet, slErrorToDisplay, "The mesh has multiple subdivision levels. Action cancelled."]
+// 			[LoopExit]
+// 		,]
+// 		
+// 		//..continue
+// 		//..continue
+// 		[VarSet, slLayerStatus, [IGetStatus, Tool:Layers:Delete]]
+// 		[If, slLayerStatus == 1,
+// 			[VarSet, slHasError, 1]
+// 			[VarSet, slErrorToDisplay, "The mesh has layers. Action cancelled."]
+// 			[LoopExit]
+// 		,]
+// 		
+// 		//..continue
+// 		[VarSet, slDynamicsFlags, [IGetFlags, Tool:Geometry:s.Dynamic]]
+// 		[If, (slDynamicsFlags == 9) || (slDynamicsFlags == 11) ,
+// 			[VarSet, slHasError, 1]
+// 			[VarSet, slErrorToDisplay, "The mesh has dynamic subdivisions on. Action cancelled."]
+// 			[LoopExit]
+// 		,]
+// 		//..continue
+// 		
+// 		[VarSet, slHiddenPointsID, [StrFind, "HiddenPoints=", slToolInfo]]
+// 		[VarSet, slHiddenPoints, [StrExtract,slToolInfo, (slHiddenPolysID + 12), (slHiddenPointsID - 2)]]
+// 		[If, slHiddenPoints > 0 ,
+// 			[VarSet, slHasError, 1]
+// 			[VarSet, slErrorToDisplay, "The mesh has hidden points. Action cancelled."]
+// 			[LoopExit]
+// 		,]
+// 		
+// 		//..continue
+// 		
+// 		[IFreeze,
+// 			[VarSet, gHoleCircle, 1]
+// 			
+// 			[VarSet, slIsMirrorOn, [IGetFlags, "Transform:Activate Symmetry"]] // Checks if the symmetry is on.
+// 			[If, (slIsMirrorOn == 9) || (slIsMirrorOn ==11),
+// 				[IUnPRess, "Transform:Activate Symmetry"] // Deactivate this button.
+// 			,]
+// 			
+// 			[VarSet, slIsOrtho, [IGetFlags, Draw:Perspective]]
+// 			
+// 			[If, (slIsOrtho == 9) || (slIsOrtho == 11),
+// 				[IUnPress, Draw:Perspective] // Deactivate the perspective.
+// 			,]
+// 			[VarSet, slIsCamPlacement, [IGetFlags, "Edit:Tool:Restore Placement"]]
+// 			[If,(slIsCamPlacement == 9) || (slIsCamPlacement == 11),
+// 				
+// 				[IUnPress, "Edit:Tool:Restore Placement"]
+// 			,]
+// 			[IPress, Tool:Masking:Clear]
+// 			[VarSet, gHoleUndo, [IGet, Edit:Tool:UndoCounter]] // This is the step where the original mesh is located.
+// 			[VarSet, gMeshVol, ([IGet, Tool:Geometry:X Size] * [IGet, Tool:Geometry:Y Size] * [IGet, Tool:Geometry:Z Size])]
+// 			[IPress, Edit:Tool:Store] // Replace the current camera
+// 			
+// 			[ISet, Edit:Tool:UndoCounter, (gHoleUndo -  1)]
+// 			[IPress, Edit:Tool:Store] // Replace the current camera
+// 			[ISet, Edit:Tool:UndoCounter, gHoleUndo]
+// 			
+// 			// Restore the camera placement if it was on
+// 			[If,(slIsCamPlacement == 9) || (slIsCamPlacement == 11),
+// 				
+// 				[IPress, "Edit:Tool:Restore Placement"]
+// 			,]
+// 			
+// 			[IKeyPress, CTRL + SHIFT,
+// 				[IPress, Brush:Current Brush]
+// 				[VarSet, slBrushBtn, [IGetInfo, Brush:Current Brush]]
+// 				[VarSet, slStrBrushMat, [StrFind, "Current Brush",slBrushBtn]]
+// 				[VarSet, slBrushFirst, [StrExtract, slBrushBtn, (slStrBrushMat+15), ([StrLength, slBrushBtn]-1)]]
+// 				[VarSet, slStrBrExcessInd, [StrFind, "Base Type", slBrushFirst]]
+// 				[VarSet, gHoleShiftCtrlBrush, [StrExtract, slBrushFirst, 0, (slStrBrExcessInd - 3)]] // Saves the current Shift + Ctrl brush so it could be restore later.

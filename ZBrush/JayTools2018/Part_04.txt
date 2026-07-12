@@ -1,0 +1,300 @@
+// 	
+// 	
+// 	[If, #slHasError == 1,
+// 		
+// 		[NOteBar, ""]
+// 		[IUpdate, 1, 1]
+// 		[Note, #slErrorToDisplay]
+// 	,]
+// 	[IShowActions, 1]
+// 	[IUpdate, 1,1]
+// ]
+// [IButton, CheckIfSolid, "",
+// 	[IKeyPress, 1,
+// 		[RoutineCall, J_CheckIfSolid]
+// 	
+// 	]
+// 	
+// 	
+// 	
+// ]
+
+
+// [VarDef, gInsCurvePrevBrush, ""]
+// [VarDef, gInsCurvePrevColor,]
+// [VarDef, gInsCurvePrevBorder, 0]
+// [VarDef, gInsCurvePrevBorder2, 0]
+// [VarDef, gInsCurveFinished, 0]
+// [ISwitch, DrawInsertCurve, 0, "",
+// 	[VarSet, slHasError, 0]
+// 	[VarSet, slErrorToDisplay, ""]
+// 	[Ifreeze,
+// 		[Loop, 1,
+// 			[RoutineCall, J_CatchValidityError, slHasError, slErrorToDisplay]
+// 			[RoutineCall, J_CatchGeometryError, slHasError, slErrorToDisplay, 1,1,0,0,1]
+// 			[RoutineCall, J_GetCurrentBrush, gInsCurvePrevBrush]
+// 			[VarSet, slIsBrushTheSame, 0]
+// 			[RoutineCall, J_CompareStringsIfSame, "CurveTubeSnap", #gInsCurvePrevBrush, slIsBrushTheSame]
+// 			[If, #slIsBrushTheSame == 0 ,
+// 				[IPress, Brush:CurveTubeSnap]
+// 				[VarSet, slIsBrushTheSame,]
+// 			,]
+// 			
+// 			[VarSet, gInsCurvePrevBorder, [IGet, Document:Border]]
+// 			[VarSet, gInsCurvePrevBorder2, [IGet, Document:Border2]]
+// 			[VarSet, slPrevColor, ]
+// 			[RoutineCall, J_NewColor,slPrevColor, 0,0,0]
+// 			[RoutineCall, J_GetColor, slPrevColor]
+// 			[VarSet, slNewColor, ]
+// 			[RoutineCall, J_NewColor, slNewColor, 5, 130, 255]
+// 			[RoutineCall, J_SetColorInPalette, slNewColor]
+// 			[IPress, Document:Border]
+// 			[IPress, Document:Border2]
+// 			[RoutineCall, J_SetColorInPalette, slPrevColor]
+// 			[VarSet, slNewColor, ]
+// 			[VarSet, slPrevColor, ]
+// 			
+// 			// Sleep
+// 			
+// 			
+// 			[VarSet, slKeyPressed, [IGet, Preferences:Utilies:View Keyboard Status]]
+// 			[If, #slKeyPressed == 0 ,
+// 				[IKeyPress, 126,
+// 				
+// 				]
+// 				
+// 			,]
+// 			[VarSet, slKeyPressed, ]
+// 			[VarSet, slMouseClickX,0]
+// 			[VarSet, slMouseClickY,0]
+// 			[VarSet, slBrushSize, 0]
+// 			[VarSet, slWindowID, 0]
+// 			[VarSet, slPrevMX, 0]
+// 			[VarSet, slPrevMY, 0]
+// 			[VarSet, slStrokeDist, 0]
+// 			[VarSet, slIsSet, 0]
+// 			[VarSet, slDoubleDispFlags, 0]
+// 			[VarSet, slLastOpMode, 0]
+// 			[VarSet, slClick, 0]
+// 			[VarSet, slFunction, 0]
+// 			[Sleep,.001,
+// 				[If, slWindowID == 2 ,
+// 				
+// 					[If, #gInsCurveFinished == 0 ,
+// 						[NoteBar, "CURVE ASSIST MODE --- CURVE ASSIST MODE --- CURVE ASSIST MODE --- CURVE ASSIST MODE"]
+// 						[VarSet, slIsAlt, 0]
+// 						[Loop, 1,
+// 							
+// 							[VarSet, slIsAltPressed, 0]
+// 							[RoutineCall, J_GetALTStatus,slIsAltPressed ]
+// 							[VarSet, slIsMouseDown, [MouseLButton]]
+// 							[VarSet, slCurrOpMode, 0]
+// 							[If, (#slIsAltPressed == 0) && (#slIsMouseDown == 0) ,
+// 								[VarSet, slIsAlt, 0]
+// 								[VarSet, slCurrOpMode, 0]
+// 							,]
+// 							[If, (#slIsAltPressed == 0) && (#slIsMouseDown == 1) ,
+// 								[VarSet, slIsAlt, 1]
+// 								[VarSet, slCurrOpMode, 1]
+// 							,]
+// 							[If, (#slIsAltPressed == 1) && (#slIsMouseDown == 0) ,
+// 								[VarSet, slIsAlt, 1]
+// 								[VarSet, slCurrOpMode, 2]
+// 							,]
+// 							[If, (#slIsAltPressed == 1) && (#slIsMouseDown == 1) ,
+// 								[VarSet, slIsAlt, 1]
+// 								[VarSet, slCurrOpMode, 3]
+// 							,]
+// 							
+// 							[If, #slIsAlt == 0 ,
+// 								[LoopExit]
+// 							,]
+// 							
+// 							[If,((#slCurrOpMode == 3) && (#slLastOpMode == 3)) || ((#slCurrOpMode == 3) && (#slLastOpMode == 2)) || ((#slCurrOpMode == 1) && (#slLastOpMode == 3)),
+// 								[LoopExit]
+// 							,]
+// 							[If, ((#slCurrOpMode == 2) && (#slLastOpMode == 0)) || ((#slCurrOpMode == 2) && (#slLastOpMode == 2)),
+// 								
+// 								[If, #slIsSet == 0 ,
+// 									
+// 									[If, #slFunction == 0 ,
+// 										[VarSet, slDoubleDispFlags, [IGetFlags, Tool:Display Properties:Double]]
+// 										[If, (slDoubleDispFlags == 8) || (slDoubleDispFlags == 10) ,
+// 											
+// 											[IToggle, Tool:Display Properties:Double]
+// 										,]
+// 										[VarSet,slPrevMX, [MouseHPos]]
+// 										[VarSet,slPrevMY, [MouseVPos]]
+// 										[VarSet, slMouseClickX, #slPrevMX]
+// 										[VarSet, slMouseClickY, #slPrevMY]
+// 										
+// 										[VarSet, slBrushSize, [IGet, Draw:Draw Size]]
+// 										[VarSet, slIsSet, 1]
+// 										[VarSet, slIsAltPressed, ]
+// 										[VarSet, slIsMouseDown, ]
+// 										[VarSet, slLastOpMode, #slCurrOpMode]
+// 										[VarSet, slCurrOpMode, ]
+// 										[VarSet, slFunction, 1 ]
+// 										[LoopExit]
+// 										
+// 									,]
+// 									
+// 								,	
+// 									[If, #slFunction == 1 ,
+// 										[If, #slClick == 0 ,
+// 											[VarSet, slClick, 1]
+// 										,]
+// 										
+// 										[VarSet,slCurrMX, [MouseHPos]]
+// 										[VarSet,slCurrMY, [MouseVPos]]
+// 										
+// 										[VarSet, slPoint1,]
+// 										[RoutineCall, J_NewPoint2D,slPoint1, #slPrevMX,#slPrevMY ]
+// 										[VarSet, slPoint2,]
+// 										[RoutineCall, J_NewPoint2D,slPoint2, #slCurrMX,#slCurrMY ]
+// 										
+// 										[VarSet, slMouseVect, ]
+// 										[RoutineCall, J_NewVector2D,slMouseVect, slPoint1,slPoint2 ]
+// 										
+// 										
+// 										[VarSet, slPoint3,]
+// 										[RoutineCall, J_NewPoint2D, slPoint3, #slPrevMX, #slPrevMY ]
+// 										[VarSet, slPoint4,]
+// 										[RoutineCall, J_NewPoint2D, slPoint4, (#slPrevMX + 1000), #slPrevMY ]
+// 										[VarSet, slSizeVect,]
+// 										[RoutineCall, J_NewVector2D, slSizeVect, slPoint3, slPoint4]
+// 										[VarSet, slSizeAngle,]
+// 										
+// 										[RoutineCall, J_GetDotProd2Vector2D, slMouseVect, slSizeVect, slSizeAngle,1]
+// 										[VarSet, slSizeAngle, ABS(#slSizeAngle)]
+// 										
+// 										
+// 										
+// 										[VarSet, slPoint5,]
+// 										[RoutineCall, J_NewPoint2D, slPoint5, #slPrevMX, #slPrevMY ]
+// 										[VarSet, slPoint6,]
+// 										[RoutineCall, J_NewPoint2D, slPoint6, #slPrevMX, (#slPrevMY+1000) ]
+// 										[VarSet, slImbedVect,]
+// 										[RoutineCall, J_NewVector2D, slImbedVect, slPoint5, slPoint6]
+// 										[VarSet, slImbedAngle,]
+// 										[RoutineCall, J_GetDotProd2Vector2D, slMouseVect, slImbedVect, slImbedAngle,1]
+// 										[VarSet, slImbedAngle, ABS(slImbedAngle)]
+// 										
+// 										
+// 										[Loop, 1,
+// 											[If, #slImbedAngle >= 170 ,
+// 												[IFReeze,
+// 													
+// 													[VarSet, slImbedDepth, [IGet,Brush:Depth:Imbed]]
+// 													[VarSet, slImbedDepth, (#slImbedDepth + 15 )]
+// 													[ISet,Brush:Depth:Imbed, #slImbedDepth]
+// 													
+// 													[IKeyPress,,
+// 														[CanvasClick, #slMouseClickX, #slMouseClickY,#slMouseClickX, #slMouseClickY]
+// 														[VarSet, slTempo, ""]
+// 													,#slMouseClickX, #slMouseClickY]
+// 												]	
+// 													
+// 													[VarSet, slImbedDepth, ]
+// 													
+// 												[LoopExit]
+// 												
+// 											,
+// 												
+// 											]
+// 										
+// 										
+// 										
+// 										
+// 											[If, #slImbedAngle <= 10 ,
+// 												
+// 												[IFReeze,
+// 													[VarSet, slImbedDepth, [IGet,Brush:Depth:Imbed]]
+// 													[VarSet, slImbedDepth, (#slImbedDepth - 15 )]
+// 													[ISet,Brush:Depth:Imbed, #slImbedDepth]
+// 													
+// 													[IKeyPress,,
+// 														[CanvasClick, #slMouseClickX, #slMouseClickY,#slMouseClickX, #slMouseClickY]
+// 														[VarSet, slTempo, ""]
+// 													,#slMouseClickX, #slMouseClickY]
+// 												]	
+// 											
+// 													[VarSet, slImbedDepth, ]
+// 													
+// 												[LoopExit]
+// 													
+// 												
+// 											,]
+// 											
+// 											
+// 											
+// 											[If, #slSizeAngle >= 170 ,
+// 												[IFReeze,
+// 													[IKeyPress,,
+// 														[VarSet, slBrushSize2, [IGet,Draw:Draw Size]]
+// 														[VarSet, slBrushSize2, (#slBrushSize2 -5 )]
+// 														[ISet,Draw:Draw Size, #slBrushSize2]
+// 													,3,3]
+// 													
+// 												
+// 													[IKeyPress,,
+// 														[CanvasClick, #slMouseClickX, #slMouseClickY,#slMouseClickX, #slMouseClickY]
+// 														[VarSet, slTempo, ""]
+// 													,#slMouseClickX, #slMouseClickY]
+// 												]	
+// 													//[ISet, Brush:Depth:Imbed, #slBrushSize]
+// 													[VarSet, slBrushSize2, ]
+// 													
+// 												[LoopExit]
+// 												
+// 											,
+// 												
+// 											]
+// 										
+// 										
+// 										
+// 										
+// 											[If, #slSizeAngle <= 10 ,
+// 												
+// 												[IFReeze,
+// 													[IKeyPress,,
+// 														[VarSet, slBrushSize2, [IGet,Draw:Draw Size]]
+// 														[VarSet, slBrushSize2, (#slBrushSize2 + 5)]
+// 														[ISet,Draw:Draw Size, #slBrushSize2]
+// 													,3,3]
+// 													
+// 												
+// 													[IKeyPress,,
+// 														[CanvasClick, #slMouseClickX, #slMouseClickY,#slMouseClickX, #slMouseClickY]
+// 														[VarSet, slTempo, ""]
+// 													,#slMouseClickX, #slMouseClickY]
+// 												]	
+// 											
+// 													[VarSet, slBrushSize2, ]
+// 													
+// 												[LoopExit]
+// 													
+// 												
+// 											,]
+// 											
+// 											
+// 										
+// 										]
+// 										
+// 										[VarSet,slPrevMX, #slCurrMX]
+// 										[VarSet,slPrevMY, #slCurrMY]
+// 										[VarSet,slCurrMX, ]
+// 										[VarSet,slCurrMY, ]
+// 										[VarSet, slPoint1,]
+// 										[VarSet, slPoint2,]
+// 										[VarSet, slMouseVect, ]
+// 										[VarSet, slPoint3,]
+// 										[VarSet, slPoint4,]
+// 										[VarSet, slSizeVect, ]
+// 										[VarSet, slSizeAngle,]
+// 										[VarSet, slPoint5,]
+// 										[VarSet, slPoint6,]
+// 										[VarSet, slImbedVect, ]
+// 										[VarSet, slImbedAngle,]
+// 										[VarSet, slIsAltPressed, ]
+// 										[VarSet, slIsMouseDown, ]

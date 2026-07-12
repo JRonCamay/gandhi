@@ -1,0 +1,300 @@
+				]
+			,]
+			
+			
+		]// END OF MAIN LOOP
+		[If, #slAutoCollapseFlags > -1 ,
+			[RoutineCall, J_CanvasClickInsertMesh]
+			[RoutineCall, J_RestoreCameraCanvas]
+			[RoutineCall, J_SoloRestore]
+			
+			[RoutineCall, J_RestoreScrollBarStatus]
+			[IShow, 1011]
+			
+		,]
+	
+	]// END OF IFREEZE
+	
+	[If, #slHasError ,
+		[Note, #slErrorToDisplay]
+	,]
+	
+	[IShowActions, 1]
+	[IUpdate, 1, 1]
+
+]
+
+[IButton, DelProjq, "",
+	[IKeyPress, '1',
+		[RoutineCall, J_DelZMeshQ]
+	]
+	
+]
+
+
+
+[RoutineDef, J_CleanZMeshQ,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VarSet, slErrorToDisplay, ""]
+	[VarSet, slAutoCollapseFlags, -1]
+	[IFreeze,
+		[Loop, 1,
+			[RoutineCall, J_CatchValidityError,slHasError, slErrorToDisplay]
+			//..continue
+			
+			[Note, "Cleaning. Please wait..."]
+			[VarSet, slScrollBarPos, [IGetSecondary, Tool:SubTool:Subtool Scrollbar]]
+			[RoutineCall, J_SetSaveScrollBarStatus]
+			[RoutineCall, J_GetAutoCollapseFlags, slAutoCollapseFlags]
+			[IUnPress, Transform:Edit]
+			[RoutineCall, J_FixGhostingCrash]
+			[IHide, 1011]
+			[RoutineCall, J_StoreCameraCanvas]
+			[RoutineCall, J_SoloOn]
+			[RoutineCall, J_HideCanvas]
+			[RoutineCall, J_InitiateProgressBar, 6260, 6306]
+			//Check if it is the clone
+			[VArSet, slSubToolCount, [SubToolGetCount]]
+			[If,  #slSubToolCount < 2,
+				[VarSet, slHasError, 1]
+				[VarSet, slErrorToDisplay, "The ZTool has only 1 subtool.Action cancelled."]
+				[LoopExit]
+			,]
+			[RoutineCall, J_ProgressUpdate, 6268, 0,0,0,0]
+			[VarSet, slSelSubTool, [SubToolGetActiveIndex]]
+			[VarSet, slCtr, 0]
+			[VArSet, slID, 0]
+			[RoutineCall, J_ProgressUpdate, 6272, 0,0,0,0]
+			[VarSet, slDelCount, 0]
+			[Loop, #slSubToolCount,
+				[RoutineCall, J_ProgressUpdate, 6268, #slSubToolCount, #slCtr,6274,6288]
+				
+				[IUpdate, 1]
+				[SubToolSelect, #slID]
+				
+				[VarSet, slShadRes,[IGet, "Tool:Geometry:Res"]]
+				[VarSet, slShadPolish,[IGet, "Tool:Geometry:Polish"]]
+				[If, (#slShadRes == 995) && (#slShadPolish == 64) ,
+					[IKeyPress, '2', 
+						[IPress, "Tool:SubTool:Delete"]
+					]
+					[IUpdate, 1]
+					[VarDec, slSelSubTool]
+					[VarInc, slDelCount]
+				,
+				
+					[VarInc, slID]
+				]
+				[RoutineCall, J_ProgressUpdate, 6287, #slSubToolCount, #slCtr,6274,6289]
+				[VarInc, slCtr]
+				[If, #slCtr ==  #slSubToolCount,
+					[IUpdate, 1]
+					[LoopExit]
+				,]
+				
+			]// END OF LOOP
+			[RoutineCall, J_ProgressUpdate, 6295, 0,0,0,0]
+			[VarSet, slSubToolCount,[SubToolGetCount]]
+			[If, #slSelSubTool < 0 ,
+				[VarSet, slSelSubTool, 0]
+			,]
+			[RoutineCall, J_ProgressUpdate, 6300, 0,0,0,0]
+			[If, #slSelSubTool >= #slSubToolCount ,
+				[VarSet, slSelSubTool, (#slSubToolCount -1)]
+			,]
+			
+			[SubToolSelect,#slSelSubTool ]
+			[RoutineCall, J_ProgressUpdate, 6306, 0,0,0,0]
+			[RoutineCall, J_ProgressEnd]
+			[If, #slDelCount == 0 ,
+				[VarSet, slHasError, 1]
+				[VarSet, slErrorToDisplay,  "Nothing has been deleted."]
+				[LoopExit]
+			,
+			
+				[VarSet, slHasError, 1]
+				[If, #slDelCount == 1 ,
+					[VarSet, slErrorToDisplay, [StrMerge, #slDelCount," subtool has been deleted."]]
+				,
+					[VarSet, slErrorToDisplay, [StrMerge, #slDelCount," subtools have been deleted."]]
+				]
+				
+				[LoopExit]
+			]
+			
+		]// END OF MAIN LOOP
+		[If, #slAutoCollapseFlags > -1 ,
+			[RoutineCall, J_CanvasClickInsertMesh]
+			[RoutineCall, J_RestoreCameraCanvas]
+			[RoutineCall, J_SoloRestore]
+			[RoutineCall, J_RestoreScrollBarStatus]
+			[IShow, 1011]
+			
+		,]
+	
+	]// END OF IFREEZE
+	
+	[If, #slHasError ,
+		[NoteBar, ""]
+		[Note, #slErrorToDisplay]
+	,]
+	
+	[IShowActions, 1]
+	[IUpdate, 1, 1]
+
+]
+
+[IButton, CleanMeshQ, "",
+	[IKeyPress, '1',
+		[RoutineCall, J_CleanZMeshQ]
+	]
+	
+]
+
+
+
+[RoutineDef, J_FullReconstruct,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VarSet, slErrorToDisplay, ""]
+	[VarSet, slAutoCollapseFlags, -1]
+	[IFreeze,
+		[Loop, 1,
+			[RoutineCall, J_CatchValidityError,slHasError, slErrorToDisplay]
+			//..continue
+			[RoutineCall, J_CatchGeometryError, slHasError, slErrorToDisplay, 1, 1, 1, 1, 1]
+			//..continue
+			[Note, "Reconstructing. Please wait..."]
+			[RoutineCall, J_SetSaveScrollBarStatus]
+			[RoutineCall, J_GetAutoCollapseFlags, slAutoCollapseFlags]
+			[IUnPress, Transform:Edit]
+			[IHide, 1011]
+			[RoutineCall, J_StoreCameraCanvas]
+			[RoutineCall, J_SoloOn]
+			[RoutineCall, J_HideCanvas]
+			[RoutineCall, J_SaveUndoPoint]
+			[RoutineCall, J_SetUndoHistoryMax]
+			[VarSet, slLastUndo, [IGet, Edit:Tool:UndoCounter]]
+			[VarSet, slCtr, 0]
+			[VarSet, slSubDivCtr, 0]
+			[Loop, 1000,
+				[IShow, 1011]
+				[IPress, "Tool:Geometry:Reconstruct Subdiv"]
+				[IHide, 1011]
+				[VarSet, slCurrentUndo, [IGet, Edit:Tool:UndoCounter]]
+				[If, #slLastUndo ==  #slCurrentUndo,
+					[If, #slSubDivCtr == 0 ,
+						[VarSet, slHasError, 1]
+						[VarSet, slErrorToDisplay, "The mesh can not be reconstructed. Action cancelled."]
+						[IUpdate, 1]
+						[LoopExit]
+					,]
+					[ISet, "Tool:Geometry:SDiv", [IGetMax, "Tool:Geometry:SDiv"]]
+					[VarSet, slHasError, 1]
+					[VarSet, slErrorToDisplay, "Full reconstruction completed."]
+					[IUpdate, 1]
+					[LoopExit]
+				,
+					[VarInc, slSubDivCtr]
+				]
+				
+				[VarSet, slLastUndo, #slCurrentUndo]
+				[VarInc, slCtr]
+				[If, #slCtr == 1000 ,
+					[IUpdate, 1]
+					[LoopExit]
+				,] 
+			]/// END OF LOOP
+			[IPress, Tool:Geometry:Copy]
+			[RoutineCall, J_RestoreUndoPoint]
+			[IPress, "Tool:Geometry:Paste Replace"]
+			[RoutineCall, J_MemoryOptimize, 0]
+			
+		]// END OF MAIN LOOP
+		[If, #slAutoCollapseFlags > -1 ,
+			[RoutineCall, J_RestoreUndoHistoryMax]
+			[RoutineCall, J_CanvasClickInsertMesh]
+			[RoutineCall, J_RestoreCameraCanvas]
+			[RoutineCall, J_SoloRestore]
+			[RoutineCall, J_RestoreScrollBarStatus]
+			[IShow, 1011]
+			
+		,]
+	
+	]// END OF IFREEZE
+	
+	[If, #slHasError ,
+		[NoteBar, ""]
+		[Note, #slErrorToDisplay]
+	,]
+	
+	[IShowActions, 1]
+	[IUpdate, 1, 1]
+
+]
+
+[IButton, FullReconstructMesh, "",
+	[IKeyPress,'1',
+		[RoutineCall, J_FullReconstruct]
+	]
+
+]
+
+
+[RoutineDef, J_PolishFeaturesByPass,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VarSet, slErrorToDisplay, ""]
+	[VarSet, slAutoCollapseFlags, -1]
+	
+	[IFreeze,
+		[Loop, 1,
+			[If, #jInput == 0 ,
+				[LoopExit]
+			,]
+			[RoutineCall, J_CatchValidityError,slHasError, slErrorToDisplay]
+			//..continue
+			[RoutineCall, J_CatchGeometryError, slHasError, slErrorToDisplay, 0, 0, 1, 0, 1]
+			//..continue
+			[Note, "Polishing. Please wait..."]
+			[RoutineCall, J_SetSaveScrollBarStatus]
+			[RoutineCall, J_GetAutoCollapseFlags, slAutoCollapseFlags]
+			[IUnPress, Transform:Edit]
+			[IHide, 1011]
+			[RoutineCall, J_SetUndoHistoryMax]
+			[RoutineCall, J_StoreCameraCanvas]
+			[RoutineCall, J_SoloOn]
+			[RoutineCall, J_HideCanvas]
+			[RoutineCall, J_SaveUndoPoint]
+			[RoutineCall, J_InitiateProgressBar, 7279,7325]
+			[VarSet, slSubDivLvl, [IGet, Tool:Geometry:SDiv]]
+			
+			[VarSet, slCoverage, [IGet, "Tool:Polygroups:Coverage"]]
+			[VarSet, slClstr, [IGet, "Tool:Polygroups:Clstr"]]
+			[RoutineCall, J_ProgressUpdate, 7282, 0, 0, 0,0]
+			[ISet, "Tool:Polygroups:Coverage", 1]
+			[ISet, "Tool:Polygroups:Clstr", .75]
+			[RoutineCall, J_ProgressUpdate, 7285, 0, 0, 0,0]
+			[IPress, Tool:Masking:Clear]
+			[MergeUndo]
+			[IPress, "Tool:Masking:GroupVisible"]
+			[RoutineCall, J_ProgressUpdate, 7289, 0, 0, 0,0]
+			[ISet, "Tool:Polygroups:Coverage", #slCoverage]
+			[ISet, "Tool:Polygroups:Clstr", #slClstr]
+
+			[IMOdSet, "Tool:Deformation:Polish By Features", 1]
+			[If, #jInput > 0 ,
+				[MergeUndo]
+			,]
+			[RoutineCall, J_ProgressUpdate, 7297, 0, 0, 0,0]
+			[VarSet, slUndoCntA, [IGet, Edit:Tool:UndoCounter]]
+			[ISet, Tool:Geometry:SDiv, #slSubDivLvl]
+			[VarSet, slUndoCntB, [IGet, Edit:Tool:UndoCounter]]
+			[If, #slUndoCntB > #slUndoCntA,
+				[MergeUndo]
+			,]
+			[ISet, "Tool:Deformation:Polish By Features", #jInput ]
+			
+			[RoutineCall, J_RestoreUndoPoint]
+			

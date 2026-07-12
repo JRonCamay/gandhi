@@ -1,0 +1,300 @@
+// 			,]
+// 			[VarSet, slDBlur, [Iget, Tool:Geometry:Blur]]
+// 			[VarSet, slRes, [IGet, Tool:Geometry:Resolution]]
+// 			[ISet, Tool:Geometry:Resolution,64]
+// 			[ISet, Tool:Geometry:Blur, 0]
+// 			[VarSet, slIsDynaOn, [IGetFlags, Tool:Geometry:DynaMesh]]
+// 			[IF, (slIsDynaOn == 8) || (slIsDynaOn == 10),
+// 				[IPRess, Tool:Geometry:DynaMesh]
+// 			,
+// 				[IUnPRess, Tool:Geometry:DynaMesh]
+// 				[IPRess, Tool:Geometry:DynaMesh]
+// 			]
+// 			[VarSet, slMeshPoints, 0]
+// 			[Mesh3DGet,0,,,slMeshPoints] // Get the polycount of the dynameshed (8) original mesh. 
+// 			
+// 			// Save the resolutions of the Initialize subpalette
+// 			[VarSet, slXRes, [IGet, "Tool:Initialize:X Res"]]
+// 			[VarSet, slYRes, [IGet, "Tool:Initialize:Y Res"]]
+// 			[VarSet, slZRes, [IGet, "Tool:Initialize:Z Res"]]
+// 			// Set the resolutions of the Initialize subpalette
+// 			[ISet, "Tool:Initialize:X Res", 100]
+// 			[ISet, "Tool:Initialize:Y Res", 100]
+// 			[ISet, "Tool:Initialize:Z Res", 100]
+// 			
+// 			[IPress, Tool:Initialize:QSphere] // Initialize the existing mesh to a QSphere
+// 			[IPress, Tool:PolyGroups:GroupVisible]
+// 			//Reset the initialize Settings
+// 			[ISet, "Tool:Initialize:X Res", slXRes]
+// 			[ISet, "Tool:Initialize:Y Res", slYRes]
+// 			[ISet, "Tool:Initialize:Z Res", slZRes]
+// 			
+// 			//Resize the cube to the saved sizes and position
+// 			[ISet, "Tool:Geometry:X Size", (slScaleXYZ * 1.7)]
+// 			[ISet, "Tool:Geometry:Y Size", (slScaleXYZ * 1.7)]
+// 			[ISet, "Tool:Geometry:Z Size", (slScaleXYZ * 1.7)]
+// 			[ISet, "Tool:Geometry:X Position", slPosX]
+// 			[ISet, "Tool:Geometry:Y Position", slPosY]
+// 			[ISet, "Tool:Geometry:Z Position", slPosZ]
+// 			
+// 			
+// 			[VarSet, slDocMidX, [CanvasPanGetH]]
+// 			[VarSet, slDocMidY, [CanvasPanGetV]]
+// 			[CanvasClick, slDocMidX, slDocMidY, (slDocMidX + 10), (slDocMidY + 10)]
+// 			[IPress, Transform:Edit]
+// 			[IPress, Edit:Tool:Restore Placement]
+// 			[IUnPress, Edit:Tool:Restore Placement]
+// 			[IPress, Layer:Clear]
+// 			
+// 			[IPress, Stroke:Inventory:ReplayAll] //Replay The stroke to clip the QSphere
+// 			[IUnPress, Transform:Edit]
+// 			[IPress, Layer:Bake]
+// 			[IPress, Tool:Geometry:Copy] // Copy the clipped QSphere
+// 			[ISet, Edit:Tool:UndoCounter,slOrigCopyUndo] // Go back to the original mesh but with Dynamesh on
+// 			
+// 			[IPress, Tool:Masking:MaskAll] // MAsk all
+// 			[IPress, "Tool:Geometry:Paste Append"] // Paste to the original mesh
+// 			[IPress,Tool:Masking:Inverse] // Inverse the mask
+// 			[IPress,Tool:Visibility:HidePt] //Hide the original mesh part.
+// 			[IPress, "Tool:Polygroups:Group As Dynamesh Sub"]
+// 			[IPress,Tool:Visibility:ShowPt]
+// 			[IPress, Tool:Masking:Clear]
+// 			[VarSet, slMeshCombinedUndo, [IGet, Edit:Tool:UndoCounter]]
+// 			[ISet, Tool:Geometry:XYZ Size, ([IGet, Tool:Geometry:XYZ Size] * slDifXYZ)]
+// 			[VarSet, slPolyGroups, [IGetFlags, Tool:Geometry:Groups]]
+// 			[If, (slPolyGroups == 9) || (slPolyGroups == 11),
+// 				[IUnPress, Tool:Geometry:Groups]
+// 			,]
+// 			[VarSet, slProj, [IGetFlags, Tool:Geometry:Project]]
+// 			[If, (slProj == 9) || (slProj == 11),
+// 				[IUnPress, Tool:Geometry:Project]
+// 			,]
+// 			[VarSet, slPolish, [IGetFlags, Tool:Geometry:Polish]]
+// 			[If, (slPolish == 9) || (slPolish == 11),
+// 				[IUnPress, Tool:Geometry:Polish]
+// 			,]
+// 			[VarSet, slDBlur, [Iget, Tool:Geometry:Blur]]
+// 			[VarSet, slRes, [IGet, Tool:Geometry:Resolution]]
+// 			[ISet, Tool:Geometry:Resolution, 64]
+// 			[IPress, Tool:Geometry:Sub]
+// 			[VarSet, slDynameshedPoints, 0]
+// 			[Mesh3DGet,0,,,slDynameshedPoints]
+// 			[VarSet, slPointsDiff, Abs(slMeshPoints - slDynameshedPoints)]
+// 			[If, slPointsDiff <= 20, 
+// 				
+// 				[ISet, Edit:Tool:UndoCounter, (gHoleUndo-1)]
+// 				[IPress, Tool:Initialize:QCube]
+// 				[IPress, Tool:Geometry:Copy]
+// 				[ISet, Edit:Tool:UndoCounter, ([IGet, Edit:Tool:UndoCounter] - 1)]
+// 				[IPress, Tool:Masking:Clear]
+// 				[ISet, Edit:Tool:UndoCounter, ([IGet, Edit:Tool:UndoCounter] - 1)]
+// 				
+// 				[If, (slSoloF == 8) || (slSoloF == 10) ,
+// 					[IUnPress, Transform:Solo]
+// 				,]
+// 				[VarSet, slHasError, 1]
+// 				[VarSet, slErrorToDisplay, "No hole created."]
+// 				[LoopExit]
+// 			,
+// 			]
+// 			//..Continue
+// 			
+// 			[ISet, Edit:Tool:UndoCounter,slMeshCombinedUndo] // Go back to the combined meshes.
+// 			
+// 			[VArSet, slStrokePoints, [StrokeGetInfo,[StrokeGetLast], 0, 0]]
+// 			[VarSet, slStrokeStartX, [StrokeGetInfo,[StrokeGetLast], 1, 0]]
+// 			[VarSet, slStrokeStartY, [StrokeGetInfo, [StrokeGetLast] , 2, 0]]
+// 			[VarSet, slStrokeEndX, [StrokeGetInfo,[StrokeGetLast], 1, (slStrokePoints - 1)]]
+// 			[VarSet, slStrokeEndY, [StrokeGetInfo, [StrokeGetLast] , 2, (slStrokePoints - 1)]]
+// 			[VarSet, slXDist, (slStrokeEndX - slStrokeStartX)]
+// 			[VarSet, slYDist, (slStrokeEndY - slStrokeStartY)]
+// 			[VarSet, slStrokeDist, INT(SQRT((slXDist * slXDist) + (slYDist * slYDist)))]
+// 			[VarSet, slAngle, ATAN2(slYDist, slXDist)] // The angle of the start and end points of the stroke.
+// 			[VarSet, slMidLength, (slStrokeDist * .5)]
+// 			[VarSet, slCosMidX, (slStrokeStartX + (COS(slAngle) * slMidLength))]
+// 			[VarSet, slSinMidY, (slStrokeStartY + (SIN(slAngle) * slMidLength))]
+// 
+// 			[VarSet, slCurrentBrush, ""] // Variable to  hold the current brush name
+// 			[VarSet, slBrushBtn, [IGetInfo, Brush:Current Brush]]
+// 			[VarSet, slStrBrushMat, [StrFind, "Current Brush",slBrushBtn]]
+// 			[VarSet, slBrushFirst, [StrExtract, slBrushBtn, (slStrBrushMat+15), ([StrLength, slBrushBtn]-1)]]
+// 			[VarSet, slStrBrExcessInd, [StrFind, "Base Type", slBrushFirst]]
+// 			[VarSet, slCurrentBrush, [StrExtract, slBrushFirst, 0, (slStrBrExcessInd - 3)]] // Saves the current brush so it could be restore later.
+// 			
+// 			[VarSet, slDocMidX, [CanvasPanGetH]] // Gets the middle x point of the canvas
+// 			[VarSet, slDocMidY, [CanvasPanGetV]] // Gets the middle Y point of the canvas
+// 			[CanvasClick, slDocMidX, slDocMidY, (slDocMidX + 10), (slDocMidY + 10)]
+// 			[IPress, Transform:Edit]
+// 			[IPress, Edit:Tool:Restore Placement]
+// 			[IUnPress, Edit:Tool:Restore Placement]
+// 			[IPress, Layer:Clear]
+// 			[IPress, Brush:InsertCylinder]// Change the brush so it can be clicked
+// 
+// 			[IKeyPress, ALT, // Drag the cylinder 
+// 				[CanvasClick, slCosMidX, slSinMidY, (slCosMidX - 10), (slSinMidY - 10)]
+// 			,slCosMidX, slSinMidY]
+// 			
+// 			[IUnPress, Transform:Edit]
+// 			[IPress, Layer:Bake]
+// 			
+// 			[IPRess, Tool:Visibility:ShowPt] // Show the hidden mesh
+// 			[IPress, Tool:Masking:Clear] //Clear any masks
+// 			[MVArSet, jmemDynaMessageToggle, 0, 0]// Set this to 0 so that during the DynaM ther would be no message.
+// 			[IPress, Layer:Clear]
+// 			[Note, "Finalizing. Please wait..."]
+// 			[CanvasClick, slDocMidX, slDocMidY, (slDocMidX + 10), (slDocMidY + 10)]
+// 			[IPress, Transform:Edit]
+// 			[IPress, Edit:Tool:Restore Placement]
+// 			[IUnPress, Edit:Tool:Restore Placement]
+// 			[IPress, Layer:Clear]
+// 			[IPress,ZScript:DynaM]// Do the subtraction
+// 			[VarSet, slDynRes, [IGet, Tool:Geometry:Resolution]]
+// 			[IUnPress, Transform:Edit]
+// 			[IPress, Layer:Bake]
+// 			[IPress, Tool:Geometry:Copy] 
+// 			
+// 			[ISet, Edit:Tool:UndoCounter, (gHoleUndo-1)] // Go back to the original mesh
+// 			
+// 			[ISet, Tool:Geometry:Resolution, slDynRes]
+// 			[IPress, "Tool:Geometry:Paste Replace"] // Paste the new mesh to original mesh creating a new undo step.
+// 						
+// 			[IPress, [StrMerge, "Brush:", slCurrentBrush]] // Restore the previous brush.
+// 			[IPress, Tool:Initialize:QCube]
+// 			[IPress, Tool:Geometry:Copy]
+// 			[ISet, Edit:Tool:UndoCounter, ([IGet, Edit:Tool:UndoCounter] - 1)]
+// 			[IPress, Tool:Masking:Clear]
+// 			[ISet, Edit:Tool:UndoCounter, ([IGet, Edit:Tool:UndoCounter] - 1)]
+// 			
+// 			[If, (slSoloF == 8) || (slSoloF == 10) ,
+// 				[IUnPress, Transform:Solo]
+// 			,]
+// 			
+// 		] // ---- THIS IS THE END OF THE LOOP.
+// 		
+// 		
+// 		[ToolSelect, gHoleToolID]
+// 		[SubToolSelect, gHoleSubToolID]
+// 		
+// 		[VarSet, slDocMidX, [CanvasPanGetH]]
+// 		[VarSet, slDocMidY, [CanvasPanGetV]]
+// 		[CanvasClick, slDocMidX, slDocMidY, (slDocMidX + 20), (slDocMidY + 20)]
+// 		[IPress, Transform:Edit]
+// 		[IPress, Layer:Clear]
+// 		[IPress, Edit:Tool:Restore Placement]
+// 		[If,(slIsCamPlacement == 8) || (slIsCamPlacement == 10),
+// 			[IUnPress, Edit:Tool:Restore Placement]
+// 		,]
+// 		
+// 		
+// 		[IKeyPress, CTRL + SHIFT, //Restores the previous CTRL + SHIFT Brush.
+// 			//Restores first the setting of the clipbrushes
+// 			[If, gClipCenter == 1,
+// 				[VarSet, slIsCenter, [IGetFlags, Stroke:Center]]
+// 				[If, (slIsCenter == 8) || (slIsCenter == 10),
+// 					[IPress, Stroke:Center]
+// 				,]
+// 				
+// 			,
+// 				[VarSet, slIsCenter, [IGetFlags, Stroke:Center]]
+// 				[If, (slIsCenter == 9) || (slIsCenter == 11),
+// 					[IUnPress, Stroke:Center]
+// 				,]
+// 			]
+// 			
+// 			[If, gClipSquare == 1,
+// 				[VarSet, slIsSquare, [IGetFlags, Stroke:Square]]
+// 				[If, (slIsSquare == 8) || (slIsSquare == 10),
+// 					[IPress, Stroke:Square]
+// 				,]
+// 				
+// 			,
+// 				[VarSet, slIsSquare, [IGetFlags, Stroke:Square]]
+// 				[If, (slIsSquare == 9) || (slIsSquare == 11),
+// 					[IUnPress, Stroke:Square]
+// 				,]
+// 			]
+// 			[IPress, [StrMerge, "Brush:", gHoleShiftCtrlBrush]]
+// 		]
+// 		
+// 		
+// 			
+// 		//Deletes the stroke
+// 		[VarSet, slStrokeCount, [IGet, Stroke:Inventory:Strokes Count]]
+// 		[VarSet, slRecordingFlags, [IGetFlags, Stroke:Inventory:Record]]
+// 		[If, slStrokeCount > 0,
+// 			[If, (slRecordingFlags == 9) || (slRecordingFlags == 11),
+// 				[IUnPress, Stroke:Inventory:Record]
+// 				[IPress, Stroke:Inventory:Record]
+// 				[IUnPress, Stroke:Inventory:Record]
+// 			,
+// 				[IPress, Stroke:Inventory:Record]
+// 				[IUnPress, Stroke:Inventory:Record]
+// 			]
+// 				
+// 		,
+// 			[If, (slRecordingFlags == 9) || (slRecordingFlags == 11),
+// 				[IUnPress, Stroke:Inventory:Record]
+// 			,
+// 			]
+// 		]
+// 		[VarSet, gMeshVol, -1 ]
+// 		[IShow, 1011]
+// 	]
+// 
+// 	
+// 	//Disable the button again
+// 	[IDisable, ZScript:MakeHole]
+// 	[VarSet, slCenterPressed, [IGetFlags, ZScript:FromCenter]]
+// 	[If, (slCenterPressed == 9) || (slCenterPressed == 11),
+// 		[IUnpress, ZScript:FromCenter]
+// 	,]
+// 	[IDisable, ZScript:FromCenter]
+// 	
+// 	[VarSet, slProportionalPressed, [IGetFlags, ZScript:Proportional]]
+// 	[If, (slProportionalPressed == 9) || (slProportionalPressed == 11),
+// 		[IUnpress, ZScript:Proportional]
+// 	,]
+// 	[IDisable, ZScript:Proportional]
+// 
+// 	[IEnable, ZScript:HoleCirc] // Reenables the  Hole Circ button again.
+// 	[IEnable, ZScript:HoleSquare] // Reenables the  Hole Circ button again.
+// 	[VarSet, gHoleCircle, 0]
+// 	[VarSet, gHoleSquare, 0]
+// 	[If, slHasError == 1,
+// 		[VarSet, slErrorLength,[StrLength, slErrorToDisplay]]
+// 		[If,( slErrorLength > 0),
+// 			[Note, slErrorToDisplay]
+// 		,]
+// 	,]
+// 	
+// 	[IShowActions, 1]
+// 	[IPress, DefaultZscript] // Temporary
+// ]
+// [IButton, MakeHole, "",
+// 	[RoutineCall, J_MakeHole]
+// , 1]
+
+
+
+
+//FRONT MASK ONLY
+[RoutineDef, J_FrontMaskOnly,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VarSet, slErrorToDisplay, ""]
+	[VarSet, slSuccessful, 0]
+	
+	[IFreeze,
+		[Loop, 1,
+			[RoutineCall, J_CatchValidityError, slHasError, slErrorToDisplay]
+			//...continue
+			[RoutineCall, J_CatchGeometryError, slHasError, slErrorToDisplay,0, 0, 1, 0, 1]
+			//...continue
+			[VarSet, slCurrentBrushInfo, [IGetInfo, "Brush:Current Brush"]] 
+			[VarSet, slIMMID, [StrFind, "IMM", #slCurrentBrushInfo]]
+			[VarSet, slInsertID, [StrFind, "Insert", #slCurrentBrushInfo]]
+			[VarSet, slIsInsertBrush, 0]
+			[If, #slIMMID > -1,
+				[VarSet, slIsInsertBrush, 1]
+			,]
+			

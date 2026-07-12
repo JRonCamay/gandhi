@@ -1,0 +1,300 @@
+			
+			
+			[If, #slAltPressed ,
+				[IKeyPress, ALT,
+					[IPress, Tool:Geometry:ZRemesher]
+				]
+			,
+				[IPress, Tool:Geometry:ZRemesher]
+			]
+
+			// Get the points of the mesh and remesh until it gets the right target
+			[VarSet, slMeshInfo, [IGetInfo, "Tool:Current Tool"]]
+			[VarSet, slPointsId, [StrFind, "Points=", #slMeshInfo]]
+			[VarSet, slHiddenPolys,[StrFind, "HiddenPolys=", #slMeshInfo]]
+			[VarSet, slPoints, [StrExtract, #slMeshInfo, (#slPointsId + 7), (#slHiddenPolys - 2)]]
+			[VarSet, slRemeshAgain, 0]
+			[VArSet, slPointsLog, (LOG10(#slPoints * .001))]
+			[VarSet, slConstantMult,(#slLogConstant * #slSubDivCount)]
+			[VarSet,slHighestSubDLog, (#slPointsLog + #slConstantMult)]
+			[VarSet,slFinalSubDCount, ((10 ^^ #slHighestSubDLog) * 1000)]
+			[VarSet, slPointsDiff, (ABS(#slFinalSubDCount - #slOrigPoints ))]
+			[VarSet, slLimit,3000]
+			[If, #slPointsDiff >= #slLimit ,
+				[VarSet, slRemeshAgain, 1]
+			]
+
+			[If,#slRemeshAgain,
+				
+				[IPress, Tool:Geometry:Copy]
+				[RoutineCall, J_RestoreUndoPoint]
+				[If, #slHasSDynamic ,
+					[IUnPress,  "Tool:Geometry:s.Dynamic"]
+					[MergeUndo]
+				]
+				[IPress, "Tool:Geometry:Paste Replace"]
+				[VarSet, slOrigLog,(LOG10(#slOrigPoints * .001))]
+				[VarSet, slOrigSubD,(LOG10(#slFinalSubDCount * .001))]
+				[VarSet, slLeftSide, ((#slOrigSubD-#slOrigLog)/ #slOrigLog)]
+				[VarSet, slZRemRes, (1.05*(#slTargetCount + #slLeftSide))]
+				[ISet, "Tool:Geometry:Target Polygons Count", #slZRemRes]
+				[IUnPress, Tool:Geometry:Adapt]
+				[ISet, Tool:Geometry:AdaptiveSize, 50]
+				[If, #slHasCurves,
+					
+					[ISet, "Tool:Geometry:Curves Strength", 100]
+				,
+					[ISet, "Tool:Geometry:Curves Strength", 0]
+				]
+				
+				[If, #slAltPressed,
+					[IKeyPress, ALT,
+						[IPress, Tool:Geometry:ZRemesher]
+					]
+				
+				,
+					[IPress, Tool:Geometry:ZRemesher]
+				]
+				
+			]
+			
+			// Reset the settings
+			[If, ((FRAC(#slFreezeBorder/2)) > 0),
+				[IPress, Tool:Geometry:FreezeBorder]
+			,
+				[IUnPress, Tool:Geometry:FreezeBorder]
+			]
+			
+			[If, ((FRAC(#slFreezeGroups/2)) > 0),
+				[IPress, Tool:Geometry:FreezeGroups]
+			,
+				[IUnPress, Tool:Geometry:FreezeGroups]
+			]
+			[If, ((FRAC(#slUsePP/2)) > 0),
+				[IPress, "Tool:Geometry:Use Polypaint"]
+			,
+				[IUnPress, "Tool:Geometry:Use Polypaint"]
+			]
+			
+			[If, ((FRAC(#slKeepGroups/2)) == 0),
+				[IUnPress, Tool:Geometry:KeepGroups]
+			,
+				[IPress, Tool:Geometry:KeepGroups]
+			]
+			[If, ((FRAC(#slAdapt/2)) > 0),
+				[IPress, Tool:Geometry:Adapt]
+			,
+				[IUnPress, Tool:Geometry:Adapt]
+			]
+			
+			[If, ((FRAC(#slHalf/2)) > 0),
+				[IPress, Tool:Geometry:Half]
+			,
+				[IUnPress, Tool:Geometry:Half]
+			]
+			
+			[If, ((FRAC(#slSame/2)) > 0),
+				[IPress, Tool:Geometry:Same]
+			,
+				[IUnPress, Tool:Geometry:Same]
+			]
+			
+			[If, ((FRAC(#slDouble/2)) > 0),
+				[IPress, Tool:Geometry:Double]
+			,
+				[IUnPress, Tool:Geometry:Double]
+			]
+			
+			[ISet, Tool:Geometry:AdaptiveSize, #slAdaptSize]
+			[ISet, "Tool:Geometry:Curves Strength", #slCurveStrength]
+			[ISet,Tool:Geometry:SmoothGroups, #slSmoothGrps]
+			[ISet, "Tool:Geometry:Target Polygons Count", #slTgtPolyCount]
+			
+			// Get the points of the mesh
+			[VarSet, slMeshInfo, [IGetInfo, "Tool:Current Tool"]]
+			[VarSet, slPointsId, [StrFind, "Points=", #slMeshInfo]]
+			[VarSet, slHiddenPolys,[StrFind, "HiddenPolys=", #slMeshInfo]]
+			[VarSet, slPoints, [StrExtract, #slMeshInfo, (#slPointsId + 7), (#slHiddenPolys - 2)]]
+			[VarSet, slOldPoly, #slPoints]
+			
+			// Get the flags of the Divide
+			[VarSet, slSmt, [IGetFlags, Tool:Geometry:Smt]]
+			[VarSet, slSuv, [IGetFlags, Tool:Geometry:Suv]]
+			
+			[If, ((FRAC(#slSmt/2)) == 0), [IPress, Tool:Geometry:Smt]]
+			
+			[If, ((FRAC(#slSuv/2)) > 0), [IUnPress, Tool:Geometry:Suv]]
+			
+			[Note, "Step 2 - Please wait... Subdividing polymesh..."]
+			[Delay,1]
+			
+			[If, #slAdaptRes ,
+				[Loop, #slSubDivCount,
+					[MergeUndo]
+					[IPress, Tool:Geometry:Divide]
+				]
+				
+			,
+				[VarSet,slLoopCtr,[IGet, "ZScript:Highest SubD Lvl"]]
+				
+				[Loop, (#slLoopCtr-1),
+					[MergeUndo]
+					[IPress, Tool:Geometry:Divide]
+				]
+			
+			]
+			
+			[IPress, "Tool:Geometry:Copy"]
+			[RoutineCall, J_RestoreUndoPoint]
+			[If, #slHasSDynamic ,
+				[IUnPress,  "Tool:Geometry:s.Dynamic"]
+				[MergeUndo]
+			]
+			[IPress, "Tool:Geometry:Paste Replace"]
+			[VarSet,slMorphStat,[IGetStatus,"Tool:Morph Target:DelMT"]]
+			[If, #slMorphStat ,
+				[MergeUndo]
+				[IPress,"Tool:Morph Target:DelMT"]
+			]
+			[MergeUndo]
+			[IPress,"Tool:Morph Target:StoreMT"]
+			
+			//..Continue
+			[IPress, Tool:Geometry:Copy]
+			[ToolSelect, #slToolLast]
+			[IPress, Tool:SubTool:Duplicate]
+			[MergeUndo]
+			[IPress, "Tool:Geometry:Paste Replace"]
+			[IPress, "Edit:Tool:DelUH"]
+			[If, #slHasPolyGorups ,
+				[MergeUndo]
+				[ISet,"Tool:Geometry:SDiv", [IGet,"Tool:Geometry:SDiv"]]
+				[IPress, "Tool:Geometry:Copy"]
+				[VarSet, slPGCov,[IGEt, "Tool:Polygroups:Coverage"]]
+				[VarSet, slPGClstr,[IGEt, "Tool:Polygroups:Clstr"]]
+				[ISEt, "Tool:Polygroups:Coverage", 1]
+				[ISEt, "Tool:Polygroups:Clstr", 1]
+				[MergeUndo]
+				[IPress,"Tool:Polygroups:GroupVisible"]
+				[ISEt, "Tool:Polygroups:Coverage", #slPGCov]
+				[ISEt, "Tool:Polygroups:Clstr", #slPGClstr]
+				
+			]
+			[MergeUndo]
+			[ISet,Tool:Geometry:SDiv, 1]
+			// Get the flags of these buttons
+			[VarSet, slFarthest, [IGetFlags, Tool:SubTool:Farthest]]
+			[IUnPress, Tool:SubTool:Inner]
+			[IUnPress, Tool:SubTool:Outer]
+			//Change the setting of the ProjectAll
+			//Get the area of the bounding box
+			[VArSet, slBoxWidthAfter, [IGet, "Tool:Geometry:X Size"]]
+			[VArSet, slBoxHeightAfter, [IGet, "Tool:Geometry:Y Size"]]
+			[VArSet, slBoxLengthAfter, [IGet, "Tool:Geometry:Z Size"]]
+			[VarSet, slBoxAreaAfter, (#slBoxWidthAfter * #slBoxHeightAfter * #slBoxLengthAfter)]
+			[VarSet,slBoxAreaDiff,(#slBoxAreaAfter - #slBoxAreaBefore) ]
+			[VarSet, slBoxAreaPerc, (#slBoxAreaDiff / #slBoxAreaBefore )]
+			[VarSet, slBoxAreaPerc, (#slBoxAreaPerc * #slBoxAreaBefore)]
+			[VarSet,slBoxProject, ((#slBoxAreaPerc*2)*-1)]
+			[ISet, Tool:SubTool:ProjectionShell, .025]
+			[ISet, Tool:SubTool:Mean,25]
+			[ISet, "Tool:SubTool:PA Blur", 2]
+			
+			[VarSet, slTheDist, .25]
+			[ISet, Tool:SubTool:Dist, #slTheDist]
+			[IModSet, Tool:SubTool:ProjectionShell, 7]
+			[IPress, Tool:SubTool:Farthest]
+// 			[If, (#slFarthest == 9) || (#slFarthest == 11) || (#slFarthest == 13) || (#slFarthest == 1),
+// 				[IUnPress, Tool:SubTool:Farthest]
+// 			,]
+			
+			[Note, "Step 3 - Please wait... Projection Passes..."]
+			
+			[IUnPress, Transform:Solo]
+			[MergeUndo]
+			[IKeyPress,'1',
+				[IPress, Tool:SubTool:ProjectAll]
+			]
+			
+			[IPress, Transform:Solo]
+			//Get the area of the bounding box
+			[VArSet, slBoxWidthAfter, [IGet, "Tool:Geometry:X Size"]]
+			[VArSet, slBoxHeightAfter, [IGet, "Tool:Geometry:Y Size"]]
+			[VArSet, slBoxLengthAfter, [IGet, "Tool:Geometry:Z Size"]]
+			[VarSet, slBoxAreaAfter, (#slBoxWidthAfter * #slBoxHeightAfter * #slBoxLengthAfter)]
+			[VarSet,slBoxAreaDiff,(#slBoxAreaAfter - #slBoxAreaBefore) ]
+			[VarSet, slBoxAreaPerc, (#slBoxAreaDiff / #slBoxAreaBefore )]
+			[VarSet, slBoxAreaPerc, (#slBoxAreaPerc * #slBoxAreaBefore)]
+			[VarSet,slBoxProject, ((#slBoxAreaPerc*2)*-1)]
+			[ISet, Tool:SubTool:ProjectionShell, .025]
+			[VarSet, slTheDist, .25]
+			[ISet, Tool:SubTool:Dist, #slTheDist]
+			
+			[MergeUndo]
+			[ISet, Tool:Geometry:SDiv,[IGetMax, Tool:Geometry:SDiv]]
+			[IUnPress, Transform:Solo]
+			[MergeUndo]
+			[IKeyPress,'1',
+				[IPress, Tool:SubTool:ProjectAll]
+			]
+			
+			[IPress, Transform:Solo]
+			[If, #slHasPolyGorups ,
+				[VArSet, slDelMTStat,[IGeTStatus,"Tool:Morph Target:DelMT"]]
+				[If, #slDelMTStat ,
+					[MergeUndo]
+					[IPress,"Tool:Morph Target:DelMT"]
+				]
+				[MergeUndo]
+				[IPress,"Tool:Morph Target:StoreMT"]
+				[MergeUndo]
+				[IPress, "Tool:Geometry:Paste Replace"]
+				[MergeUndo]
+				[IPress,"Tool:Morph Target:Switch"]
+			]
+			
+			[SubToolSelect,0]
+			[IPress, Tool:Geometry:Copy] 
+			[VarSet, slLastVisitedTool,[ToolGetActiveIndex]]
+						
+			[ToolSelect, #slToolIndex]
+			[VarSet, slActiveTool, [SubToolGetActiveIndex]]
+			[SubToolSelect, (#slActiveTool - 1)]
+			[VarSet, slResGeo, [IGet, "Tool:Geometry:Res"]]
+			[VarSet, slPolishGeo, [IGet, "Tool:Geometry:Polish"]]
+			[If, (#slResGeo == 995) &&  (#slPolishGeo == 64) ,
+				[IKeyPress,'2',
+					[IPress, Tool:SubTool:Delete]
+				]
+				[VarSet, slActiveTool, [SubToolGetActiveIndex]]
+			,
+				[SubToolSelect, #slActiveTool]
+			]
+			
+			[IPress, Tool:SubTool:Duplicate]
+			[IPress, Tool:SubTool:MoveUp]
+			[IPress, "Tool:Geometry:Paste Replace"]
+			[IPress, Transform:Edit]
+			[VarSet, slMrgbFlag, [IGetFlags,Draw:Mrgb]]
+			[VarSet, slRgbFlag, [IGetFlags,Draw:Rgb]]
+			[VarSet, slMFlag, [IGetFlags,Draw:M]]
+			
+			[IPress, "Tool:Polypaint:Colorize"]
+			[IPress, Draw:Rgb]
+			[RoutineCall, J_SetRGB, 255, 0,0]
+			[IPress, Draw:M]
+			[RoutineCall, J_SetMaterial, "MatCap Red Wax"]
+			[If, ((FRAC(#slMrgbFlag/2)) > 0),
+				[IPress,Draw:Mrgb]
+			,
+				[IUnPress,Draw:Mrgb]
+			]
+			[If, ((FRAC(#slRgbFlag/2)) > 0),
+				[IPress,Draw:Rgb]
+			,
+				[IUnPress,Draw:Rgb]
+			]
+			[If, ((FRAC(#slMFlag/2)) > 0),
+				[IPress,Draw:M]
+			,
+				[IUnPress,Draw:M]

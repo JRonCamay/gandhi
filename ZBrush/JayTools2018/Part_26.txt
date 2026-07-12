@@ -1,0 +1,300 @@
+				[LoopExit]
+				
+			]//END OF LOOP
+			
+		]// END OF FREEZE
+	,]
+	
+	
+	[If, #slHasError,
+		[Note, #slErrorToDisplay]
+	,]
+	
+	[IShowActions, 1]
+	[IUpdate, 1,1]
+]
+
+
+[RoutineDef, J_SampleHeightPress,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VarSet, slErrorToDisplay, ""]
+	[IFreeze,
+		[Loop,1,
+			[VarSet, slEditMode, [IGetFlags, "Transform:Edit"]]
+			[If, (#slEditMode == 8) || (#slEditMode == 10) || (#slEditMode == 12) || (#slEditMode == 0),
+				[VarSet, slHasError, 1]
+				[VarSet, slErrorToDisplay, "The ZTool is currently out of Edit mode. Action cancelled"]
+				[LoopExit]
+			,]
+			[VarSet, slToolID, [MVarGet, jmemToolSubToolID, 0]]
+			[VarSet, slCurTool, [ToolGetActiveIndex]]
+			[If, #slToolID ==  #slCurTool,
+				
+			,
+				[VarSet, slHasError, 1]
+				[VarSet, slErrorToDisplay, "The ZTool has been changed. Action cancelled."]
+				[LoopExit]
+			]
+			
+			//...continue
+			[VarSet, slSubToolID, [MVarGet, jmemToolSubToolID, 1]]
+			[VarSet, slCurSubTool, [SubToolGetActiveIndex]]
+			[If, #slSubToolID ==  #slCurSubTool,
+				
+			,
+				[VarSet, slHasError, 1]
+				[VarSet, slErrorToDisplay, "The subtool selection has been changed. Action cancelled."]
+				[LoopExit]
+			]
+			//...continue
+			
+			
+			[MVarSet, jmemToolSubToolID, 0, #slToolID]
+			[MVarSet, jmemToolSubToolID, 1, #slSubToolID]
+			[RoutineCall, J_SaveMousePosition]
+			[IShowActions, 1]
+			[IUpdate, 1,1]
+			[RoutineCall, J_SleepChangeEventAdv, #LMOUSEUP, "J_SampleHeightUnPress", 0, 1, 0]
+			[LoopExit]
+		]
+	
+	]
+	[If, #slHasError ,
+		[RoutineCall, J_RestoreStrokeEtc]
+		[Note, slErrorToDisplay]
+		[RoutineCall, J_SleepChangeEvent, #TIMER, ""]
+		[IShowActions, 1]
+		[IUpdate, 1, 1]
+		[LoopExit]
+	,]
+	[IShowActions, 1]
+	[IUpdate, 1, 1]
+
+]
+
+
+[RoutineDef, J_RestoreStrokeEtc,
+	[VarSet, slStrokeFlags, [MVarGet, jmemStrokeSettings, 0]]
+	[If, (#slStrokeFlags == 8) || (#slStrokeFlags == 10) || (#slStrokeFlags == 12)|| (#slStrokeFlags == 0)  ,
+		[IUnPress, "Stroke:Curve Mode"]
+	,
+		[IPress, "Stroke:Curve Mode"]
+	]
+	[VarSet, slAsLineFlags, [MVarGet, jmemStrokeSettings, 1]]
+	[If, (#slAsLineFlags == 8) || (#slAsLineFlags == 10) || (#slAsLineFlags == 12)|| (#slAsLineFlags == 0)  ,
+		[IUnPress, "Stroke:AsLine"]
+	,
+		[IPress, "Stroke:AsLine"]
+	]
+	[VarSet, slCurveStep, [MVarGet, jmemStrokeSettings, 2]]
+	[ISet, "Stroke:Curve Step", #slCurveStep]
+	
+	[VarSet, slBend, [MVarGet, jmemStrokeSettings, 3]]
+	[If, (#slBend == 8) || (#slBend == 10) || (#slBend == 12)|| (#slBend == 0)  ,
+		[IUnPress, "Stroke:Bend"]
+	,
+		[IPress, "Stroke:Bend"]
+	]
+	[VarSet, slSnap, [MVarGet, jmemStrokeSettings, 4]]
+	[If, (#slSnap == 8) || (#slSnap == 10) || (#slSnap == 12)|| (#slSnap == 0)  ,
+		[IUnPress, "Stroke:Snap"]
+	,
+		[IPress, "Stroke:Snap"]
+	]
+	[VarSet, slElastic, [MVarGet, jmemStrokeSettings, 5]]
+	[If, (#slElastic == 8) || (#slElastic == 10) || (#slElastic == 12)|| (#slElastic == 0)  ,
+		[IUnPress, "Stroke:Elastic"]
+	,
+		[IPress, "Stroke:Elastic"]
+	]
+	[VarSet, slLiquid, [MVarGet, jmemStrokeSettings, 6]]
+	[If, (#slLiquid == 8) || (#slLiquid == 10) || (#slLiquid == 12)|| (#slLiquid == 0)  ,
+		[IUnPress, "Stroke:Liquid"]
+	,
+		[IPress, "Stroke:Liquid"]
+	]
+	[VarSet, slLockStart, [MVarGet, jmemStrokeSettings, 7]]
+	[If, (#slLockStart == 8) || (#slLockStart == 10) || (#slLockStart == 12)|| (#slLockStart == 0)  ,
+		[IUnPress, "Stroke:Lock Start"]
+	,
+		[IPress, "Stroke:Lock Start"]
+	]
+	[VarSet, slLockEnd, [MVarGet, jmemStrokeSettings, 8]]
+	[If, (#slLockEnd == 8) || (#slLockEnd == 10) || (#slLockEnd == 12)|| (#slLockEnd == 0)  ,
+		[IUnPress, "Stroke:Lock End"]
+	,
+		[IPress, "Stroke:Lock End"]
+	]
+	[VarSet, slLazyMouse, [MVarGet, jmemStrokeSettings, 9]]
+	[If, (#slLazyMouse == 8) || (#slLazyMouse == 10) || (#slLazyMouse == 12)|| (#slLazyMouse == 0)  ,
+		[IUnPress, "Stroke:LazyMouse"]
+	,
+		[IPress, "Stroke:LazyMouse"]
+	]
+	
+	[VarSet, slDrawSize, [MVarGet, jmemStrokeSettings, 10]]
+	[IKeyPress, ,
+		[ISet, "Draw:Draw Size", #slDrawSize]
+	, -500, -500]
+	
+	
+	[VarSet, slLastBrush, ""]
+	[RoutineCall, J_WriteStringVar,"jmemLastBrush", slLastBrush]
+	[IPress, [StrMerge, "Brush:", #slLastBrush]]
+	[MVarSet, jmemToolSubToolID, 0, -1]
+	[MVarSet, jmemToolSubToolID, 1, -1]
+	[RoutineCall, J_RestoreUndoPoint]
+]
+
+
+[RoutineDef, J_SampleHeightUnPress,
+	[IShowActions , 0]
+	[IFreeze,
+		[Loop, 1,
+			[VarSet, slSavedXPos, 0]
+			[VarSet, slSavedYPos, 0]
+			[RoutineCall, J_GetSavedMousePosition, slSavedXPos,slSavedYPos]
+			[VArSet, slCurMouseX, [MouseHPos]]
+			[VArSet, slCurMouseY, [MouseVPos]]
+			[VArSet, slTX, 0]
+			[VArSet, slTY, 0]
+			[VArSet, slTZ, 0]
+			[VArSet, slSX, 0]
+			[VArSet, slSY, 0]
+			[VArSet, slSZ, 0]
+			[VArSet, slRX, 0]
+			[VArSet, slRY, 0]
+			[VArSet, slRZ, 0]
+			[TransformGet, slTX, slTY, slTZ, slSX, slSY, slSZ, slRX, slRY, slRZ ]
+			[VarSet, slPoint1, ]
+			[RoutineCall, J_NewPoint2D, slPoint1,#slSavedXPos, #slSavedYPos ]
+			[VarSet, slPoint2, ]
+			[RoutineCall, J_NewPoint2D, slPoint2,#slCurMouseX, #slCurMouseY ]
+			[VArSet, slVect1,]
+			[RoutineCall, J_NewVector2D, slVect1,slPoint1, slPoint2 ]
+			[VarSet, slDist, 0]
+			[RoutineCall, J_GetVector2DLength,slVect1, slDist]
+			[VarSet, slFact, ((100/#slSX)*(#slDist/100))]
+			[ISet, "Tool:Geometry:P.Thickness", #slFact]
+			[RoutineCall, J_RestoreStrokeEtc]
+			
+			[IShowActions, 1]
+			[IUpdate, 1,1]
+			[Note, [StrMerge, "Panel Loops Thickness is set to ", #slFact]]
+			[RoutineCall, J_SleepChangeEvent, #TIMER, ""]
+			[LoopExit]
+		]
+	
+	]
+
+]
+[IButton, SampleHeight, "",
+	[IKeyPress, '1',
+		[RoutineCall, J_SampleHeight]
+	]
+]
+
+
+[ISwitch, FlatEdges,0,"",, ,0, 80]
+[ISwitch, PanelGrpAppend,0,"",, ,0, 80]
+[ISlider, PanelGrpBevel , 40, 1, 0, 100,,, 0, 200 ]
+[RoutineDef, J_PanelGrpAdv,
+	[IShowActions, 0]
+	[VarSet, slHasError, 0]
+	[VarSet, slErrorToDisplay, ""]
+	[VarSet, slAutoCollapseFlags, -1]
+	[IFreeze,
+		[Loop, 1,
+			[RoutineCall, J_CatchValidityError, slHasError, slErrorToDisplay]
+			//...continue
+			[RoutineCall, J_CatchGeometryError,slHasError, slErrorToDisplay, 0,1,1,0, 1 ]
+			//...continue
+			
+			[Note, "Extracting the panel group/s. Please wait..."]
+			
+			[IHide, 1011]
+			[RoutineCall, J_SetSaveScrollBarStatus]
+			[RoutineCall, J_GetAutoCollapseFlags, slAutoCollapseFlags]
+			[RoutineCall, J_StoreCameraCanvas]
+			[RoutineCall, J_SoloOn]
+			[RoutineCall, J_HideCanvas]
+			[IUnPress, Transform:Edit]
+			[RoutineCall, J_SetUndoHistoryMax]
+			
+			[VarSet, slToSeparate, 1]
+			[VarSet, slPanelGrpAppend, [IGetFlags, "ZScript:PanelGrpAppend"]]
+			[If, (#slPanelGrpAppend == 9) || (#slPanelGrpAppend == 11)|| (#slPanelGrpAppend == 13) || (#slPanelGrpAppend == 1)  ,
+				[VarSet, slToSeparate, 0]
+				[VarSet, slSubDivMax, [IGetMax, "Tool:Geometry:SDiv"]]
+				[If, #slSubDivMax > 1 ,
+					[VarSet, slHasError, 1]
+					[VarSet, slErrorToDisplay, "Action cancelled.Panels cannot be appended on meshes with subdivision levels. Toggle off the PanelGrpAppend option to make a separate mesh and try again."]
+					[LoopExit]
+				,]
+			,
+				
+			]
+			
+			[RoutineCall, J_SaveUndoPoint]
+			[RoutineCall, J_InitiateProgressBar, 8534, 8623]
+			[RoutineCall, J_ProgressUpdate, 8535, 0,0,0,0]
+			[VarSet, slDelLowerStat, [IGetStatus, "Tool:Geometry:Del Lower"]]
+			[If, #slDelLowerStat ,
+				[IPress,"Tool:Geometry:Del Lower" ]
+				[MergeUndo]
+			,]
+			[RoutineCall, J_ProgressUpdate, 8541, 0,0,0,0]
+			[VarSet, slDelHigherStat, [IGetStatus, "Tool:Geometry:Del Higher"]]
+			
+			[If, #slDelHigherStat ,
+				
+				[IPress,"Tool:Geometry:Del Higher" ]
+				[MergeUndo]
+			,]
+			
+			[VArSet, slFlatEdges, [IGetFlags, "ZScript:FlatEdges"]]
+			[VarSet, slHiddenPoints, 0]
+			[RoutineCall, J_GetPointsInfo, slHiddenPoints, 0]
+			[IPress, "Tool:Visibility:HidePt"]
+			[VarSet, slHiddenPointsB, 0]
+			[RoutineCall, J_ProgressUpdate, 8552, 0,0,0,0]
+			[RoutineCall, J_GetPointsInfo, slHiddenPointsB, 0]
+			
+			[If, #slHiddenPoints ==  #slHiddenPointsB,
+				[RoutineCall, J_RestoreUndoPoint]
+				[RoutineCall, J_MemoryOptimize, 0]
+				[VarSet, slHasError, 1]
+				[VarSet, slErrorToDisplay, "There is no mask. Action cancelled."]
+				[LoopExit]
+			,]
+			
+			[If, (#slFlatEdges == 9) || (#slFlatEdges == 11) || (#slFlatEdges == 13) || (#slFlatEdges == 1),
+				[MergeUndo]
+				[ISet,"Tool:Deformation:Inflate",.4]
+			,
+				[MergeUndo]
+				[IPress,"Tool:Visibility:Grow"]
+			]
+			
+			[RoutineCall, J_ProgressUpdate, 8562, 0,0,0,0]
+			[MergeUndo]
+			[IPress, "Tool:Geometry:Del Hidden"]
+			[MergeUndo]
+			[IPress, "Tool:Masking:Clear"]
+
+			[VarSet, slPolyCov, [IGet, Tool:Polygroups:Coverage]]
+			[VarSet, slPolyClstr, [IGet, Tool:Polygroups:Clstr]]
+			[ISet, Tool:Polygroups:Coverage, 1]
+			[ISet, Tool:Polygroups:Clstr, .75]
+			[MergeUndo]
+			[IPress, Tool:Polygroups:GroupVisible]
+			[ISet, Tool:Polygroups:Coverage, #slPolyCov]
+			[ISet, Tool:Polygroups:Clstr, .#slPolyClstr]
+			
+			[VarSet, slLoopCount, [Iget, "Tool:Geometry:Loops"]]
+			[VArSet, slGPolish, [IGet, "Tool:Geometry:GPolish"]]
+			[VarSet, slGPolishMod, [IModGet, "Tool:Geometry:GPolish"]]
+			[VArSet, slTrianglesFlag, [IGet, "Tool:Geometry:Triangle"]]
+			[ISet, "Tool:Geometry:Loops", 1]
+			[IModSet, "Tool:Geometry:GPolish", 1]

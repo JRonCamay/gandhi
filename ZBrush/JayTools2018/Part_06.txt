@@ -1,0 +1,300 @@
+// 				[IPress, Brush:ClipCircle]
+// 				[VarSet, slClipCenter, [IGetFlags, Stroke:Center]]
+// 				[IPress, Stroke:Circle]
+// 				[If, (slClipCenter == 9) || (slClipCenter == 11),
+// 					[VarSet, gClipCenter, 1]
+// 					[IUnPress, Stroke:Center]
+// 				,
+// 					[VarSet, gClipCenter, 0]
+// 				]
+// 				
+// 				[VarSet, slClipSquare, [IGetFlags, Stroke:Square]]
+// 				[If, (slClipSquare == 9) || (slClipSquare == 11),
+// 					[VarSet, gClipSquare, 1]
+// 					[IUnPress, Stroke:Square]
+// 				,
+// 					[VarSet, gClipSquare, 0]
+// 				]
+// 				
+// 			]
+// 			
+// 			[VarSet, slStrokeRecF, [IGetFlags, Stroke:Inventory:Record]]
+// 			[VarSet, slStrokeCtr, [IGet, Stroke:Inventory:Strokes Count]]
+// 			
+// 			[If, slStrokeCtr > 0 ,
+// 				
+// 				[If, (slStrokeRecF == 9) || (slStrokeRecF == 11) ,
+// 					[IUnPress, Stroke:Inventory:Add]
+// 					[IPress,  Stroke:Inventory:Record]
+// 					[IUnPress, Stroke:Inventory:Add]
+// 				,
+// 					[IPress,  Stroke:Inventory:Record]
+// 					[IUnPress, Stroke:Inventory:Add]
+// 					
+// 				]
+// 				
+// 			,
+// 				[If, (slStrokeRecF == 9) || (slStrokeRecF == 11) ,
+// 					[IUnPress, Stroke:Inventory:Add]
+// 				,
+// 				]
+// 			]
+// 			
+// 			[VaRSet, slStrokeAdd, [IGetFlags, Stroke:Inventory:Add]]
+// 			[If, (slStrokeAdd == 9) || (slStrokeAdd == 11) ,
+// 				[IUnPress, Stroke:Inventory:Add]
+// 			,]
+// 					
+// 			[VarSet, gHoleToolID, [ToolGetActiveIndex]]
+// 			[VarSet, gHoleSubToolID, [SubToolGetActiveIndex]]
+// 			[IEnable, ZScript:MakeHole]
+// 			[IEnable, ZScript:FromCenter]
+// 			[IEnable, ZScript:Proportional]
+// 			
+// 			[IDisable, ZScript:HoleCirc] // Disable this button
+// 			[IDisable, ZScript:HoleSquare] // Disable this button
+// 		]
+// 		// The status bar must display an instruction so the user knows what to do,
+// 		[VarSet, slHasClippedStroke, 0]
+// 		
+// 		[Sleep, .001,
+// 			
+// 			[IFreeze,
+// 				[Loop,1,
+// 					[VarSet, slWindowID, [IGet, Preferences:Utilities:View Window Id]]
+// 					[If, slWindowID == 1004 ,
+// 						
+// 						[VarSet, slBrushInfo, [IGetInfo, Brush:Current Brush]]
+// 						[VarSet, slClipCircleID, [StrFind, "ClipCircle", slBrushInfo]]
+// 						
+// 						[If, slClipCircleID == -1 ,
+// 							[IKeyPress, SHIFT + CTRL,
+// 								[IPress, Brush:ClipCircle]
+// 							]
+// 							[If, slHasClippedStroke == 0,
+// 								[VarSet, slRecordingF, [IGetFlags, Stroke:Inventory:Record]]
+// 								[If, (slRecordingF == 9) || (slRecordingF == 11) ,
+// 									 [IUnPress, Stroke:Inventory:Record]
+// 									  [IPress, Stroke:Inventory:Record]
+// 									  [IUnPress, Stroke:Inventory:Record]
+// 								,]
+// 							,]
+// 						,
+// 							[VarSet, slRecordingF, [IGetFlags, Stroke:Inventory:Record]]
+// 							[If, (slRecordingF == 9) || (slRecordingF == 11) ,
+// 								 [IUnPress, Stroke:Inventory:Record]
+// 								 [IPress, Stroke:Inventory:Record]
+// 							,
+// 								 [IPress, Stroke:Inventory:Record]
+// 							]
+// 							[VarSet, gClipUndo, [IGet, Edit:Tool:UndoCounter]]
+// 
+// 							[VarSet, slHasClippedStroke, 1]
+// 						
+// 						]
+// 						[SleepAgain,.001, 4]
+// 					,
+// 						[SleepAgain,.001, 4]
+// 					]
+// 				]
+// 			
+// 			]
+// 			
+// 			
+// 		
+// 		,4 ]
+// 		
+// 		[NoteBar, "Hold SHIFT + CTRL Keys to activate the ClipCircle brush and drag the circle. This will determine where to put the hole."]
+// 	] // End of LOOP
+// 	[If, slHasError == 1,
+// 		[Note, slErrorToDisplay]
+// 	,]
+// 	[IShowActions, 1]
+// ]
+// 
+// //FOR THE SQUARE HOLE
+// [IButton, HoleSquare, "",
+// 	[IShowActions, 0]
+// 	[VarSet, slHasError, 0]
+// 	[VarSet, slErrorToDisplay, ""]
+// 	
+// 	[Loop,1,
+// 	
+// 		[VarSet, slEditFlags, [IGetFlags, Transform:Edit]]
+// 		[If, (slEditFlags == 8) || (slEditFlags == 10),
+// 			[VarSet, slHasError, 1]
+// 			[VarSet, slErrorToDisplay, "Edit mode is off. Action cancelled"]
+// 			[LoopExit]
+// 		,]
+// 		
+// 		//..continue
+// 		[VarSet, slToolInfo, [IGetInfo, Tool:Current Tool]]
+// 		[VarSet, slHiddenPolysID, [StrFind, "HiddenPolys=", slToolInfo]]
+// 		[If, slHiddenPolysID == -1 ,
+// 			[VarSet, slHasError, 1]
+// 			[VarSet, slErrorToDisplay, "The mesh is not a Polymesh3D. Action cancelled."]
+// 			[LoopExit]
+// 		,]
+// 		
+// 		//..continue
+// 		[VarSet, slSubD, [IGetMax, Tool:Geometry:SDiv]]
+// 		[If, slSubD > 1,
+// 			[VarSet, slHasError, 1]
+// 			[VarSet, slErrorToDisplay, "The mesh has multiple subdivision levels. Action cancelled."]
+// 			[LoopExit]
+// 		,]
+// 		
+// 		//..continue
+// 		//..continue
+// 		[VarSet, slLayerStatus, [IGetStatus, Tool:Layers:Delete]]
+// 		[If, slLayerStatus == 1,
+// 			[VarSet, slHasError, 1]
+// 			[VarSet, slErrorToDisplay, "The mesh has layers. Action cancelled."]
+// 			[LoopExit]
+// 		,]
+// 		
+// 		//..continue
+// 		[VarSet, slDynamicsFlags, [IGetFlags, Tool:Geometry:s.Dynamic]]
+// 		[If, (slDynamicsFlags == 9) || (slDynamicsFlags == 11) ,
+// 			[VarSet, slHasError, 1]
+// 			[VarSet, slErrorToDisplay, "The mesh has dynamic subdivisions on. Action cancelled."]
+// 			[LoopExit]
+// 		,]
+// 		
+// 		//...continue
+// 		
+// 		
+// 		[VarSet, slHiddenPointsID, [StrFind, "HiddenPoints=", slToolInfo]]
+// 		[VarSet, slHiddenPoints, [StrExtract,slToolInfo, (slHiddenPolysID + 12), (slHiddenPointsID - 2)]]
+// 		[If, slHiddenPoints > 0 ,
+// 			[VarSet, slHasError, 1]
+// 			[VarSet, slErrorToDisplay, "The mesh has hidden points. Action cancelled."]
+// 			[LoopExit]
+// 		,]
+// 		
+// 		//..continue
+// 		
+// 		[IFreeze,
+// 			[VarSet, gHoleSquare, 1]
+// 			
+// 			[VarSet, slIsMirrorOn, [IGetFlags, "Transform:Activate Symmetry"]] // Checks if the symmetry is on.
+// 			[If, (slIsMirrorOn == 9) || (slIsMirrorOn ==11),
+// 				[IUnPRess, "Transform:Activate Symmetry"] // Deactivate this button.
+// 			,]
+// 			
+// 			[VarSet, slIsOrtho, [IGetFlags, Draw:Perspective]]
+// 			
+// 			[If, (slIsOrtho == 9) || (slIsOrtho == 11),
+// 				[IUnPress, Draw:Perspective] // Deactivate the perspective.
+// 			,]
+// 			[VarSet, slIsCamPlacement, [IGetFlags, "Edit:Tool:Restore Placement"]]
+// 			[If,(slIsCamPlacement == 9) || (slIsCamPlacement == 11),
+// 				
+// 				[IUnPress, "Edit:Tool:Restore Placement"]
+// 			,]
+// 			[IPress, Tool:Masking:Clear]
+// 			[VarSet, gHoleUndo, [IGet, Edit:Tool:UndoCounter]] // This is the step where the original mesh is located.
+// 			[VarSet, gMeshVol, ([IGet, Tool:Geometry:X Size] * [IGet, Tool:Geometry:Y Size] * [IGet, Tool:Geometry:Z Size])]
+// 
+// 			[IPress, Edit:Tool:Store] // Replace the current camera
+// 			
+// 			[ISet, Edit:Tool:UndoCounter, (gHoleUndo -  1)]
+// 			[IPress, Edit:Tool:Store] // Replace the current camera
+// 			[ISet, Edit:Tool:UndoCounter, gHoleUndo]
+// 			
+// 			// Restore the camera placement if it was on
+// 			[If,(slIsCamPlacement == 9) || (slIsCamPlacement == 11),
+// 				
+// 				[IPress, "Edit:Tool:Restore Placement"]
+// 			,]
+// 			
+// 			
+// 			[IKeyPress, CTRL + SHIFT,
+// 				[IPress, Brush:Current Brush]
+// 				[VarSet, slBrushBtn, [IGetInfo, Brush:Current Brush]]
+// 				[VarSet, slStrBrushMat, [StrFind, "Current Brush",slBrushBtn]]
+// 				[VarSet, slBrushFirst, [StrExtract, slBrushBtn, (slStrBrushMat+15), ([StrLength, slBrushBtn]-1)]]
+// 				[VarSet, slStrBrExcessInd, [StrFind, "Base Type", slBrushFirst]]
+// 				[VarSet, gHoleShiftCtrlBrush, [StrExtract, slBrushFirst, 0, (slStrBrExcessInd - 3)]] // Saves the current Shift + Ctrl brush so it could be restore later.
+// 				[IPress, Brush:ClipRect]
+// 				[VarSet, slClipCenter, [IGetFlags, Stroke:Center]]
+// 				[IPress, Stroke:Rect]
+// 				[If, (slClipCenter == 9) || (slClipCenter == 11),
+// 					[VarSet, gClipCenter, 1]
+// 					[IUnPress, Stroke:Center]
+// 				,
+// 					[VarSet, gClipCenter, 0]
+// 				]
+// 				
+// 				[VarSet, slClipSquare, [IGetFlags, Stroke:Square]]
+// 				[If, (slClipSquare == 9) || (slClipSquare == 11),
+// 					[VarSet, gClipSquare, 1]
+// 					[IUnPress, Stroke:Square]
+// 				,
+// 					[VarSet, gClipSquare, 0]
+// 				]
+// 				
+// 			]
+// 			
+// 			[VarSet, slStrokeRecF, [IGetFlags, Stroke:Inventory:Record]]
+// 			[VarSet, slStrokeCtr, [IGet, Stroke:Inventory:Strokes Count]]
+// 			
+// 			[If, slStrokeCtr > 0 ,
+// 				
+// 				[If, (slStrokeRecF == 9) || (slStrokeRecF == 11) ,
+// 					[IUnPress, Stroke:Inventory:Add]
+// 					[IPress,  Stroke:Inventory:Record]
+// 					[IUnPress, Stroke:Inventory:Add]
+// 				,
+// 					[IPress,  Stroke:Inventory:Record]
+// 					[IUnPress, Stroke:Inventory:Add]
+// 					
+// 				]
+// 				
+// 			,
+// 				[If, (slStrokeRecF == 9) || (slStrokeRecF == 11) ,
+// 					[IUnPress, Stroke:Inventory:Add]
+// 				,
+// 				]
+// 			]
+// 			
+// 			[VaRSet, slStrokeAdd, [IGetFlags, Stroke:Inventory:Add]]
+// 			[If, (slStrokeAdd == 9) || (slStrokeAdd == 11) ,
+// 				[IUnPress, Stroke:Inventory:Add]
+// 			,]
+// 					
+// 			[VarSet, gHoleToolID, [ToolGetActiveIndex]]
+// 			[VarSet, gHoleSubToolID, [SubToolGetActiveIndex]]
+// 			[IEnable, ZScript:MakeHole]
+// 			[IEnable, ZScript:FromCenter]
+// 			[IEnable, ZScript:Proportional]
+// 			
+// 			[IDisable, ZScript:HoleCirc] // Disable this button
+// 			[IDisable, ZScript:HoleSquare] // Disable this button
+// 		]
+// 		// The status bar must display an instruction so the user knows what to do,
+// 		[VarSet, slHasClippedStroke, 0]
+// 		
+// 		[Sleep, .001,
+// 			
+// 			[IFreeze,
+// 				[Loop,1,
+// 					[VarSet, slWindowID, [IGet, Preferences:Utilities:View Window Id]]
+// 					[If, slWindowID == 1004 ,
+// 						
+// 						[VarSet, slBrushInfo, [IGetInfo, Brush:Current Brush]]
+// 						[VarSet, slClipRectID, [StrFind, "ClipRect", slBrushInfo]]
+// 						
+// 						[If, slClipRectID == -1 ,
+// 							[IKeyPress, SHIFT + CTRL,
+// 								[IPress, Brush:ClipRect]
+// 							]
+// 							[If, slHasClippedStroke == 0,
+// 								[VarSet, slRecordingF, [IGetFlags, Stroke:Inventory:Record]]
+// 								[If, (slRecordingF == 9) || (slRecordingF == 11) ,
+// 									 [IUnPress, Stroke:Inventory:Record]
+// 									  [IPress, Stroke:Inventory:Record]
+// 									  [IUnPress, Stroke:Inventory:Record]
+// 								,]
+// 							,]
+// 						,

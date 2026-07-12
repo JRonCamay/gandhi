@@ -1,0 +1,300 @@
+			]
+			
+			[RoutineCall, J_ProgressUpdate, 612, 0,0,0,0]
+			[VarSet, slUndoMaxAfter, [IGet, Edit:Tool:UndoCounter]]
+			[If, #slUndoMaxAfter > #slUndoMax,
+				[MergeUndo]
+			]
+			[IPress, Tool:Geometry:Paste Replace]
+			
+			[RoutineCall, J_MemoryOptimize, 0] // Ignore the Dynamic option
+			[IPress, Transform:Edit]
+			[RoutineCall, J_RestoreCameraCanvas]
+			[RoutineCall,J_SoloRestore]
+			[RoutineCall, J_ProgressUpdate, 628, 0,0,0,0]
+			[RoutineCall, J_ProgressEnd]
+			[RoutineCall, J_RestoreScrollBarStatus]
+			[If, #slPPaintStat ,
+				[IPress,Tool:Polypaint:Colorize]
+			,
+				[IUnPress,Tool:Polypaint:Colorize]
+			]
+			[If, ((FRAC(#slDrawFlags/2)) > 0),
+				[IPress, "Transform:Draw Pointer"]
+			]
+			[If, ((FRAC(#slMoveFlags/2)) > 0),
+				[IPress, "Transform:Move"]
+			]
+			[If, ((FRAC(#slScaleFlags/2)) > 0),
+				[IPress, "Transform:Scale"]
+			]
+			[If,  ((FRAC(#slRotateFlags/2)) > 0),
+				[IPRess, "Transform:Rotate"]
+			]
+			[IShow,  1011] //Show status bar
+			
+		]
+	]
+	[MVArSet, jmemDynaMessageToggle, 0, 1]
+	
+	[If, #slHasError,
+		[RoutineCall, J_RestoreUndoHistoryMax]
+		[NoteBar, ""]
+		
+		[Note, #slErrorToDisplay]
+	,
+		[NoteBar, ""]
+		
+		[VarSet, slOpTime, ([ZBrushInfo, 2] - #slOpTime)] // Displays time of dynameshing
+		[RoutineCall, J_RestoreUndoHistoryMax]
+		// Check if PGroups buttons is on. This is a copy of lines of codes above, because after the dynamesh operation, the Groups switch button does not behave as expected.
+		[VarSet, slPGroupsStatus, [IGetFlags, ZScript:PGroups]]
+		[If, ((FRAC(#slPGroupsStatus/2)) > 0),
+			[VarSet, slGeometryGroupsStatus, [IGetFlags, Tool:Geometry:Groups]]
+			[If, ((FRAC(#slGeometryGroupsStatus/2)) == 0),
+				[IToggle, Tool:Geometry:Groups]
+			]
+		,
+			[VarSet, slGeometryGroupsStatus, [IGetFlags, Tool:Geometry:Groups]]
+			[If, ((FRAC(#slGeometryGroupsStatus/2)) > 0),
+				[IToggle, Tool:Geometry:Groups]
+			]
+		]
+		
+		[If, [MVArGet, jmemDynaMessageToggle, 0] == 1,
+			[Note, [StrMerge,[StrMerge,"Dynamesh Operation Successful. Time is ", #slOpTime]," seconds."]]
+		]
+			
+	]
+	[IShowActions, 1]
+	[IUpdate, 1,1]
+	
+]
+[IButton, DynaM, "Dynamesh with enough details",
+	[IKeyPress, '1',
+		[RoutineCall, J_DynaM]
+	]
+	
+]
+
+
+
+// [RoutineDef, J_CloseHolesFix,
+// 	[IShowActions, 0]
+// 	[VarSet, slHasError, 0]
+// 	[VarSet, slErrorToDisplay, ""]
+// 	[VarSet, slAutoCollapseFlags, -1]
+// 	[VarSet, slDynSub, 0]
+// 	[IFreeze, 
+// 		[Loop, 1,
+// 			[RoutineCall,J_CatchValidityError, slHasError, slErrorToDisplay]
+// 			//... continue
+// 			[RoutineCall, J_CatchGeometryError, slHasError, slErrorToDisplay, 1,1,0,0,1]
+// 			//... continue
+// 			[Note, "Checking and fixing geometry holes. Please wait..."]
+// 			[RoutineCall, J_SetSaveScrollBarStatus]
+// 			[RoutineCall, J_GetAutoCollapseFlags, slAutoCollapseFlags]
+// 			[IHide, 1011]
+// 			
+// 			[RoutineCall, J_SetUndoHistoryMax]
+// 			[RoutineCall, J_StoreCameraCanvas]
+// 			[RoutineCall, J_InitiateProgressBar, 625, 708]
+// 			[RoutineCall, J_SoloOn]
+// 			[RoutineCall, J_HideCanvas]
+// 			[RoutineCall, J_SaveUndoPoint]
+// 			[RoutineCall, J_ProgressUpdate, 629, 0, 0, 0 ,0]
+// 			[VArset, slUndoCount, [IGet, Edit:Tool:UndoCounter]]
+// 			[VarSet, slDynamicFlags, ]
+// 			[RoutineCall, J_SwitchUnPressIf9, slDynamicFlags, "Tool:Geometry:s.Dynamic"]
+// 			[If, (#slDynamicFlags == 9) || (#slDynamicFlags == 11) || (#slDynamicFlags == 13) || (#slDynamicFlags == 1),
+// 				[VarSet, slDynSub, 1]
+// 			,]
+// 			[RoutineCall, J_ProgressUpdate, 636, 0, 0, 0 ,0]
+// 			[VArset, slUndoCount2, [IGet, Edit:Tool:UndoCounter]]
+// 			[If, #slUndoCount ==  #slUndoCount2,
+// 				
+// 			,
+// 				[MergeUndo]
+// 			]
+// 			[RoutineCall, J_ProgressUpdate, 643, 0, 0, 0 ,0]
+// 			[IPress, Tool:Masking:Clear]
+// 			[VarSet, slHiddenPoints,]
+// 			[RoutineCall, J_GetPointsInfo,slHiddenPoints, 1 ]
+// 			
+// 			[If, #slHiddenPoints == 1 ,
+// 				[MergeUndo]
+// 				[IPress, "Tool:Geometry:Del Hidden"]
+// 			,]
+// 			[RoutineCall, J_ProgressUpdate, 652, 0, 0, 0 ,0]
+// 			[VarSet, slPolyCount,0]
+// 			[Mesh3dGet, 0,,,slPolyCount]
+// 			[IPress, Tool:Geometry:Copy]
+// 			[RoutineCall, J_ProgressUpdate, 656, 0, 0, 0 ,0]
+// 			[VArset, slUndoCount, [IGet, Edit:Tool:UndoCounter]]
+// 			[MergeUndo]
+// 			[IPress, Tool:Geometry:Close Holes]
+// 			[RoutineCall, J_ProgressUpdate, 660, 0, 0, 0 ,0]
+// 			[VArset, slUndoCount2, [IGet, Edit:Tool:UndoCounter]]
+// 			[VarSet, slPolyCount2,0]
+// 			[Mesh3dGet, 0,,,slPolyCount2]
+// 			[RoutineCall, J_ProgressUpdate, 664, 0, 0, 0 ,0]
+// 			[If, #slPolyCount == #slPolyCount2 ,
+// 				[RoutineCall, J_RestoreUndoPoint]
+// 				[RoutineCall, J_MemoryOptimize, 0]
+// 				[VarSet, slHasError, 1]
+// 				[IShow, 1011]
+// 				[NoteBar, ""]
+// 				
+// 				[VarSet, slErrorToDisplay, "The mesh is 100% solid and has 0 holes. Action cancelled."]
+// 				[LoopExit]
+// 			,]
+// 			[RoutineCall, J_ProgressUpdate, 672, 0, 0, 0 ,0]
+// 			[If, #slHasError == 0,
+// 				[If,#slUndoCount2 > #slUndoCount ,
+// 					[MergeUndo]
+// 				,]
+// 				[RoutineCall, J_ProgressUpdate, 677, 0, 0, 0 ,0]
+// 				[IPress, "Tool:Geometry:Paste Append"]
+// 				[VarSet, slWeldDist, [IGet, Tool:Geometry:WeldDist]]
+// 				[ISet, Tool:Geometry:WeldDist, 1]
+// 				[MergeUndo]
+// 				[IPress, Tool:Geometry:WeldPoints]
+// 				[RoutineCall, J_ProgressUpdate, 683, 0, 0, 0 ,0]
+// 				[MergeUndo]
+// 				[IPress, "Tool:Geometry:Paste Append"]
+// 				[IPress, Tool:Geometry:WeldPoints]
+// 				[RoutineCall, J_ProgressUpdate, 687, 0, 0, 0 ,0]
+// 				[ISet, Tool:Geometry:WeldDist, #slWeldDist]
+// 				[IKeyPress, 13,
+// 					[MergeUndo]
+// 					[IPress, Tool:Geometry:Fix Mesh]
+// 				]
+// 				[RoutineCall, J_ProgressUpdate, 693, 0, 0, 0 ,0]
+// 				[Note, "Checking and fixing geometry holes. Please wait..."]
+// 				[VArset, slUndoCount, [IGet, Edit:Tool:UndoCounter]]
+// 				[MergeUndo]
+// 				[IPress, Tool:Geometry:Close Holes]
+// 				[RoutineCall, J_ProgressUpdate, 698, 0, 0, 0 ,0]
+// 				[VArset, slUndoCount2, [IGet, Edit:Tool:UndoCounter]]
+// 				[If, #slUndoCount2 ==  #slUndoCount,
+// 					[IPress, Tool:Masking:Clear]
+// 				,]
+// 				[RoutineCall, J_ProgressUpdate, 703, 0, 0, 0 ,0]
+// 				[IPress, Tool:Geometry:Copy]
+// 				[RoutineCall, J_RestoreUndoPoint]
+// 				[IPress, Tool:Geometry:Paste Replace]
+// 				[RoutineCall, J_MemoryOptimize, 0]
+// 				[RoutineCall, J_ProgressUpdate, 708, 0, 0, 0 ,0]
+// 				[RoutineCall, J_ProgressEnd]
+// 			,]
+// 			
+// 			
+// 			
+// 		]
+// 		[If, #slAutoCollapseFlags > -1 ,
+// 			[RoutineCall, J_CanvasClickInsertMesh]
+// 			[If, #slDynSub ,
+// 				[MergeUndo]
+// 				[IPress, "Tool:Geometry:s.Dynamic"]
+// 			,]
+// 			[RoutineCall, J_RestoreScrollBarStatus]
+// 			[RoutineCall, J_RestoreUndoHistoryMax]
+// 			[RoutineCall, J_RestoreCameraCanvas]
+// 			[RoutineCall, J_SoloRestore]
+// 			[IShow, 1011]
+// 		,]
+// 	]
+// 	
+// 	[If, #slHasError == 1,
+// 		[Note, #slErrorToDisplay]
+// 	,]
+// 	[IShowActions, 1]
+// 	[IUpdate, 1, 1]
+// ]
+// 
+// 
+// [IButton, CloseHolesFix, "", 
+// 	[IKeyPress, 1,
+// 		[RoutineCall, J_CloseHolesFix]
+// 	]
+// 	
+// ]
+// 
+// [RoutineDef, J_CheckIfSolid,
+// 	[IShowActions, 0]
+// 	[VarSet, slHasError, 0]
+// 	[VarSet, slErrorToDisplay, ""]
+// 	[VarSet, slAutoCollapseFlags, -1]
+// 	[IFreeze,
+// 		[Loop,1,
+// 			[RoutineCall,J_CatchValidityError, slHasError, slErrorToDisplay]
+// 			//... continue
+// 			
+// 			[RoutineCall, J_CatchGeometryError, slHasError, slErrorToDisplay, 0,0,1,0,0]
+// 			//... continue
+// 			[Note, "Checking if no holes. Please wait..."]
+// 			[RoutineCall, J_SetSaveScrollBarStatus]
+// 			[RoutineCall, J_GetAutoCollapseFlags, slAutoCollapseFlags]
+// 			[IHide, 1011]
+// 			[RoutineCall, J_InitiateProgressBar, 644, 695]
+// 			[RoutineCall, J_ProgressUpdate, 645, 0, 0, 0, 0]
+// 			[RoutineCall, J_SetUndoHistoryMax]
+// 			[RoutineCall, J_StoreCameraCanvas]
+// 			[RoutineCall, J_SoloOn]
+// 			[RoutineCall, J_ProgressUpdate, 649, 0, 0, 0, 0]
+// 			[RoutineCall, J_HideCanvas]
+// 			[RoutineCall, J_SaveUndoPoint]
+// 			[IUnPress, Transform:Edit]
+// 			[RoutineCall, J_ProgressUpdate, 653, 0, 0, 0, 0]
+// 			[VarSet, slUndo, [IGet, Edit:Tool:UndoCounter]]
+// 			[RoutineCall, J_PrepareSubTool, 0, 1, 1, 1]
+// 			[VarSet, slUndo2, [IGet, Edit:Tool:UndoCounter]]
+// 			[If, #slUndo2 > #slUndo ,
+// 				[MergeUndo]
+// 			,]
+// 			[RoutineCall, J_ProgressUpdate, 660, 0, 0, 0, 0]
+// 			[IPress, Tool:Masking:Clear]
+// 			[VarSet, slUndo, [IGet, Edit:Tool:UndoCounter]]
+// 			[MergeUndo]
+// 			[RoutineCall, J_BakeGeometry]
+// 			[VarSet, slUndo2, [IGet, Edit:Tool:UndoCounter]]
+// 			[RoutineCall, J_ProgressUpdate, 666, 0, 0, 0, 0]
+// 			[VarSet, slPolyCount,0]
+// 			[Mesh3dGet, 0,,,slPolyCount]
+// 			[IPress, Tool:Geometry:Copy]
+// 			[If, #slUndo2 > #slUndo ,
+// 				[MergeUndo]
+// 			,]
+// 			[RoutineCall, J_ProgressUpdate, 673, 0, 0, 0, 0]
+// 			[IPress, Tool:Geometry:Close Holes]
+// 			[VarSet, slPolyCount2,0]
+// 			[Mesh3dGet, 0,,,slPolyCount2]
+// 			
+// 			[If, #slPolyCount == #slPolyCount2,
+// 				[VarSet, slHasError, 1]
+// 					
+// 				[VarSet, slErrorToDisplay, "Test completed.The mesh is 100% solid and has 0 holes."]
+// 			,
+// 				
+// 				[VarSet, slHasError, 1]
+// 				[VarSet, slErrorToDisplay, "Test completed.The mesh has holes."]
+// 			
+// 			]
+// 			[RoutineCall, J_ProgressUpdate, 688, 0, 0, 0, 0]
+// 			[RoutineCall, J_RestoreUndoPoint]
+// 			[MergeUndo]
+// 			[IPress, "Tool:Masking:Clear"]
+// 			[RoutineCall, J_ProgressUpdate, 692, 0, 0, 0, 0]
+// 			[RoutineCall, J_MemoryOptimize, 0]
+// 			[RoutineCall, J_ProgressUpdate, 694, 0, 0, 0, 0]
+// 			[RoutineCall, J_ProgressEnd]
+// 		]
+// 		[If, #slAutoCollapseFlags > -1 ,
+// 			[RoutineCall, J_CanvasClickInsertMesh]
+// 			[RoutineCall, J_RestoreScrollBarStatus]
+// 			[RoutineCall, J_RestoreUndoHistoryMax]
+// 			[RoutineCall, J_RestoreCameraCanvas]
+// 			[RoutineCall, J_SoloRestore]
+// 			[IShow, 1011]
+// 		,]
+// 	]
