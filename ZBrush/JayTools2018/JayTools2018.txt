@@ -1,0 +1,80 @@
+[IShowActions,0]
+// JayTools2018 plugin wrapper for ZBrush 2018 / ZScript 4.7
+// Keep this file beside script.txt and the J*.txt dependency files.
+<zscriptinsert,"script.txt">
+
+[ISubPalette,"ZPlugin:JayTools2018 - DynaMan"]
+[ISlider,"ZPlugin:JayTools2018 - DynaMan:Target Points",250,4,10,3000,"Target polygon count in thousands",
+    [ISet,"ZScript:Target Points",[IGet,"ZPlugin:JayTools2018 - DynaMan:Target Points"]]
+,0,200]
+[ISwitch,"ZPlugin:JayTools2018 - DynaMan:PGroups",0,"Preserve PolyGroups",
+    [IPress,"ZScript:PGroups"],
+    [IPress,"ZScript:PGroups"]
+,0,80]
+[IButton,"ZPlugin:JayTools2018 - DynaMan:DynaM","Run DynaMan",
+    [IPress,"ZScript:DynaM"]
+]
+
+[ISubPalette,"ZPlugin:JayTools2018 - MaskMan"]
+[IButton,"ZPlugin:JayTools2018 - MaskMan:FrontMask Only","Mask visible front-facing surface only",[IPress,"ZScript:FrontMaskOnly"]]
+[ISlider,"ZPlugin:JayTools2018 - MaskMan:GrowMask",0,1,-100,100,"Grow or shrink mask",
+    [ISet,"ZScript:GrowMask",[IGet,"ZPlugin:JayTools2018 - MaskMan:GrowMask"]]
+,0,200]
+[ISlider,"ZPlugin:JayTools2018 - MaskMan:Mask Sharpness",0,1,-100,100,"Sharpen or soften mask",
+    [ISet,"ZScript:MaskSharpness",[IGet,"ZPlugin:JayTools2018 - MaskMan:Mask Sharpness"]]
+,0,200]
+[IButton,"ZPlugin:JayTools2018 - MaskMan:MaskPenHardSize","Set hard mask pen size",[IPress,"ZScript:MaskPenHardSize"]]
+[IButton,"ZPlugin:JayTools2018 - MaskMan:MaskPenHardOnly","Use hard mask pen",[IPress,"ZScript:MaskPenHardOnly"]]
+[IButton,"ZPlugin:JayTools2018 - MaskMan:Mask Pen Restore","Restore mask pen",[IPress,"ZScript:MaskPenRestore"]]
+
+[ISubPalette,"ZPlugin:JayTools2018 - ResoluteMan"]
+[ISwitch,"ZPlugin:JayTools2018 - ResoluteMan:AdaptRes",0,"Adaptive resolution",
+    [IPress,"ZScript:AdaptRes"],
+    [IPress,"ZScript:AdaptRes"]
+,0,80]
+[ISlider,"ZPlugin:JayTools2018 - ResoluteMan:Lowest Lvl Polys",4.5,.01,.01,50,"Lowest level polygons; 1 equals 1K",
+    [ISet,"ZScript:Lowest Lvl Polys 1=1k",[IGet,"ZPlugin:JayTools2018 - ResoluteMan:Lowest Lvl Polys"]]
+,0,200]
+[ISlider,"ZPlugin:JayTools2018 - ResoluteMan:Highest Lvl Polys",18,.01,.01,3000,"Highest level polygons; 1 equals 1K",
+    [ISet,"ZScript:Highest Lvl Polys 1=1k",[IGet,"ZPlugin:JayTools2018 - ResoluteMan:Highest Lvl Polys"]]
+,0,200]
+[ISlider,"ZPlugin:JayTools2018 - ResoluteMan:Highest Lvl SubD Lvl",1,1,1,10,"Highest subdivision level",
+    [ISet,"ZScript:Highest SubD Lvl",[IGet,"ZPlugin:JayTools2018 - ResoluteMan:Highest Lvl SubD Lvl"]]
+,0,200]
+[ISwitch,"ZPlugin:JayTools2018 - ResoluteMan:Alt Remeshing",0,"Alternate remeshing",
+    [IPress,"ZScript:AltRemeshing"],
+    [IPress,"ZScript:AltRemeshing"]
+,0,80]
+[IButton,"ZPlugin:JayTools2018 - ResoluteMan:RemeshQ","Run RemeshQ",[IPress,"ZScript:ReMeshq"]]
+[IButton,"ZPlugin:JayTools2018 - ResoluteMan:ZmeshQ","Run ZMeshQ",[IPress,"ZScript:ZMeshq"]]
+
+[ISubPalette,"ZPlugin:JayTools2018 - IsoBoy"]
+[IButton,"ZPlugin:JayTools2018 - IsoBoy:FixProjG","Fix projection groups",[IPress,"ZScript:FixProjq"]]
+[IButton,"ZPlugin:JayTools2018 - IsoBoy:IsolateProjQ","Isolate projection",[IPress,"ZScript:IsolateProjq"]]
+[IButton,"ZPlugin:JayTools2018 - IsoBoy:ProjQ","Project",[IPress,"ZScript:ProjQ"]]
+[IButton,"ZPlugin:JayTools2018 - IsoBoy:DelProjQ","Delete projection",[IPress,"ZScript:DelProjq"]]
+[IButton,"ZPlugin:JayTools2018 - IsoBoy:CleanMeshQ","Clean mesh",[IPress,"ZScript:CleanMeshQ"]]
+[IButton,"ZPlugin:JayTools2018 - IsoBoy:FullReconstructMesh","Fully reconstruct mesh",[IPress,"ZScript:FullReconstructMesh"]]
+
+[ISubPalette,"ZPlugin:JayTools2018 - EditButler"]
+[IButton,"ZPlugin:JayTools2018 - EditButler:FaceMode","Face selection mode",[IPress,"ZScript:FaceMode"]]
+[IButton,"ZPlugin:JayTools2018 - EditButler:EdgeMode","Edge selection mode",[IPress,"ZScript:EdgeMode"]]
+[IButton,"ZPlugin:JayTools2018 - EditButler:PointMode","Point selection mode",[IPress,"ZScript:PointMode"]]
+
+[ISubPalette,"ZPlugin:JayTools2018 - Extractor"]
+[IButton,"ZPlugin:JayTools2018 - Extractor:SampleHeight","Sample panel height",[IPress,"ZScript:SampleHeight"]]
+[ISwitch,"ZPlugin:JayTools2018 - Extractor:FlatEdges",0,"Use flat edges",
+    [IPress,"ZScript:FlatEdges"],
+    [IPress,"ZScript:FlatEdges"]
+,0,80]
+[ISwitch,"ZPlugin:JayTools2018 - Extractor:PanelGrpAppend",0,"Append panel group",
+    [IPress,"ZScript:PanelGrpAppend"],
+    [IPress,"ZScript:PanelGrpAppend"]
+,0,80]
+[ISlider,"ZPlugin:JayTools2018 - Extractor:PanelGrpBevel",40,1,0,100,"Panel group bevel",
+    [ISet,"ZScript:PanelGrpBevel",[IGet,"ZPlugin:JayTools2018 - Extractor:PanelGrpBevel"]]
+,0,200]
+[IButton,"ZPlugin:JayTools2018 - Extractor:PanelGrpAdv","Advanced panel group extraction",[IPress,"ZScript:PanelGrpAdv"]]
+
+[IShowActions,1]
+[IUpdate,1,1]
