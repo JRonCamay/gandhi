@@ -1,80 +1,54 @@
 [IShowActions,0]
-// JayTools2018 plugin wrapper for ZBrush 2018 / ZScript 4.7
-// Keep this file beside script.txt and the J*.txt dependency files.
-<zscriptinsert,"script.txt">
+// JayTools2018 UI-only test plugin
+// Compatible with ZBrush 2018 / ZScript 4.7
+// No external scripts or routines are loaded yet.
 
-[ISubPalette,"ZPlugin:JayTools2018 - DynaMan"]
-[ISlider,"ZPlugin:JayTools2018 - DynaMan:Target Points",250,4,10,3000,"Target polygon count in thousands",
-    [ISet,"ZScript:Target Points",[IGet,"ZPlugin:JayTools2018 - DynaMan:Target Points"]]
-,0,200]
-[ISwitch,"ZPlugin:JayTools2018 - DynaMan:PGroups",0,"Preserve PolyGroups",
-    [IPress,"ZScript:PGroups"],
-    [IPress,"ZScript:PGroups"]
-,0,80]
-[IButton,"ZPlugin:JayTools2018 - DynaMan:DynaM","Run DynaMan",
-    [IPress,"ZScript:DynaM"]
+[ISubPalette,"ZPlugin:JayTools2018"]
+[IButton,"ZPlugin:JayTools2018:JayTools 2018","UI test button",
+    [Note,"JayTools2018 UI loaded successfully."]
 ]
 
-[ISubPalette,"ZPlugin:JayTools2018 - MaskMan"]
-[IButton,"ZPlugin:JayTools2018 - MaskMan:FrontMask Only","Mask visible front-facing surface only",[IPress,"ZScript:FrontMaskOnly"]]
-[ISlider,"ZPlugin:JayTools2018 - MaskMan:GrowMask",0,1,-100,100,"Grow or shrink mask",
-    [ISet,"ZScript:GrowMask",[IGet,"ZPlugin:JayTools2018 - MaskMan:GrowMask"]]
-,0,200]
-[ISlider,"ZPlugin:JayTools2018 - MaskMan:Mask Sharpness",0,1,-100,100,"Sharpen or soften mask",
-    [ISet,"ZScript:MaskSharpness",[IGet,"ZPlugin:JayTools2018 - MaskMan:Mask Sharpness"]]
-,0,200]
-[IButton,"ZPlugin:JayTools2018 - MaskMan:MaskPenHardSize","Set hard mask pen size",[IPress,"ZScript:MaskPenHardSize"]]
-[IButton,"ZPlugin:JayTools2018 - MaskMan:MaskPenHardOnly","Use hard mask pen",[IPress,"ZScript:MaskPenHardOnly"]]
-[IButton,"ZPlugin:JayTools2018 - MaskMan:Mask Pen Restore","Restore mask pen",[IPress,"ZScript:MaskPenRestore"]]
+[ISubPalette,"ZPlugin:DynaMan"]
+[IButton,"ZPlugin:DynaMan:Target Points","UI placeholder",[Note,"Target Points placeholder"]]
+[IButton,"ZPlugin:DynaMan:PGroups","UI placeholder",[Note,"PGroups placeholder"]]
+[IButton,"ZPlugin:DynaMan:DynaM","UI placeholder",[Note,"DynaM placeholder"]]
 
-[ISubPalette,"ZPlugin:JayTools2018 - ResoluteMan"]
-[ISwitch,"ZPlugin:JayTools2018 - ResoluteMan:AdaptRes",0,"Adaptive resolution",
-    [IPress,"ZScript:AdaptRes"],
-    [IPress,"ZScript:AdaptRes"]
-,0,80]
-[ISlider,"ZPlugin:JayTools2018 - ResoluteMan:Lowest Lvl Polys",4.5,.01,.01,50,"Lowest level polygons; 1 equals 1K",
-    [ISet,"ZScript:Lowest Lvl Polys 1=1k",[IGet,"ZPlugin:JayTools2018 - ResoluteMan:Lowest Lvl Polys"]]
-,0,200]
-[ISlider,"ZPlugin:JayTools2018 - ResoluteMan:Highest Lvl Polys",18,.01,.01,3000,"Highest level polygons; 1 equals 1K",
-    [ISet,"ZScript:Highest Lvl Polys 1=1k",[IGet,"ZPlugin:JayTools2018 - ResoluteMan:Highest Lvl Polys"]]
-,0,200]
-[ISlider,"ZPlugin:JayTools2018 - ResoluteMan:Highest Lvl SubD Lvl",1,1,1,10,"Highest subdivision level",
-    [ISet,"ZScript:Highest SubD Lvl",[IGet,"ZPlugin:JayTools2018 - ResoluteMan:Highest Lvl SubD Lvl"]]
-,0,200]
-[ISwitch,"ZPlugin:JayTools2018 - ResoluteMan:Alt Remeshing",0,"Alternate remeshing",
-    [IPress,"ZScript:AltRemeshing"],
-    [IPress,"ZScript:AltRemeshing"]
-,0,80]
-[IButton,"ZPlugin:JayTools2018 - ResoluteMan:RemeshQ","Run RemeshQ",[IPress,"ZScript:ReMeshq"]]
-[IButton,"ZPlugin:JayTools2018 - ResoluteMan:ZmeshQ","Run ZMeshQ",[IPress,"ZScript:ZMeshq"]]
+[ISubPalette,"ZPlugin:MaskMan"]
+[IButton,"ZPlugin:MaskMan:FrontMask Only","UI placeholder",[Note,"FrontMask Only placeholder"]]
+[IButton,"ZPlugin:MaskMan:GrowMask","UI placeholder",[Note,"GrowMask placeholder"]]
+[IButton,"ZPlugin:MaskMan:Mask Sharpness","UI placeholder",[Note,"Mask Sharpness placeholder"]]
+[IButton,"ZPlugin:MaskMan:MaskPenHardSize","UI placeholder",[Note,"MaskPenHardSize placeholder"]]
+[IButton,"ZPlugin:MaskMan:MaskPenHardOnly","UI placeholder",[Note,"MaskPenHardOnly placeholder"]]
+[IButton,"ZPlugin:MaskMan:Mask Pen Restore","UI placeholder",[Note,"Mask Pen Restore placeholder"]]
 
-[ISubPalette,"ZPlugin:JayTools2018 - IsoBoy"]
-[IButton,"ZPlugin:JayTools2018 - IsoBoy:FixProjG","Fix projection groups",[IPress,"ZScript:FixProjq"]]
-[IButton,"ZPlugin:JayTools2018 - IsoBoy:IsolateProjQ","Isolate projection",[IPress,"ZScript:IsolateProjq"]]
-[IButton,"ZPlugin:JayTools2018 - IsoBoy:ProjQ","Project",[IPress,"ZScript:ProjQ"]]
-[IButton,"ZPlugin:JayTools2018 - IsoBoy:DelProjQ","Delete projection",[IPress,"ZScript:DelProjq"]]
-[IButton,"ZPlugin:JayTools2018 - IsoBoy:CleanMeshQ","Clean mesh",[IPress,"ZScript:CleanMeshQ"]]
-[IButton,"ZPlugin:JayTools2018 - IsoBoy:FullReconstructMesh","Fully reconstruct mesh",[IPress,"ZScript:FullReconstructMesh"]]
+[ISubPalette,"ZPlugin:ResoluteMan"]
+[IButton,"ZPlugin:ResoluteMan:AdaptRes","UI placeholder",[Note,"AdaptRes placeholder"]]
+[IButton,"ZPlugin:ResoluteMan:Lowest Lvl Polys","UI placeholder",[Note,"Lowest Lvl Polys placeholder"]]
+[IButton,"ZPlugin:ResoluteMan:Highest Lvl Polys","UI placeholder",[Note,"Highest Lvl Polys placeholder"]]
+[IButton,"ZPlugin:ResoluteMan:Highest Lvl SubD Lvl","UI placeholder",[Note,"Highest Lvl SubD Lvl placeholder"]]
+[IButton,"ZPlugin:ResoluteMan:Alt Remeshing","UI placeholder",[Note,"Alt Remeshing placeholder"]]
+[IButton,"ZPlugin:ResoluteMan:RemeshQ","UI placeholder",[Note,"RemeshQ placeholder"]]
+[IButton,"ZPlugin:ResoluteMan:ZmeshQ","UI placeholder",[Note,"ZmeshQ placeholder"]]
 
-[ISubPalette,"ZPlugin:JayTools2018 - EditButler"]
-[IButton,"ZPlugin:JayTools2018 - EditButler:FaceMode","Face selection mode",[IPress,"ZScript:FaceMode"]]
-[IButton,"ZPlugin:JayTools2018 - EditButler:EdgeMode","Edge selection mode",[IPress,"ZScript:EdgeMode"]]
-[IButton,"ZPlugin:JayTools2018 - EditButler:PointMode","Point selection mode",[IPress,"ZScript:PointMode"]]
+[ISubPalette,"ZPlugin:IsoBoy"]
+[IButton,"ZPlugin:IsoBoy:FixProjG","UI placeholder",[Note,"FixProjG placeholder"]]
+[IButton,"ZPlugin:IsoBoy:IsolateProjQ","UI placeholder",[Note,"IsolateProjQ placeholder"]]
+[IButton,"ZPlugin:IsoBoy:ProjQ","UI placeholder",[Note,"ProjQ placeholder"]]
+[IButton,"ZPlugin:IsoBoy:DelProjQ","UI placeholder",[Note,"DelProjQ placeholder"]]
+[IButton,"ZPlugin:IsoBoy:CleanMeshQ","UI placeholder",[Note,"CleanMeshQ placeholder"]]
+[IButton,"ZPlugin:IsoBoy:FullReconstructMesh","UI placeholder",[Note,"FullReconstructMesh placeholder"]]
 
-[ISubPalette,"ZPlugin:JayTools2018 - Extractor"]
-[IButton,"ZPlugin:JayTools2018 - Extractor:SampleHeight","Sample panel height",[IPress,"ZScript:SampleHeight"]]
-[ISwitch,"ZPlugin:JayTools2018 - Extractor:FlatEdges",0,"Use flat edges",
-    [IPress,"ZScript:FlatEdges"],
-    [IPress,"ZScript:FlatEdges"]
-,0,80]
-[ISwitch,"ZPlugin:JayTools2018 - Extractor:PanelGrpAppend",0,"Append panel group",
-    [IPress,"ZScript:PanelGrpAppend"],
-    [IPress,"ZScript:PanelGrpAppend"]
-,0,80]
-[ISlider,"ZPlugin:JayTools2018 - Extractor:PanelGrpBevel",40,1,0,100,"Panel group bevel",
-    [ISet,"ZScript:PanelGrpBevel",[IGet,"ZPlugin:JayTools2018 - Extractor:PanelGrpBevel"]]
-,0,200]
-[IButton,"ZPlugin:JayTools2018 - Extractor:PanelGrpAdv","Advanced panel group extraction",[IPress,"ZScript:PanelGrpAdv"]]
+[ISubPalette,"ZPlugin:EditButler"]
+[IButton,"ZPlugin:EditButler:FaceMode","UI placeholder",[Note,"FaceMode placeholder"]]
+[IButton,"ZPlugin:EditButler:EdgeMode","UI placeholder",[Note,"EdgeMode placeholder"]]
+[IButton,"ZPlugin:EditButler:PointMode","UI placeholder",[Note,"PointMode placeholder"]]
+
+[ISubPalette,"ZPlugin:Extractor"]
+[IButton,"ZPlugin:Extractor:SampleHeight","UI placeholder",[Note,"SampleHeight placeholder"]]
+[IButton,"ZPlugin:Extractor:FlatEdges","UI placeholder",[Note,"FlatEdges placeholder"]]
+[IButton,"ZPlugin:Extractor:PanelGrpAppend","UI placeholder",[Note,"PanelGrpAppend placeholder"]]
+[IButton,"ZPlugin:Extractor:PanelGrpBevel","UI placeholder",[Note,"PanelGrpBevel placeholder"]]
+[IButton,"ZPlugin:Extractor:PanelGrpAdv","UI placeholder",[Note,"PanelGrpAdv placeholder"]]
 
 [IShowActions,1]
 [IUpdate,1,1]
