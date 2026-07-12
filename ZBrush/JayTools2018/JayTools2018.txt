@@ -1,137 +1,47 @@
 [IShowActions,0]
-// JayTools2018 UI-only plugin
-// ZBrush 2018 / ZScript 4.7 compatible
-// No external routines are loaded yet.
+// JayTools2018 - ZBrush 2018 / ZScript 4.7
+// DynaMan connected to the original script.
+
+<zscriptinsert,"JayTools2018/script.txt">
 
 [ISubPalette,"ZPlugin:JayTools2018"]
 
-[IButton,"ZPlugin:JayTools2018:JAY TOOLS 2018","JayTools2018 UI test",
-    [Note,"JayTools2018 UI loaded successfully."]
+[IButton,"ZPlugin:JayTools2018:JAY TOOLS 2018","JayTools2018 for ZBrush 2018",
+    [Note,"JayTools2018 loaded. DynaMan is connected."]
 ]
 
-[IButton,"ZPlugin:JayTools2018:=== DynaMan ===","DynaMan section",
+[IButton,"ZPlugin:JayTools2018:=== DynaMan ===","DynaMan tools",
     [Note,"DynaMan"]
 ]
+
 [ISlider,"ZPlugin:JayTools2018:Target Points",250,4,10,3000,"Target polygon count in thousands",
-    [Note,"Target Points placeholder"]
+    [ISet,"ZScript:Target Points",[IGet,"ZPlugin:JayTools2018:Target Points"]]
 ,0,200]
-[ISwitch,"ZPlugin:JayTools2018:PGroups",0,"Preserve PolyGroups",
-    [Note,"PGroups ON placeholder"],
-    [Note,"PGroups OFF placeholder"]
-]
-[IButton,"ZPlugin:JayTools2018:DynaM","Run DynaMan",
-    [Note,"DynaM placeholder"]
+
+[ISwitch,"ZPlugin:JayTools2018:PGroups",0,"Preserve PolyGroups during DynaMesh",
+    [If,[IGet,"ZScript:PGroups"] == 0,
+        [IPress,"ZScript:PGroups"]
+    ],
+    [If,[IGet,"ZScript:PGroups"] == 1,
+        [IUnPress,"ZScript:PGroups"]
+    ]
 ]
 
-[IButton,"ZPlugin:JayTools2018:=== MaskMan ===","MaskMan section",
-    [Note,"MaskMan"]
-]
-[ISwitch,"ZPlugin:JayTools2018:FrontMask Only",0,"Mask front-facing polygons only",
-    [Note,"FrontMask Only ON placeholder"],
-    [Note,"FrontMask Only OFF placeholder"]
-]
-[ISlider,"ZPlugin:JayTools2018:GrowMask",0,1,-100,100,"Grow or shrink the current mask",
-    [Note,"GrowMask placeholder"]
-,0,200]
-[ISlider,"ZPlugin:JayTools2018:Mask Sharpness",0,1,-100,100,"Sharpen or soften the current mask",
-    [Note,"Mask Sharpness placeholder"]
-,0,200]
-[IButton,"ZPlugin:JayTools2018:MaskPenHardSize","Set hard mask pen size",
-    [Note,"MaskPenHardSize placeholder"]
-]
-[IButton,"ZPlugin:JayTools2018:MaskPenHardOnly","Use hard mask pen only",
-    [Note,"MaskPenHardOnly placeholder"]
-]
-[IButton,"ZPlugin:JayTools2018:Mask Pen Restore","Restore previous mask pen settings",
-    [Note,"Mask Pen Restore placeholder"]
+[IButton,"ZPlugin:JayTools2018:DynaM","DynaMesh while targeting the requested point count",
+    [ISet,"ZScript:Target Points",[IGet,"ZPlugin:JayTools2018:Target Points"]]
+    [If,[IGet,"ZPlugin:JayTools2018:PGroups"] == 1,
+        [If,[IGet,"ZScript:PGroups"] == 0,[IPress,"ZScript:PGroups"]]
+    ,
+        [If,[IGet,"ZScript:PGroups"] == 1,[IUnPress,"ZScript:PGroups"]]
+    ]
+    [IPress,"ZScript:DynaM"]
 ]
 
-[IButton,"ZPlugin:JayTools2018:=== ResoluteMan ===","ResoluteMan section",
-    [Note,"ResoluteMan"]
-]
-[ISwitch,"ZPlugin:JayTools2018:AdaptRes",0,"Use adaptive resolution",
-    [Note,"AdaptRes ON placeholder"],
-    [Note,"AdaptRes OFF placeholder"]
-]
-[ISlider,"ZPlugin:JayTools2018:Lowest Lvl Polys",4.5,0.1,0.1,50,"Lowest level polygon target; 1 equals 1K",
-    [Note,"Lowest Lvl Polys placeholder"]
-,0,200]
-[ISlider,"ZPlugin:JayTools2018:Highest Lvl Polys",18,0.1,0.1,3000,"Highest level polygon target; 1 equals 1K",
-    [Note,"Highest Lvl Polys placeholder"]
-,0,200]
-[ISlider,"ZPlugin:JayTools2018:Highest Lvl SubD Lvl",1,1,1,10,"Maximum subdivision level",
-    [Note,"Highest Lvl SubD Lvl placeholder"]
-,0,200]
-[ISwitch,"ZPlugin:JayTools2018:Alt Remeshing",0,"Use alternate remeshing",
-    [Note,"Alt Remeshing ON placeholder"],
-    [Note,"Alt Remeshing OFF placeholder"]
-]
-[IButton,"ZPlugin:JayTools2018:RemeshQ","Run RemeshQ",
-    [Note,"RemeshQ placeholder"]
-]
-[IButton,"ZPlugin:JayTools2018:ZmeshQ","Run ZmeshQ",
-    [Note,"ZmeshQ placeholder"]
-]
-
-[IButton,"ZPlugin:JayTools2018:=== IsoBoy ===","IsoBoy section",
-    [Note,"IsoBoy"]
-]
-[IButton,"ZPlugin:JayTools2018:FixProjG","Fix projection groups",
-    [Note,"FixProjG placeholder"]
-]
-[IButton,"ZPlugin:JayTools2018:IsolateProjQ","Isolate projection",
-    [Note,"IsolateProjQ placeholder"]
-]
-[IButton,"ZPlugin:JayTools2018:ProjQ","Run projection",
-    [Note,"ProjQ placeholder"]
-]
-[IButton,"ZPlugin:JayTools2018:DelProjQ","Delete projection data",
-    [Note,"DelProjQ placeholder"]
-]
-[IButton,"ZPlugin:JayTools2018:CleanMeshQ","Clean mesh",
-    [Note,"CleanMeshQ placeholder"]
-]
-[IButton,"ZPlugin:JayTools2018:FullReconstructMesh","Fully reconstruct mesh",
-    [Note,"FullReconstructMesh placeholder"]
-]
-
-[IButton,"ZPlugin:JayTools2018:=== EditButler ===","EditButler section",
-    [Note,"EditButler"]
-]
-[IButton,"ZPlugin:JayTools2018:FaceMode","Face selection mode",
-    [Note,"FaceMode placeholder"]
-]
-[IButton,"ZPlugin:JayTools2018:EdgeMode","Edge selection mode",
-    [Note,"EdgeMode placeholder"]
-]
-[IButton,"ZPlugin:JayTools2018:PointMode","Point selection mode",
-    [Note,"PointMode placeholder"]
-]
-
-[IButton,"ZPlugin:JayTools2018:=== Extractor ===","Extractor section",
-    [Note,"Extractor"]
-]
-[IButton,"ZPlugin:JayTools2018:SampleHeight","Sample panel height",
-    [Note,"SampleHeight placeholder"]
-]
-[ISwitch,"ZPlugin:JayTools2018:FlatEdges",0,"Use flat panel edges",
-    [Note,"FlatEdges ON placeholder"],
-    [Note,"FlatEdges OFF placeholder"]
-]
-[ISwitch,"ZPlugin:JayTools2018:PanelGrpAppend",0,"Append extracted panel group",
-    [Note,"PanelGrpAppend ON placeholder"],
-    [Note,"PanelGrpAppend OFF placeholder"]
-]
-[ISlider,"ZPlugin:JayTools2018:PanelGrpBevel",40,1,0,100,"Panel group bevel amount",
-    [Note,"PanelGrpBevel placeholder"]
-,0,200]
-[IButton,"ZPlugin:JayTools2018:PanelGrpAdv","Advanced panel group extraction",
-    [Note,"PanelGrpAdv placeholder"]
-]
-
-[IButton,"ZPlugin:JayTools2018:About JayTools","UI-only development build for ZBrush 2018",
-    [Note,"JayTools2018 UI-only development build. Functions will be connected next."]
-]
+[IButton,"ZPlugin:JayTools2018:=== MaskMan ===","Not connected yet",[Note,"MaskMan will be connected next."]]
+[IButton,"ZPlugin:JayTools2018:=== ResoluteMan ===","Not connected yet",[Note,"ResoluteMan will be connected later."]]
+[IButton,"ZPlugin:JayTools2018:=== IsoBoy ===","Not connected yet",[Note,"IsoBoy will be connected later."]]
+[IButton,"ZPlugin:JayTools2018:=== EditButler ===","Not connected yet",[Note,"EditButler will be connected later."]]
+[IButton,"ZPlugin:JayTools2018:=== Extractor ===","Not connected yet",[Note,"Extractor will be connected later."]]
 
 [IShowActions,1]
 [IUpdate,1,1]
