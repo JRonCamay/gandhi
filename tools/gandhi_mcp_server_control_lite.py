@@ -1,4 +1,5 @@
 import json,os,re,tempfile,time,uuid,hashlib,shutil,urllib.request
+from urllib.error import HTTPError
 from contextlib import contextmanager
 from pathlib import Path
 from mcp.server.fastmcp import FastMCP
@@ -153,6 +154,14 @@ def f_batch(o):
         try:out.append(f_write({**x,"overwrite":o.get("overwrite",False) or x.get("overwrite",False)}))
         except Exception as e:bad.append({"i":i,"err":str(e)})
     return ok({"count":len(out),"failed":bad,"files":out})
+def f_read(o):
+    p=safe(o.get("path"))
+    if not p.is_file():raise E("not file")
+    t=p.read_text(encoding="utf-8",errors="replace");return ok({"path":str(p),"content":t[:int(o.get("maxChars",20000))],"bytes":p.stat().st_size,"sha256":sha(p)})
+def f_info(o):
+    p=safe(o.get("path"));z=p.stat();r={"path":str(p),"file":p.is_file(),"dir":p.is_dir(),"bytes":z.st_size,"mtime":z.st_mtime}
+    if p.is_file():r["sha256"]=sha(p)
+    return ok(r)
 def qd(*a):
     p=WQ
     for x in a:p=p/x
@@ -178,13 +187,17 @@ def jf(o):
 def ig(path):return json.loads(urllib.request.urlopen(WI+path,timeout=8).read().decode())
 def ip(o):
     b=json.dumps(o,ensure_ascii=False).encode();req=urllib.request.Request(WI+"/op",data=b,headers={"Content-Type":"application/json"},method="POST")
-    return json.loads(urllib.request.urlopen(req,timeout=12).read().decode())
+    try:return json.loads(urllib.request.urlopen(req,timeout=12).read().decode())
+    except HTTPError as e:
+        body=e.read().decode("utf-8","replace")
+        try:return json.loads(body)
+        except Exception:return {"status":"error","err":"HTTP","code":e.code,"body":body}
 def rn(kind,o):return jq({"kind":kind,"payload":o,"ram":True})
 DIS={"ping":lambda o:ok({"server":"gandhi_control_lite"}),"qc.create":qc.create,"qc.process":qc.process,"qc.status":qc.status,"qc.complete":qc.complete,"qc.get":qc.get,"qc.list":qc.list,"file.write":f_write,"file.batch":f_batch,"file.read":lambda o:ip({"op":"file.read","params":o}),"file.info":lambda o:ip({"op":"file.info","params":o}),"file.search":lambda o:ip({"op":"file.search","params":o}),"file.functions":lambda o:ip({"op":"file.functions","params":o}),"memory.exportChat":qc.export,"writer.queue":jq,"writer.status":js,"writer.flush":jf,"scratch.note":lambda o:rn("scratch.note",o),"scratch.list":lambda o:ig("/scratch"),"scratch.get":lambda o:ig("/scratch/"+ck(o.get("id"),"id")),"seg.note":lambda o:rn("seg.note",o),"seg.list":lambda o:ig("/segment"),"seg.get":lambda o:ig("/segment/"+ck(o.get("id"),"id")),"daemon.op":ip}
 
 @mcp.tool()
 def MCP_Control(controlObj:dict)->dict:
-    """MCP_Control({cmd,params}). cmds: ping,qc.*,file.*,memory.exportChat,writer.*,scratch.*,seg.*,daemon.op."""
+    """Route {cmd,params}."""
     try:
         o=controlObj or {};c=o.get("cmd") or o.get("op");p=o.get("params") or o.get("param") or {}
         if not c:raise E("missing cmd/op")
