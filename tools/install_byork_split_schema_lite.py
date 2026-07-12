@@ -102,7 +102,7 @@ def main():
     funcs = {n.name: re.sub(r"^\s*@mcp\.tool\([^\n]*\)\s*\r?\n", "", "".join(lines[n.lineno-1:n.end_lineno]), count=1, flags=re.M) for n in nodes}
     aliases = {n: short(n) for n in funcs}
     prefix = clean_prefix("".join(lines[:min(n.lineno for n in nodes)-1]))
-    impl = re.sub(r"^\s*@mcp\.tool\([^\n]*\)\s*\r?\n", "", prefix + "\n" + "\n\n".join(cut_doc(v, k) for k, v in funcs.items()), flags=re.M)
+    impl = re.sub(r"^\s*@mcp\.tool\([^\n]*\)\s*\r?\n", "", prefix + "\n" + "\n\n".join(funcs.values()), flags=re.M)
 
     groups = {}
     groups["core"] = [n for n in ["ping", "repo_info"] if n in funcs]
