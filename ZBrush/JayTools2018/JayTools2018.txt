@@ -14,22 +14,113 @@
     [Note,"DynaMan"]
 ]
 
+// ------------------------------------------------------------
+// QUALITY
+// ------------------------------------------------------------
+[IButton,"ZPlugin:JayTools2018:-- Quality --","DynaMesh quality options",
+    [Note,"DynaMan quality settings"]
+]
+
+[ISwitch,"ZPlugin:JayTools2018:Preserve PolyGroups",0,"Preserve PolyGroups during DynaMesh",
+    [If,[IGet,"ZScript:PGroups"] == 0,[IPress,"ZScript:PGroups"]],
+    [If,[IGet,"ZScript:PGroups"] == 1,[IUnPress,"ZScript:PGroups"]]
+]
+
+[ISwitch,"ZPlugin:JayTools2018:Preserve Borders",0,"Preserve open borders when supported by the active mesh",
+    [Note,"Preserve Borders enabled. This will be connected during the DynaMan routine optimization."],
+    [Note,"Preserve Borders disabled."]
+]
+
+[ISwitch,"ZPlugin:JayTools2018:Project Details",0,"Use DynaMesh projection",
+    [If,[IGet,"Tool:Geometry:Project"] == 0,[IPress,"Tool:Geometry:Project"]],
+    [If,[IGet,"Tool:Geometry:Project"] == 1,[IUnPress,"Tool:Geometry:Project"]]
+]
+
+[ISwitch,"ZPlugin:JayTools2018:Polish",0,"Use DynaMesh polish",
+    [If,[IGet,"Tool:Geometry:D.Polish"] == 0,[IPress,"Tool:Geometry:D.Polish"]],
+    [If,[IGet,"Tool:Geometry:D.Polish"] == 1,[IUnPress,"Tool:Geometry:D.Polish"]]
+]
+
+[ISwitch,"ZPlugin:JayTools2018:Freeze SubDivision",0,"Freeze subdivision levels before DynaMesh when applicable",
+    [Note,"Freeze SubDivision enabled. It will be applied only when subdivision levels are present."],
+    [Note,"Freeze SubDivision disabled."]
+]
+
+// ------------------------------------------------------------
+// RESOLUTION
+// ------------------------------------------------------------
+[IButton,"ZPlugin:JayTools2018:-- Resolution --","Target point controls",
+    [Note,"Target Points uses thousands. 250 means approximately 250,000 points."]
+]
+
 [ISlider,"ZPlugin:JayTools2018:Target Points",250,4,10,3000,"Target polygon count in thousands",
     [ISet,"ZScript:Target Points",[IGet,"ZPlugin:JayTools2018:Target Points"]]
 ,0,200]
 
-[ISwitch,"ZPlugin:JayTools2018:PGroups",0,"Preserve PolyGroups during DynaMesh",
-    [If,[IGet,"ZScript:PGroups"] == 0,
-        [IPress,"ZScript:PGroups"]
-    ],
-    [If,[IGet,"ZScript:PGroups"] == 1,
-        [IUnPress,"ZScript:PGroups"]
+[IButton,"ZPlugin:JayTools2018:Preset 50K","Set target to 50,000 points",
+    [ISet,"ZPlugin:JayTools2018:Target Points",50]
+    [ISet,"ZScript:Target Points",50]
+]
+[IButton,"ZPlugin:JayTools2018:Preset 100K","Set target to 100,000 points",
+    [ISet,"ZPlugin:JayTools2018:Target Points",100]
+    [ISet,"ZScript:Target Points",100]
+]
+[IButton,"ZPlugin:JayTools2018:Preset 250K","Set target to 250,000 points",
+    [ISet,"ZPlugin:JayTools2018:Target Points",250]
+    [ISet,"ZScript:Target Points",250]
+]
+[IButton,"ZPlugin:JayTools2018:Preset 500K","Set target to 500,000 points",
+    [ISet,"ZPlugin:JayTools2018:Target Points",500]
+    [ISet,"ZScript:Target Points",500]
+]
+[IButton,"ZPlugin:JayTools2018:Preset 1M","Set target to 1,000,000 points",
+    [ISet,"ZPlugin:JayTools2018:Target Points",1000]
+    [ISet,"ZScript:Target Points",1000]
+]
+[IButton,"ZPlugin:JayTools2018:Preset 2M","Set target to 2,000,000 points",
+    [ISet,"ZPlugin:JayTools2018:Target Points",2000]
+    [ISet,"ZScript:Target Points",2000]
+]
+
+// ------------------------------------------------------------
+// ANALYSIS
+// ------------------------------------------------------------
+[IButton,"ZPlugin:JayTools2018:-- Analysis --","Inspect current and estimated DynaMesh values",
+    [Note,"Use the three analysis buttons below."]
+]
+
+[IButton,"ZPlugin:JayTools2018:Current Points","Show the active tool point and polygon information",
+    [Note,[IGetInfo,"Tool:Current Tool"]]
+]
+
+[IButton,"ZPlugin:JayTools2018:Current Resolution","Show the current DynaMesh resolution",
+    [Note,[StrMerge,"Current DynaMesh Resolution: ",[IGet,"Tool:Geometry:Resolution"]]]
+]
+
+[IButton,"ZPlugin:JayTools2018:Estimated Output","Estimate output and resolution from the current mesh",
+    [VarSet,slTargetK,[IGet,"ZPlugin:JayTools2018:Target Points"]]
+    [VarSet,slTargetActual,(#slTargetK*1000)]
+    [VarSet,slToolInfo,[IGetInfo,"Tool:Current Tool"]]
+    [VarSet,slPolysId,[StrFind,"Polys=",#slToolInfo]]
+    [VarSet,slHiddenPolysId,[StrFind,"HiddenPolys=",#slToolInfo]]
+    [If,(#slPolysId >= 0) && (#slHiddenPolysId > #slPolysId),
+        [VarSet,slCurrentPolys,[StrExtract,#slToolInfo,(#slPolysId+6),(#slHiddenPolysId-2)]]
+        [If,#slCurrentPolys < 1,[VarSet,slCurrentPolys,1]]
+        [VarSet,slCurrentRes,[IGet,"Tool:Geometry:Resolution"]]
+        [If,#slCurrentRes < 1,[VarSet,slCurrentRes,64]]
+        [VarSet,slEstimatedRes,(#slCurrentRes*((#slTargetActual/#slCurrentPolys)^^0.5))]
+        [Note,[StrMerge,"Current: ",#slCurrentPolys,"  Target: ",#slTargetActual,"  Estimated Resolution: ",#slEstimatedRes]]
+    ,
+        [Note,"Unable to read the active mesh polygon count."]
     ]
 ]
 
+// ------------------------------------------------------------
+// RUN
+// ------------------------------------------------------------
 [IButton,"ZPlugin:JayTools2018:DynaM","DynaMesh while targeting the requested point count",
     [ISet,"ZScript:Target Points",[IGet,"ZPlugin:JayTools2018:Target Points"]]
-    [If,[IGet,"ZPlugin:JayTools2018:PGroups"] == 1,
+    [If,[IGet,"ZPlugin:JayTools2018:Preserve PolyGroups"] == 1,
         [If,[IGet,"ZScript:PGroups"] == 0,[IPress,"ZScript:PGroups"]]
     ,
         [If,[IGet,"ZScript:PGroups"] == 1,[IUnPress,"ZScript:PGroups"]]
