@@ -4,6 +4,7 @@ from pathlib import Path
 
 QR=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
 MEM=Path(os.environ.get("MEMORY_DIR",r"D:\Projects\Chad\memory"))
+FR=[Path(x.strip()) for x in os.environ.get("LOCAL_FILE_ALLOWED_ROOTS",r"D:\Projects\Chad;D:\Projects\Chad\local\AI_MEMORY_FIN").split(";") if x.strip()]
 Q=queue.Queue();J={};S={};G={}
 
 def now():return time.strftime("%Y-%m-%dT%H:%M:%S%z")
@@ -15,6 +16,13 @@ def sha(p):
     with Path(p).open("rb") as f:
         for b in iter(lambda:f.read(1048576),b""):h.update(b)
     return h.hexdigest()
+def inside(p,r):
+    try:Path(p).resolve().relative_to(Path(r).resolve());return True
+    except Exception:return False
+def safe(p):
+    p=Path(p).expanduser().resolve()
+    if not any(inside(p,r) or p==Path(r).expanduser().resolve() for r in FR):raise RuntimeError("blocked path")
+    return p
 def cid(u):
     import re
     m=re.search(r"/c/([0-9a-f-]{20,})",str(u),re.I)
@@ -37,17 +45,47 @@ def export_chat(p):
     idx={"latest":str(out),"archive":str(arc),"days":days,"records":len(rows),"updatedAt":now(),"sha256":sha(out)}
     wj(MEM/"index.json",idx)
     return {"path":str(out),"archive":str(arc),"index":str(MEM/"index.json"),"bytes":out.stat().st_size,"records":len(rows),"sha256":sha(out)}
+def file_info(p):
+    f=safe(p["path"]);z=f.stat();r={"path":str(f),"file":f.is_file(),"dir":f.is_dir(),"bytes":z.st_size,"mtime":z.st_mtime}
+    if f.is_file():r["sha256"]=sha(f)
+    return r
+def file_read(p):
+    f=safe(p["path"]);t=f.read_text(encoding="utf-8",errors="replace");return {"path":str(f),"content":t[:int(p.get("maxChars",12000))],"bytes":f.stat().st_size,"sha256":sha(f)}
+def file_write(p):
+    f=safe(p["path"]);b=str(p.get("content") or p.get("text","")).encode("utf-8");wb(f,b);return {"path":str(f),"bytes":len(b),"sha256":sha(f)}
+def file_search(p):
+    f=safe(p["path"]);q=str(p.get("query") or p.get("q",""));mx=int(p.get("max",50));out=[]
+    for i,l in enumerate(f.read_text(encoding="utf-8",errors="replace").splitlines(),1):
+        if q in l:
+            out.append({"line":i,"text":l[:240]})
+            if len(out)>=mx:break
+    return {"path":str(f),"query":q,"matches":out,"count":len(out)}
+def file_funcs(p):
+    import re
+    f=safe(p["path"]);a=[]
+    for i,l in enumerate(f.read_text(encoding="utf-8",errors="replace").splitlines(),1):
+        m=re.match(r"\s*(?:async\s+)?def\s+([A-Za-z_]\w*)\s*\(|\s*(?:function\s+)?([A-Za-z_$][\w$]*)\s*\(",l)
+        if m:a.append({"line":i,"name":m.group(1) or m.group(2)})
+    return {"path":str(f),"functions":a,"count":len(a)}
+def op(x):
+    o=x.get("op") or x.get("operation") or x.get("kind");p=x.get("params") or x.get("payload") or {}
+    if o in ("memory.exportChat","exportChat"):return export_chat(p)
+    if o in ("file.info","info"):return file_info(p)
+    if o in ("file.read","read"):return file_read(p)
+    if o in ("file.write","write"):return file_write(p)
+    if o in ("file.search","search"):return file_search(p)
+    if o in ("file.functions","functions","funcs"):return file_funcs(p)
+    if o=="scratch.note":
+        i=p.get("id") or f"SP-{time.strftime('%H%M%S')}-{uuid.uuid4().hex[:4]}";S[i]={"id":i,"text":p.get("text") or p.get("note",""),"tag":p.get("tag",""),"createdAt":now()};return S[i]
+    if o in ("seg.note","segment.note"):
+        i=p.get("id") or f"SG-{time.strftime('%H%M%S')}-{uuid.uuid4().hex[:4]}";G[i]={"id":i,"text":p.get("text") or p.get("note",""),"tag":p.get("tag",""),"createdAt":now()};return G[i]
+    raise RuntimeError(f"bad op:{o}")
 def work():
     while True:
         j=Q.get();jid=j["id"];J[jid]|={"state":"running","startedAt":now()}
         try:
             k=j["kind"];p=j.get("payload") or {}
-            if k in ("memory.exportChat","exportChat"):r=export_chat(p)
-            elif k=="scratch.note":
-                i=p.get("id") or f"SP-{time.strftime('%H%M%S')}-{uuid.uuid4().hex[:4]}";S[i]={"id":i,"text":p.get("text") or p.get("note",""),"tag":p.get("tag",""),"createdAt":now()};r=S[i]
-            elif k in ("segment.note","seg.note"):
-                i=p.get("id") or f"SG-{time.strftime('%H%M%S')}-{uuid.uuid4().hex[:4]}";G[i]={"id":i,"text":p.get("text") or p.get("note",""),"tag":p.get("tag",""),"createdAt":now()};r=G[i]
-            else:raise RuntimeError(f"unknown kind:{k}")
+            r=op({"op":k,"params":p})
             J[jid]|={"state":"done","finishedAt":now(),"result":r}
         except Exception as e:J[jid]|={"state":"error","finishedAt":now(),"error":str(e)}
         Q.task_done()
@@ -69,6 +107,9 @@ class H(BaseHTTPRequestHandler):
             i=s.path.rsplit("/",1)[-1];return s.send({"status":"success","item":G.get(i)})
         s.send({"status":"error","msg":"bad path"},404)
     def do_POST(s):
+        if s.path=="/op":
+            try:return s.send({"status":"success","result":op(s.body())})
+            except Exception as e:return s.send({"status":"error","msg":str(e)},400)
         if s.path!="/queue":return s.send({"status":"error","msg":"bad path"},404)
         x=s.body();jid=x.get("jobId") or f"JOB-{time.strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}";j={"id":jid,"kind":x.get("kind"),"payload":x.get("payload") or {},"state":"queued","createdAt":now()}
         if not j["kind"]:return s.send({"status":"error","msg":"missing kind"},400)
