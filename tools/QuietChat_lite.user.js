@@ -15,7 +15,7 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api";
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",POS="qc-lite-pos-v1";
   let busy=false,timer=null;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
@@ -35,7 +35,8 @@
         #${ID} *{box-sizing:border-box}
         .qcw{width:min(760px,calc(100vw - 48px));height:min(680px,calc(100vh - 80px));display:flex;flex-direction:column;background:#282828;border:1px solid #555;border-radius:16px;box-shadow:0 20px 70px #0009;overflow:hidden}
         .qcw.min{width:180px;height:48px}.qcw.min .qcb,.qcw.min .stat,.qcw.min .qcf{display:none}.qcw.min .qch{border:0}.qcw.min .qcs,.qcw.min .scan{display:none}
-        .qch{height:48px;display:flex;align-items:center;gap:8px;padding:0 12px;background:#303030;border-bottom:1px solid #444}
+        .qch{height:48px;display:flex;align-items:center;gap:8px;padding:0 12px;background:#303030;border-bottom:1px solid #444;cursor:grab;user-select:none}
+        .qch.drag{cursor:grabbing}
         .qct{font-weight:700;flex:1}.qcs{font-size:11px;color:#aaa}
         #${ID} button{border:1px solid #555;background:#3a3a3a;color:#eee;border-radius:9px;padding:7px 10px;cursor:pointer}#${ID} button:disabled{opacity:.45;cursor:not-allowed}
         .qcb{flex:1;overflow:auto;padding:18px;background:#242424}.msg{max-width:88%;margin:0 0 14px;line-height:1.45;white-space:pre-wrap}.u{margin-left:auto;background:#3c3c3c;padding:10px 12px;border-radius:14px 14px 4px 14px}.a{margin-right:auto}.a:before{content:"QuietChat";display:block;color:#8fd;opacity:.8;font-size:11px;margin-bottom:4px}
@@ -43,11 +44,22 @@
       </style>
       <section class=qcw><div class=qch><div><div class=qct>QuietChat Lite</div><div class=qcs>daemon view · max 20</div></div><button class=scan>Scan</button><button class=hide>Dock</button></div><main class=qcb></main><div class=stat>ready</div><footer class=qcf><textarea placeholder="Message QuietChat..."></textarea><button class=send>Send</button></footer></section>`;
     document.documentElement.appendChild(h);
+    place(h);
+    drag(h);
     h.querySelector(".scan").onclick=()=>load();
     h.querySelector(".hide").onclick=()=>{const w=h.querySelector(".qcw"),b=h.querySelector(".hide");w.classList.toggle("min");b.textContent=w.classList.contains("min")?"Open":"Dock";};
     h.querySelector(".send").onclick=send;
     load();
     timer=setInterval(load,5000);
+  }
+  function place(h){
+    try{const p=JSON.parse(localStorage.getItem(POS)||"{}");if(Number.isFinite(p.x)&&Number.isFinite(p.y)){h.style.left=p.x+"px";h.style.top=p.y+"px";h.style.right="auto";h.style.bottom="auto";}}catch{}
+  }
+  function drag(h){
+    const hd=h.querySelector(".qch");let sx=0,sy=0,ox=0,oy=0,on=false;
+    hd.addEventListener("pointerdown",e=>{if(e.target.closest("button"))return;on=true;sx=e.clientX;sy=e.clientY;const r=h.getBoundingClientRect();ox=r.left;oy=r.top;hd.classList.add("drag");hd.setPointerCapture(e.pointerId);});
+    hd.addEventListener("pointermove",e=>{if(!on)return;const x=Math.max(0,Math.min(innerWidth-80,ox+e.clientX-sx)),y=Math.max(0,Math.min(innerHeight-48,oy+e.clientY-sy));h.style.left=x+"px";h.style.top=y+"px";h.style.right="auto";h.style.bottom="auto";});
+    hd.addEventListener("pointerup",e=>{if(!on)return;on=false;hd.classList.remove("drag");const r=h.getBoundingClientRect();localStorage.setItem(POS,JSON.stringify({x:Math.round(r.left),y:Math.round(r.top)}));try{hd.releasePointerCapture(e.pointerId);}catch{};});
   }
   function stat(t){document.querySelector(`#${ID} .stat`).textContent=t;}
   function lock(on){busy=on;document.querySelector(`#${ID} .send`).disabled=on;}
