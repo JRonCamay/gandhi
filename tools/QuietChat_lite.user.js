@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.1.9
+// @version      0.2.0
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,7 +15,7 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.1.9";
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.2.0";
   let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
@@ -79,6 +79,7 @@
   function lock(on){busy=on;document.querySelector(`#${ID} .send`).disabled=on;}
   function hi(s,q){s=String(s||"");q=String(q||"");const l=s.toLowerCase(),x=l.indexOf(q.toLowerCase());return x<0?esc(s):esc(s.slice(0,x))+"<mark>"+esc(s.slice(x,x+q.length))+"</mark>"+esc(s.slice(x+q.length));}
   function jumpNewest(){toNewest=true;jump=true;load(true);}
+  function jumpMsg(id){const n=last.findIndex(x=>x.message_id===id);if(n<0){stat("message not in loaded window cache");return;}pos=Math.max(0,Math.min(n-4,Math.max(0,last.length-win)));jump=true;render({messages:last});closeSearch(document.getElementById(ID));}
   function openSearch(h){const p=h.querySelector(".qsp"),i=h.querySelector(".qsph input");p.classList.add("on");setTimeout(()=>i.focus(),30);}
   function closeSearch(h){h.querySelector(".qsp").classList.remove("on");}
   async function runSearch(h){
@@ -87,7 +88,8 @@
     r.innerHTML='<div class=hint>Searching daemon...</div>';
     try{
       const d=await dop("qc.search",{chatUrl:location.href,query:q,limit:50}),a=d.results||[];
-      r.innerHTML=a.length?`<div class=qleg><span class="dot du"></span>blue = user <span class="dot da"></span>gray = assistant</div>`+a.map(x=>`<div class="res ${esc(x.role||"")}" title="${esc(x.message_id||"")}">${hi(x.snippet||"",q)}</div>`).join(""):`<div class=hint>No matches for "${esc(q)}".</div>`;
+      r.innerHTML=a.length?`<div class=qleg><span class="dot du"></span>blue = user <span class="dot da"></span>gray = assistant <span class="dot" style="background:#6d5b2c"></span>amber = summary</div>`+a.map(x=>`<div class="res ${esc(x.role||"")}" data-mid="${esc(x.message_id||"")}" title="click to jump">${hi(x.snippet||"",q)}</div>`).join(""):`<div class=hint>No matches for "${esc(q)}".</div>`;
+      r.querySelectorAll(".res[data-mid]").forEach(e=>e.onclick=()=>jumpMsg(e.dataset.mid));
     }catch(e){r.innerHTML=`<div class=hint>Search failed: ${esc(e.message)}</div>`;}
   }
   function updateNewest(){
