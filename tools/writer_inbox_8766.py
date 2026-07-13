@@ -27,6 +27,27 @@ def cid(u):
     import re
     m=re.search(r"/c/([0-9a-f-]{20,})",str(u),re.I)
     return (m.group(1) if m else re.sub(r"[^A-Za-z0-9_.-]+","-",str(u)).strip("-.").lower()[:120])
+def qc_rows(u,limit=200,state=""):
+    rows=[]
+    for f in sorted((QR/cid(u)/"messages").glob("QC-*/message.json"),key=lambda x:x.stat().st_mtime):
+        r=rd(f)
+        if state and r.get("state")!=state:continue
+        rows.append(r)
+    return rows[-max(1,min(int(limit),500)):]
+def qc_view(p):
+    u=p["chatUrl"];mx=max(1,min(int(p.get("limit",20)),50));stale_after=int(p.get("staleAfter",120))
+    rows=qc_rows(u,int(p.get("scanLimit",200)));total=len(rows);vis=rows[-mx:];latest=rows[-1] if rows else {}
+    state=latest.get("state","idle");log=latest.get("status_log") or [];last=log[-1] if log else {}
+    lock=state in ("pending","running");stale=False
+    if lock:
+        ts=latest.get("updated_at") or latest.get("created_at") or ""
+        try:
+            stale=time.time()-time.mktime(time.strptime(ts[:19],"%Y-%m-%dT%H:%M:%S"))>stale_after
+        except Exception:stale=False
+    note=last.get("note") or ("Waiting for assistant reply." if lock else "QuietChat ready.")
+    if stale:note="No recent progress update. Assistant may be busy or stalled."
+    msgs=[{k:r.get(k) for k in ("message_id","state","user_message","assistant_reply","summary","created_at","updated_at","status_log")} for r in vis]
+    return {"chatUrl":u,"lock":lock,"stale":stale,"statusText":note,"latestState":state,"latestMsgId":latest.get("message_id"),"totalRecords":total,"visibleRecords":len(vis),"hiddenRecords":max(0,total-len(vis)),"messages":msgs}
 def export_chat(p):
     u=p["chatUrl"];days=int(p.get("days",5));cut=time.time()-days*86400;rows=[]
     for f in sorted((QR/cid(u)/"messages").glob("QC-*/message.json"),key=lambda x:x.stat().st_mtime):
@@ -69,6 +90,7 @@ def file_funcs(p):
     return {"path":str(f),"functions":a,"count":len(a)}
 def op(x):
     o=x.get("op") or x.get("operation") or x.get("kind");p=x.get("params") or x.get("payload") or {}
+    if o in ("qc.view","view"):return qc_view(p)
     if o in ("memory.exportChat","exportChat"):return export_chat(p)
     if o in ("file.info","info"):return file_info(p)
     if o in ("file.read","read"):return file_read(p)
