@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.0
+// @version      0.3.1
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,7 +15,7 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.0";
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.1";
   let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
@@ -44,7 +44,7 @@
         .qch.drag{cursor:grabbing}
         .qct{font-weight:700;flex:1}.qcs{font-size:11px;color:#aaa}
         #${ID} button{border:1px solid #555;background:#3a3a3a;color:#eee;border-radius:9px;padding:7px 10px;cursor:pointer}#${ID} button:disabled{opacity:.45;cursor:not-allowed}
-        .qca{position:relative;flex:1;min-height:0;background:#242424;overflow:hidden}.qcb{position:absolute;inset:0;overflow:auto;padding:18px 18px 62px;background:#242424}.msg{max-width:88%;margin:0 0 14px;line-height:1.45;white-space:pre-wrap}.u{margin-left:auto;background:#3c3c3c;padding:10px 12px;border-radius:14px 14px 4px 14px}.a{margin-right:auto}.a:before{content:"QuietChat";display:block;color:#8fd;opacity:.8;font-size:11px;margin-bottom:4px}.pinrow{max-width:88%;margin:-6px 0 14px;display:flex;align-items:center;gap:7px;color:#9ee8d0;font-size:11px}.pinrow .pname{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pinb{font-size:11px!important;padding:4px 7px!important;border-radius:8px!important;background:#263f39!important;border-color:#3b7769!important;color:#bfffee!important}
+        .qca{position:relative;flex:1;min-height:0;background:#242424;overflow:hidden}.qcb{position:absolute;inset:0;overflow:auto;padding:18px 18px 62px;background:#242424}.msg{max-width:88%;margin:0 0 14px;line-height:1.45;white-space:pre-wrap}.u{margin-left:auto;background:#3c3c3c;padding:10px 12px;border-radius:14px 14px 4px 14px}.a{margin-right:auto}.a:before{content:"QuietChat";display:block;color:#8fd;opacity:.8;font-size:11px;margin-bottom:4px}.pinrow{max-width:88%;margin:-8px 0 14px;display:flex;align-items:center;gap:7px;color:#9ee8d0;font-size:11px}.pinrow.pu{margin-left:auto;justify-content:flex-end}.pinrow.pa{margin-right:auto}.pinrow .pname{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;border:1px solid #3b7769;background:#1f3f36;border-radius:8px;padding:4px 7px}.pinb{font-size:11px!important;padding:4px 7px!important;border-radius:8px!important;background:#263f39!important;border-color:#3b7769!important;color:#bfffee!important}.pinb.on{background:#bfffee!important;border-color:#7af0cf!important;color:#17352e!important}
         .qcf{display:flex;gap:8px;padding:12px;background:#303030;border-top:1px solid #444}#${ID} textarea{flex:1;min-height:42px;max-height:150px;resize:vertical;background:#3a3a3a;color:#eee;border:1px solid #555;border-radius:12px;padding:10px;outline:none}.stat{padding:6px 12px;text-align:center;color:#aaa;font-size:11px;background:#303030;border-top:1px solid #444}
         .newest{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);width:38px;height:38px;border-radius:999px!important;font-size:18px;z-index:10;display:none;box-shadow:0 6px 18px #000a;background:#2f8f7a!important;border-color:#47c7a7!important}
         .qsp{position:absolute;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:20}.qsp.on{display:flex}.qspn{width:min(644px,calc(100% - 28px));height:min(506px,calc(100% - 40px));background:#292929;border:1px solid #666;border-radius:14px;box-shadow:0 18px 60px #000c;display:flex;flex-direction:column;overflow:hidden}.qsph{display:flex;gap:8px;padding:10px;background:#333;border-bottom:1px solid #444}#${ID} .qsph input{flex:1;background:#202020;color:#eee;border:1px solid #555;border-radius:9px;padding:9px;outline:none}.qspr{flex:1;overflow:auto;padding:10px;color:#bbb}.qspr .hint{font-size:12px;color:#999}.qleg{font-size:11px;color:#aaa;padding:2px 4px 9px}.dot{display:inline-block;width:9px;height:9px;border-radius:99px;margin:0 4px 0 10px}.du{background:#263f66}.da{background:#3d3d3d}.dp{background:#285c4e}.res{padding:9px 10px;margin:0 0 7px;border:1px solid #3d3d3d;border-radius:10px;white-space:normal;overflow:hidden;cursor:pointer;line-height:1.35}.res.user{background:#24344d;border-color:#31537d}.res.assistant{background:#333}.res.summary{background:#3a3324;border-color:#6d5b2c}.res.pin{background:#1f3f36;border-color:#3b8d78;color:#d8fff5}.res:hover{filter:brightness(1.12)}.res mark,.msg mark,.pinrow mark{background:#2f8f7a;color:#fff;border-radius:4px;padding:0 2px}.qtt{position:fixed;z-index:2147483647;max-width:560px;max-height:360px;overflow:auto;scrollbar-width:none;background:#171717;color:#ddd;border:1px solid #666;border-radius:10px;padding:10px 12px;box-shadow:0 12px 40px #000d;font:12px/1.45 system-ui;white-space:pre-wrap;display:none;pointer-events:none}.qtt::-webkit-scrollbar{display:none}
@@ -84,6 +84,10 @@
   function openSearch(h){const p=h.querySelector(".qsp"),i=h.querySelector(".qsph input");p.classList.add("on");setTimeout(()=>i.focus(),30);}
   function closeSearch(h){h.querySelector(".qsp").classList.remove("on");}
   function tip(h,on,e,txt,q){const t=h.querySelector(".qtt");tipOpen=!!on;if(!on){t.style.display="none";return;}t.innerHTML=hi(txt||"",q);t.style.display="block";t.style.left=Math.min(innerWidth-580,e.clientX+16)+"px";t.style.top=Math.min(innerHeight-390,e.clientY+16)+"px";}
+  function pinRow(r,hit,side){
+    const id=esc(r.message_id||""),pn=r.pin_name||"",cls=side==="u"?"pu":"pa";
+    return `<div class="pinrow ${cls}" data-mid="${id}">${pn?`<span class=pname data-mid="${id}" data-pin="${esc(pn)}" title="Edit pin name">📌 ${hit?hi(pn,findText):esc(pn)}</span>`:""}<button class="pinb ${pn?"on":""}" data-mid="${id}" data-pin="${esc(pn)}" title="${pn?"Pinned":"Pin"}">${pn?"Pinned":"Pin"}</button></div>`;
+  }
   async function runSearch(h){
     const i=h.querySelector(".qsph input"),r=h.querySelector(".qspr"),q=i.value.trim();
     if(!q){r.innerHTML='<div class=hint>Type to search all QuietChat history.</div>';return;}
@@ -114,12 +118,15 @@
     if(all.length>win)box.insertAdjacentHTML("beforeend",`<div class="msg a">Window ${pos+1}-${Math.min(pos+win,all.length)} of ${all.length}. Scroll up/down shifts one.</div>`);
     for(const r of m){
       const hit=r.message_id===findMid;
-      const pn=r.pin_name||"";
-      if(r.user_message)box.insertAdjacentHTML("beforeend",`<div class="msg u" data-mid="${esc(r.message_id||"")}">${hit?hi(r.user_message,findText):esc(r.user_message)}</div>`);
+      if(r.user_message){
+        box.insertAdjacentHTML("beforeend",`<div class="msg u" data-mid="${esc(r.message_id||"")}">${hit?hi(r.user_message,findText):esc(r.user_message)}</div>`);
+        box.insertAdjacentHTML("beforeend",pinRow(r,hit,"u"));
+      }
       box.insertAdjacentHTML("beforeend",`<div class="msg a" data-mid="${esc(r.message_id||"")}">${hit?hi(r.assistant_reply||statusText(r),findText):esc(r.assistant_reply||statusText(r))}</div>`);
-      box.insertAdjacentHTML("beforeend",`<div class=pinrow data-mid="${esc(r.message_id||"")}">${pn?`<span class=pname title="${esc(pn)}">📌 ${hit?hi(pn,findText):esc(pn)}</span>`:""}<button class=pinb data-mid="${esc(r.message_id||"")}" data-pin="${esc(pn)}">${pn?"Edit Pin":"Pin"}</button></div>`);
+      if(!r.user_message)box.insertAdjacentHTML("beforeend",pinRow(r,hit,"a"));
     }
-    box.querySelectorAll(".pinb").forEach(b=>b.onclick=()=>setPin(b.dataset.mid,b.dataset.pin||""));
+    box.querySelectorAll(".pinb").forEach(b=>b.onclick=()=>togglePin(b.dataset.mid,b.dataset.pin||""));
+    box.querySelectorAll(".pname").forEach(b=>b.onclick=()=>editPin(b.dataset.mid,b.dataset.pin||""));
     if(jump||first)box.scrollTop=box.scrollHeight;
     else if(fromTop)box.scrollTop=16;
     else if(findMid)setTimeout(()=>box.querySelector(`[data-mid="${CSS.escape(findMid)}"] mark`)?.scrollIntoView({block:"center"}),30);
@@ -131,11 +138,28 @@
     stat(`${m.length} shown · window ${pos+1}-${Math.min(pos+win,all.length)} of ${all.length} · ${(all.at(-1)||{}).state||"ready"}`);
   }
   function statusText(r){const l=(r.status_log||[]).at(-1);return `[${r.state||"pending"}] ${(l&&l.note)||"Waiting for reply."}`;}
-  async function setPin(id,cur){
-    const name=prompt(cur?"Edit pin name. Leave blank to remove pin.":"Pin name for this message:",cur||"");
+  async function savePin(id,name,msg){
+    const box=document.querySelector(`#${ID} .qcb`),keep=box?box.scrollTop:0;
+    try{
+      await dop("qc.pin",{chatUrl:location.href,msgId:id,pinName:name});
+      const r=last.find(x=>x.message_id===id);
+      if(r){if(name)r.pin_name=name;else delete r.pin_name;}
+      render({messages:last});
+      setTimeout(()=>{const b=document.querySelector(`#${ID} .qcb`);if(b)b.scrollTop=keep;},0);
+      setTimeout(()=>{const b=document.querySelector(`#${ID} .qcb`);if(b)b.scrollTop=keep;},80);
+      stat(msg);
+    }catch(e){stat("pin failed: "+e.message);}
+  }
+  async function togglePin(id,cur){
+    if(cur)return savePin(id,"","pin removed");
+    const name=prompt("Pin name for this message:","");
     if(name===null)return;
-    try{await dop("qc.pin",{chatUrl:location.href,msgId:id,pinName:name.trim()});await load(false);stat(name.trim()?"pin saved":"pin removed");}
-    catch(e){stat("pin failed: "+e.message);}
+    if(name.trim())return savePin(id,name.trim(),"pin saved");
+  }
+  async function editPin(id,cur){
+    const name=prompt("Edit pin name:",cur||"");
+    if(name===null)return;
+    return savePin(id,name.trim(),name.trim()?"pin saved":"pin removed");
   }
   async function load(allowJump=false){try{if(allowJump)jump=true;render(await view());}catch(e){stat("bridge offline: "+e.message);lock(false);}}
   async function send(){
