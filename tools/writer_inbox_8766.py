@@ -49,22 +49,17 @@ def qc_view(p):
     msgs=[{k:r.get(k) for k in ("message_id","state","user_message","assistant_reply","summary","pin_name","pin_user","pin_assistant","pinned_at","pin_user_at","pin_assistant_at","created_at","updated_at","status_log")} for r in vis]
     return {"chatUrl":u,"lock":lock,"stale":stale,"statusText":note,"latestState":state,"latestMsgId":latest.get("message_id"),"totalRecords":total,"visibleRecords":len(vis),"hiddenRecords":max(0,total-len(vis)),"messages":msgs}
 def qc_search(p):
-    u=p["chatUrl"];q=str(p.get("query") or p.get("q","")).strip();mx=max(1,min(int(p.get("limit",50)),200));out=[]
+    u=p["chatUrl"];q=str(p.get("query") or p.get("q","")).strip();mx=max(1,min(int(p.get("limit",50)),200));pins_out=[];normal_out=[]
     if not q:return {"chatUrl":u,"query":q,"count":0,"results":[]}
     ql=q.lower()
     for r in qc_rows(u,500):
         pins=(("pin_user","pin_user","user pin"),("pin_assistant","pin_assistant","assistant pin"),("pin_name","pin","pin"))
-        matched=False
         for pk,role,label in pins:
             pn=str(r.get(pk) or "")
             pi=pn.lower().find(ql)
             if pi<0:continue
-            out.append({"message_id":r.get("message_id"),"state":r.get("state"),"role":role,"snippet":"📌 "+pn,"preview":pn,"created_at":r.get("created_at"),"updated_at":r.get("updated_at"),"pin_name":pn,"pin_side":label})
-            matched=True
+            pins_out.append({"message_id":r.get("message_id"),"state":r.get("state"),"role":role,"snippet":"📌 "+pn,"preview":pn,"created_at":r.get("created_at"),"updated_at":r.get("updated_at"),"pin_name":pn,"pin_side":label})
             break
-        if matched:
-            if len(out)>=mx:break
-            continue
         for k,role in (("user_message","user"),("assistant_reply","assistant"),("summary","summary")):
             t=str(r.get(k) or "")
             i=t.lower().find(ql)
@@ -72,9 +67,10 @@ def qc_search(p):
             a=max(0,i-80);b=min(len(t),i+len(q)+120);pa=max(0,i-220);pb=min(len(t),i+len(q)+300)
             s=("…" if a else "")+t[a:b].replace("\r"," ").replace("\n"," ")+("…" if b<len(t) else "")
             pv=("…" if pa else "")+t[pa:pb].replace("\r","")+("…" if pb<len(t) else "")
-            out.append({"message_id":r.get("message_id"),"state":r.get("state"),"role":role,"snippet":s,"preview":pv,"created_at":r.get("created_at"),"updated_at":r.get("updated_at")})
+            normal_out.append({"message_id":r.get("message_id"),"state":r.get("state"),"role":role,"snippet":s,"preview":pv,"created_at":r.get("created_at"),"updated_at":r.get("updated_at")})
             break
-        if len(out)>=mx:break
+        if len(pins_out)+len(normal_out)>=mx*2:break
+    out=(pins_out+normal_out)[:mx]
     return {"chatUrl":u,"query":q,"count":len(out),"results":out}
 def qc_pin(p):
     u=p["chatUrl"];m=str(p.get("msgId") or p.get("message_id") or "").strip()
