@@ -59,7 +59,7 @@ def qc_search(p):
             if i<0:continue
             a=max(0,i-80);b=min(len(t),i+len(q)+120);pa=max(0,i-220);pb=min(len(t),i+len(q)+300)
             s=("…" if a else "")+t[a:b].replace("\r"," ").replace("\n"," ")+("…" if b<len(t) else "")
-            pv=("…" if pa else "")+t[pa:pb].replace("\r"," ").replace("\n"," ")+("…" if pb<len(t) else "")
+            pv=("…" if pa else "")+t[pa:pb].replace("\r","")+("…" if pb<len(t) else "")
             out.append({"message_id":r.get("message_id"),"state":r.get("state"),"role":role,"snippet":s,"preview":pv,"created_at":r.get("created_at"),"updated_at":r.get("updated_at")})
             break
         if len(out)>=mx:break
