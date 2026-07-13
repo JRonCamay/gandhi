@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.2
+// @version      0.3.3
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,8 +15,8 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.2";
-  let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false;
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.3";
+  let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
     const body=JSON.stringify(payload||{});
@@ -64,7 +64,7 @@
     h.querySelector(".send").onclick=send;
     document.addEventListener("keydown",e=>{const t=h.querySelector(".qtt");if(!tipOpen||t.style.display==="none")return;const k=e.key;if(!["ArrowDown","ArrowUp","PageDown","PageUp"].includes(k))return;e.preventDefault();t.scrollTop+=k==="ArrowDown"?36:k==="ArrowUp"?-36:k==="PageDown"?180:-180;});
     load();
-    h.querySelector(".qcb").onscroll=e=>{updateNewest();if(rendering)return;const b=e.target;if(last.length<=win)return;if(b.scrollTop<8&&pos>0){pos-=1;render({messages:last,hiddenRecords:0},true);}};
+    h.querySelector(".qcb").onscroll=e=>{updateNewest();if(rendering)return;const b=e.target,max=Math.max(0,last.length-win);if(last.length<=win)return;if(b.scrollTop<8&&pos>0){pos-=1;render({messages:last,hiddenRecords:0},"top");}else if(b.scrollTop+b.clientHeight>=b.scrollHeight-8&&pos<max){pos+=1;render({messages:last,hiddenRecords:0},"bottom");}};
     timer=setInterval(()=>{if(pos>=Math.max(0,last.length-win))load(false);},5000);
   }
   function place(h){
@@ -80,7 +80,7 @@
   function lock(on){busy=on;document.querySelector(`#${ID} .send`).disabled=on;}
   function hi(s,q){s=String(s||"");q=String(q||"");const l=s.toLowerCase(),x=l.indexOf(q.toLowerCase());return x<0?esc(s):esc(s.slice(0,x))+"<mark>"+esc(s.slice(x,x+q.length))+"</mark>"+esc(s.slice(x+q.length));}
   function jumpNewest(){toNewest=true;jump=true;load(true);}
-  function jumpMsg(id,q){const n=last.findIndex(x=>x.message_id===id);if(n<0){stat("message not in loaded window cache");return;}findMid=id;findText=q||"";pos=Math.max(0,Math.min(n-4,Math.max(0,last.length-win)));jump=false;render({messages:last});closeSearch(document.getElementById(ID));}
+  function jumpMsg(id,q){const n=last.findIndex(x=>x.message_id===id);if(n<0){stat("message not in loaded window cache");return;}findMid=id;findText=q||"";findScroll=true;pos=Math.max(0,Math.min(n-4,Math.max(0,last.length-win)));jump=false;render({messages:last});closeSearch(document.getElementById(ID));}
   function openSearch(h){const p=h.querySelector(".qsp"),i=h.querySelector(".qsph input");p.classList.add("on");setTimeout(()=>i.focus(),30);}
   function closeSearch(h){h.querySelector(".qsp").classList.remove("on");}
   function tip(h,on,e,txt,q){const t=h.querySelector(".qtt");tipOpen=!!on;if(!on){t.style.display="none";return;}t.innerHTML=hi(txt||"",q);t.style.display="block";t.style.left=Math.min(innerWidth-580,e.clientX+16)+"px";t.style.top=Math.min(innerHeight-390,e.clientY+16)+"px";}
@@ -105,7 +105,7 @@
     const max=Math.max(0,last.length-win),atBottom=box.scrollTop+box.clientHeight>=box.scrollHeight-24;
     nb.style.display=(pos<max||!atBottom)?"block":"none";
   }
-  function render(d,fromTop=false){
+  function render(d,shift=""){
     last=d.messages||last||[];
     const max=Math.max(0,last.length-win);
     const first=!init;
@@ -128,8 +128,9 @@
     box.querySelectorAll(".pinb").forEach(b=>b.onclick=()=>togglePin(b.dataset.mid,b.dataset.side,b.dataset.pin||""));
     box.querySelectorAll(".pname").forEach(b=>b.onclick=()=>editPin(b.dataset.mid,b.dataset.side,b.dataset.pin||""));
     if(jump||first)box.scrollTop=box.scrollHeight;
-    else if(fromTop)box.scrollTop=16;
-    else if(findMid)setTimeout(()=>box.querySelector(`[data-mid="${CSS.escape(findMid)}"] mark`)?.scrollIntoView({block:"center"}),30);
+    else if(shift==="top")box.scrollTop=16;
+    else if(shift==="bottom")box.scrollTop=Math.max(0,box.scrollHeight-box.clientHeight-16);
+    else if(findMid&&findScroll){findScroll=false;setTimeout(()=>box.querySelector(`[data-mid="${CSS.escape(findMid)}"] mark`)?.scrollIntoView({block:"center"}),30);}
     jump=false;
     setTimeout(()=>{rendering=false;},120);
     const locked=["pending","running"].includes((all.at(-1)||{}).state);
