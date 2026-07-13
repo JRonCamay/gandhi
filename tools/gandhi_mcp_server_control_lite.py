@@ -140,7 +140,7 @@ class QC:
         lines+=["","## Timeline"]
         for r in rows:
             lines+=["",f"### {r.get('message_id')} [{r.get('state')}]","",f"User: {r.get('user_message','').strip()}"]
-            if r.get("assistant_reply"):lines+=["",f"Assistant: {r.get('assistant_reply','').strip()}]
+            if r.get("assistant_reply"):lines+=["",f"Assistant: {r.get('assistant_reply','').strip()}"]
             if r.get("summary"):lines+=["",f"Summary: {r.get('summary')}"]
         wb(out,"\n".join(lines).encode("utf-8"))
         return ok({"path":str(out),"bytes":out.stat().st_size,"records":len(rows),"sha256":sha(out)})
