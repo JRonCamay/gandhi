@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.19
+// @version      0.3.20
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,7 +15,7 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.19";
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.20";
   let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
@@ -219,8 +219,13 @@
   async function load(opt=false){
     const o=typeof opt==="object"&&opt?opt:{jump:!!opt},box=document.querySelector(`#${ID} .qcb`),keep=box?box.scrollTop:null,keepPos=pos;
     try{
+      const before=last.at(-1)||{};
       if(o.jump)jump=true;
-      render(await view());
+      const d=await view(),after=(d.messages||[]).at(-1)||{};
+      const replyArrived=after.message_id&&after.message_id===before.message_id&&!before.assistant_reply&&after.assistant_reply;
+      const newer=after.message_id&&before.message_id&&after.message_id!==before.message_id;
+      if(!o.preserve&&(replyArrived||newer)){toNewest=true;jump=true;}
+      render(d);
       if(o.preserve&&keep!==null){
         pos=keepPos;render({messages:last});
         setTimeout(()=>{const b=document.querySelector(`#${ID} .qcb`);if(b)b.scrollTop=keep;},0);
