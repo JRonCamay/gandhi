@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.7
+// @version      0.3.8
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,7 +15,7 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.7";
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.8";
   let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
@@ -64,8 +64,8 @@
     h.querySelector(".send").onclick=send;
     document.addEventListener("keydown",e=>{const t=h.querySelector(".qtt");if(!tipOpen||t.style.display==="none")return;const k=e.key;if(!["ArrowDown","ArrowUp","PageDown","PageUp"].includes(k))return;e.preventDefault();t.scrollTop+=k==="ArrowDown"?36:k==="ArrowUp"?-36:k==="PageDown"?180:-180;});
     load();
-    h.querySelector(".qcb").onscroll=e=>{updateNewest();if(rendering)return;const b=e.target,max=Math.max(0,last.length-win);if(last.length<=win)return;if(b.scrollTop<8&&pos>0){pos-=1;render({messages:last,hiddenRecords:0},"top");}else if(b.scrollTop+b.clientHeight>=b.scrollHeight-8&&pos<max){pos+=1;render({messages:last,hiddenRecords:0},"bottom");}};
-    h.querySelector(".qcb").onwheel=e=>{const b=e.currentTarget,max=Math.max(0,last.length-win);if(rendering||last.length<=win)return;if(e.deltaY<0&&b.scrollTop<4&&pos>0){e.preventDefault();pos-=1;render({messages:last,hiddenRecords:0},"top");}else if(e.deltaY>0&&b.scrollTop+b.clientHeight>=b.scrollHeight-4&&pos<max){e.preventDefault();pos+=1;render({messages:last,hiddenRecords:0},"bottom");}};
+    h.querySelector(".qcb").onscroll=e=>{updateNewest();if(rendering)return;const b=e.target,max=Math.max(0,last.length-win);if(last.length<=win)return;if(b.scrollTop<24&&pos>0){pos-=1;render({messages:last,hiddenRecords:0},"top");}else if(b.scrollTop+b.clientHeight>=b.scrollHeight-24&&pos<max){pos+=1;render({messages:last,hiddenRecords:0},"bottom");}};
+    h.querySelector(".qcb").onwheel=e=>{const b=e.currentTarget,max=Math.max(0,last.length-win);if(rendering||last.length<=win)return;if(e.deltaY<0&&b.scrollTop<32&&pos>0){e.preventDefault();pos-=1;render({messages:last,hiddenRecords:0},"top");}else if(e.deltaY>0&&b.scrollTop+b.clientHeight>=b.scrollHeight-32&&pos<max){e.preventDefault();pos+=1;render({messages:last,hiddenRecords:0},"bottom");}};
     timer=setInterval(()=>{const b=h.querySelector(".qcb"),atBottom=b&&b.scrollTop+b.clientHeight>=b.scrollHeight-24;if(pos>=Math.max(0,last.length-win)&&atBottom)load(false);},5000);
   }
   function place(h){
@@ -159,7 +159,6 @@
       if(r){const k=side==="assistant"?"pin_assistant":"pin_user";if(name)r[k]=name;else delete r[k];}
       const btn=el.classList.contains("pinb")?el:el.closest(".pinrow")?.querySelector(".pinb");
       if(btn)paintPin(btn,id,side,name);
-      await load({preserve:true});
       stat(msg);
     }catch(e){stat("pin failed: "+e.message);}
   }
@@ -186,6 +185,7 @@
       }
     }catch(e){stat("bridge offline: "+e.message);lock(false);}
   }
+  function goNewest(){toNewest=true;jump=true;render({messages:last});}
   async function send(){
     if(busy)return;
     const ta=document.querySelector(`#${ID} textarea`),txt=ta.value.trim();
@@ -193,7 +193,7 @@
     lock(true);stat("creating...");
     try{
       const d=await req("/create",{chat_url:location.href,conversation_title:document.title||"ChatGPT",user_message:txt,metadata:{source:"qc-lite",url:location.href}});
-      ta.value="";await load();sendToChat(d.trigger||`Use quietchat_process_message for ${d.message_id}.`);
+      ta.value="";await load(true);goNewest();sendToChat(d.trigger||`Use quietchat_process_message for ${d.message_id}.`);
     }catch(e){stat("send failed: "+e.message);lock(false);}
   }
   function sendToChat(t){
