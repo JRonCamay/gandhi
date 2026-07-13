@@ -37,9 +37,9 @@
         .qcw.min{width:180px;height:48px}.qcw.min .qcb,.qcw.min .stat,.qcw.min .qcf{display:none}.qcw.min .qch{border:0}.qcw.min .qcs,.qcw.min .scan{display:none}
         .qch{height:48px;display:flex;align-items:center;gap:8px;padding:0 12px;background:#303030;border-bottom:1px solid #444}
         .qct{font-weight:700;flex:1}.qcs{font-size:11px;color:#aaa}
-        button{border:1px solid #555;background:#3a3a3a;color:#eee;border-radius:9px;padding:7px 10px;cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}
+        #${ID} button{border:1px solid #555;background:#3a3a3a;color:#eee;border-radius:9px;padding:7px 10px;cursor:pointer}#${ID} button:disabled{opacity:.45;cursor:not-allowed}
         .qcb{flex:1;overflow:auto;padding:18px;background:#242424}.msg{max-width:88%;margin:0 0 14px;line-height:1.45;white-space:pre-wrap}.u{margin-left:auto;background:#3c3c3c;padding:10px 12px;border-radius:14px 14px 4px 14px}.a{margin-right:auto}.a:before{content:"QuietChat";display:block;color:#8fd;opacity:.8;font-size:11px;margin-bottom:4px}
-        .qcf{display:flex;gap:8px;padding:12px;background:#303030;border-top:1px solid #444}textarea{flex:1;min-height:42px;max-height:150px;resize:vertical;background:#3a3a3a;color:#eee;border:1px solid #555;border-radius:12px;padding:10px;outline:none}.stat{padding:6px 12px;text-align:center;color:#aaa;font-size:11px;background:#303030;border-top:1px solid #444}
+        .qcf{display:flex;gap:8px;padding:12px;background:#303030;border-top:1px solid #444}#${ID} textarea{flex:1;min-height:42px;max-height:150px;resize:vertical;background:#3a3a3a;color:#eee;border:1px solid #555;border-radius:12px;padding:10px;outline:none}.stat{padding:6px 12px;text-align:center;color:#aaa;font-size:11px;background:#303030;border-top:1px solid #444}
       </style>
       <section class=qcw><div class=qch><div><div class=qct>QuietChat Lite</div><div class=qcs>daemon view · max 20</div></div><button class=scan>Scan</button><button class=hide>Dock</button></div><main class=qcb></main><div class=stat>ready</div><footer class=qcf><textarea placeholder="Message QuietChat..."></textarea><button class=send>Send</button></footer></section>`;
     document.documentElement.appendChild(h);
