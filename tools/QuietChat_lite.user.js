@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.12
+// @version      0.3.13
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,7 +15,7 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.12",VIRT=8;
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.13";
   let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
@@ -44,12 +44,12 @@
         .qch.drag{cursor:grabbing}
         .qct{font-weight:700;flex:1}.qcs{font-size:11px;color:#aaa}
         #${ID} button{border:1px solid #555;background:#3a3a3a;color:#eee;border-radius:9px;padding:7px 10px;cursor:pointer}#${ID} button:disabled{opacity:.45;cursor:not-allowed}
-        .qca{position:relative;flex:1;min-height:0;background:#242424;overflow:hidden}.qcb{position:absolute;inset:0;overflow:auto;padding:18px 18px 62px;background:#242424}.msg{max-width:88%;margin:0 0 14px;line-height:1.45;white-space:pre-wrap}.u{margin-left:auto;background:#3c3c3c;padding:10px 12px;border-radius:14px 14px 4px 14px}.a{margin-right:auto}.a:before{content:"QuietChat";display:block;color:#8fd;opacity:.8;font-size:11px;margin-bottom:4px}.pinrow{max-width:88%;margin:-8px 0 14px;display:flex;align-items:center;gap:7px;color:#9ee8d0;font-size:11px}.pinrow.pu{margin-left:auto;justify-content:flex-end}.pinrow.pa{margin-right:auto}.pinrow .pname{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;border:1px solid #3b7769;background:#1f3f36;border-radius:8px;padding:4px 7px}.pinb{font-size:11px!important;padding:4px 7px!important;border-radius:8px!important;background:#263f39!important;border-color:#3b7769!important;color:#bfffee!important}.pinb.on{background:#bfffee!important;border-color:#7af0cf!important;color:#17352e!important}
+        .qca{position:relative;flex:1;min-height:0;background:#242424;overflow:hidden}.qcb{position:absolute;inset:0 18px 0 0;overflow:auto;scrollbar-width:none;padding:18px 18px 62px;background:#242424}.qcb::-webkit-scrollbar{display:none}.qbar{position:absolute;right:5px;top:10px;bottom:10px;width:10px;border-radius:999px;background:#1d1d1d;border:1px solid #3f3f3f;z-index:9}.qthumb{position:absolute;left:1px;right:1px;top:0;min-height:108px;border-radius:999px;background:#777;border:1px solid #9a9a9a;box-shadow:0 2px 8px #0008;cursor:grab}.qthumb:active{cursor:grabbing;background:#8d8d8d}.msg{max-width:88%;margin:0 0 14px;line-height:1.45;white-space:pre-wrap}.u{margin-left:auto;background:#3c3c3c;padding:10px 12px;border-radius:14px 14px 4px 14px}.a{margin-right:auto}.a:before{content:"QuietChat";display:block;color:#8fd;opacity:.8;font-size:11px;margin-bottom:4px}.pinrow{max-width:88%;margin:-8px 0 14px;display:flex;align-items:center;gap:7px;color:#9ee8d0;font-size:11px}.pinrow.pu{margin-left:auto;justify-content:flex-end}.pinrow.pa{margin-right:auto}.pinrow .pname{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;border:1px solid #3b7769;background:#1f3f36;border-radius:8px;padding:4px 7px}.pinb{font-size:11px!important;padding:4px 7px!important;border-radius:8px!important;background:#263f39!important;border-color:#3b7769!important;color:#bfffee!important}.pinb.on{background:#bfffee!important;border-color:#7af0cf!important;color:#17352e!important}
         .qcf{display:flex;gap:8px;padding:12px;background:#303030;border-top:1px solid #444}#${ID} textarea{flex:1;min-height:42px;max-height:150px;resize:vertical;background:#3a3a3a;color:#eee;border:1px solid #555;border-radius:12px;padding:10px;outline:none}.stat{padding:6px 12px;text-align:center;color:#aaa;font-size:11px;background:#303030;border-top:1px solid #444}.vspacer{height:0;pointer-events:none}
         .newest{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);width:38px;height:38px;border-radius:999px!important;font-size:18px;z-index:10;display:none;box-shadow:0 6px 18px #000a;background:#2f8f7a!important;border-color:#47c7a7!important}
         .qsp{position:absolute;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:20}.qsp.on{display:flex}.qspn{width:min(644px,calc(100% - 28px));height:min(506px,calc(100% - 40px));background:#292929;border:1px solid #666;border-radius:14px;box-shadow:0 18px 60px #000c;display:flex;flex-direction:column;overflow:hidden}.qsph{display:flex;gap:8px;padding:10px;background:#333;border-bottom:1px solid #444}#${ID} .qsph input{flex:1;background:#202020;color:#eee;border:1px solid #555;border-radius:9px;padding:9px;outline:none}.qspr{flex:1;overflow:auto;padding:10px;color:#bbb}.qspr .hint{font-size:12px;color:#999}.qleg{position:sticky;top:-10px;z-index:2;background:#292929;border-bottom:1px solid #444;font-size:11px;color:#aaa;padding:8px 4px 9px}.dot{display:inline-block;width:9px;height:9px;border-radius:99px;margin:0 4px 0 10px}.du{background:#263f66}.da{background:#3d3d3d}.dp{background:#285c4e}.res{padding:9px 10px;margin:0 0 7px;border:1px solid #3d3d3d;border-radius:10px;white-space:normal;overflow:hidden;cursor:pointer;line-height:1.35}.res.user{background:#24344d;border-color:#31537d}.res.assistant{background:#333}.res.summary{background:#3a3324;border-color:#6d5b2c}.res.pin,.res.pin_user,.res.pin_assistant{background:#1f3f36;border-color:#3b8d78;color:#d8fff5}.res:hover{filter:brightness(1.12)}.res mark,.msg mark,.pinrow mark{background:#2f8f7a;color:#fff;border-radius:4px;padding:0 2px}.qtt{position:fixed;z-index:2147483647;max-width:560px;max-height:360px;overflow:auto;scrollbar-width:none;background:#171717;color:#ddd;border:1px solid #666;border-radius:10px;padding:10px 12px;box-shadow:0 12px 40px #000d;font:12px/1.45 system-ui;white-space:pre-wrap;display:none;pointer-events:none}.qtt::-webkit-scrollbar{display:none}
       </style>
-      <section class=qcw><div class=qch><div><div class=qct>QuietChat Lite <span style="font-size:10px;color:#999">v${VER}</span></div><div class=qcs>daemon view · 10 sliding</div></div><button class=scan>Scan</button><button class=srch title="Search by Pin or Words" aria-label="Search by Pin or Words">⌕</button><button class=hide>Dock</button></div><div class=qca><main class=qcb></main><button class=newest title="Newest">↓</button></div><div class=stat>ready</div><footer class=qcf><textarea placeholder="Message QuietChat..."></textarea><button class=send>Send</button></footer><div class=qsp><div class=qspn><div class=qsph><input placeholder="Search pin or words..."><button class=sx title="Close">×</button></div><div class=qspr><div class=hint>Search panel ready. Results next.</div></div></div></div><div class=qtt></div></section>`;
+      <section class=qcw><div class=qch><div><div class=qct>QuietChat Lite <span style="font-size:10px;color:#999">v${VER}</span></div><div class=qcs>daemon view · 10 sliding</div></div><button class=scan>Scan</button><button class=srch title="Search by Pin or Words" aria-label="Search by Pin or Words">⌕</button><button class=hide>Dock</button></div><div class=qca><main class=qcb></main><div class=qbar title="Drag to move through QuietChat"><div class=qthumb></div></div><button class=newest title="Newest">↓</button></div><div class=stat>ready</div><footer class=qcf><textarea placeholder="Message QuietChat..."></textarea><button class=send>Send</button></footer><div class=qsp><div class=qspn><div class=qsph><input placeholder="Search pin or words..."><button class=sx title="Close">×</button></div><div class=qspr><div class=hint>Search panel ready. Results next.</div></div></div></div><div class=qtt></div></section>`;
     document.documentElement.appendChild(h);
     place(h);
     drag(h);
@@ -64,7 +64,8 @@
     h.querySelector(".send").onclick=send;
     document.addEventListener("keydown",e=>{const t=h.querySelector(".qtt");if(!tipOpen||t.style.display==="none")return;const k=e.key;if(!["ArrowDown","ArrowUp","PageDown","PageUp"].includes(k))return;e.preventDefault();t.scrollTop+=k==="ArrowDown"?36:k==="ArrowUp"?-36:k==="PageDown"?180:-180;});
     load();
-    h.querySelector(".qcb").onscroll=e=>{updateNewest();if(rendering)return;const b=e.target,max=Math.max(0,last.length-win);if(last.length<=win)return;const np=Math.max(0,Math.min(max,Math.floor((b.scrollTop+VIRT/2)/VIRT)));if(np!==pos){const off=Math.max(2,Math.min(VIRT-3,b.scrollTop-np*VIRT));pos=np;render({messages:last,hiddenRecords:0},"virtual");setTimeout(()=>{const x=h.querySelector(".qcb");if(x)x.scrollTop=pos*VIRT+off;},0);}};
+    wireFakeScroll(h);
+    h.querySelector(".qcb").onscroll=()=>updateNewest();
     h.querySelector(".qcb").onwheel=e=>{const b=e.currentTarget,max=Math.max(0,last.length-win);if(rendering||last.length<=win)return;if(e.deltaY<0&&b.scrollTop<32&&pos>0){e.preventDefault();pos-=1;render({messages:last,hiddenRecords:0},"top");}else if(e.deltaY>0&&b.scrollTop+b.clientHeight>=b.scrollHeight-32&&pos<max){e.preventDefault();pos+=1;render({messages:last,hiddenRecords:0},"bottom");}};
     timer=setInterval(()=>{const b=h.querySelector(".qcb"),atBottom=b&&b.scrollTop+b.clientHeight>=b.scrollHeight-24;if(pos>=Math.max(0,last.length-win)&&atBottom)load(false);},5000);
   }
@@ -119,6 +120,30 @@
     nb.style.display=(pos<max||!atBottom)?"block":"none";
   }
   function scrollBottom(box){box.scrollTop=box.scrollHeight;setTimeout(()=>{box.scrollTop=box.scrollHeight;},0);setTimeout(()=>{box.scrollTop=box.scrollHeight;},80);}
+  function updateBar(){
+    const h=document.getElementById(ID),bar=h?.querySelector(".qbar"),th=h?.querySelector(".qthumb");
+    if(!bar||!th)return;
+    const max=Math.max(0,last.length-win),bh=bar.clientHeight;
+    bar.style.display=last.length>win?"block":"none";
+    if(last.length<=win||bh<20)return;
+    const hh=Math.max(108,Math.min(bh,Math.round(bh*Math.max(.22,win/Math.max(last.length,1)))));
+    th.style.height=hh+"px";
+    th.style.top=(max?Math.round((bh-hh)*pos/max):0)+"px";
+  }
+  function setPosFromBar(y){
+    const h=document.getElementById(ID),bar=h?.querySelector(".qbar"),th=h?.querySelector(".qthumb");
+    if(!bar||!th)return;
+    const max=Math.max(0,last.length-win),r=bar.getBoundingClientRect(),hh=th.offsetHeight,span=Math.max(1,r.height-hh);
+    pos=Math.max(0,Math.min(max,Math.round(((y-r.top-hh/2)/span)*max)));
+    render({messages:last},"bar");
+  }
+  function wireFakeScroll(h){
+    const bar=h.querySelector(".qbar"),th=h.querySelector(".qthumb");let drag=false,dy=0;
+    bar.onclick=e=>{if(e.target===th)return;setPosFromBar(e.clientY);};
+    th.onpointerdown=e=>{drag=true;dy=e.clientY-th.getBoundingClientRect().top;th.setPointerCapture(e.pointerId);e.preventDefault();};
+    th.onpointermove=e=>{if(!drag)return;const r=bar.getBoundingClientRect(),hh=th.offsetHeight,max=Math.max(0,last.length-win),span=Math.max(1,r.height-hh);pos=Math.max(0,Math.min(max,Math.round(((e.clientY-dy-r.top)/span)*max)));render({messages:last},"bar");};
+    th.onpointerup=e=>{drag=false;try{th.releasePointerCapture(e.pointerId);}catch{};};
+  }
   function render(d,shift=""){
     last=d.messages||last||[];
     const max=Math.max(0,last.length-win);
@@ -129,7 +154,6 @@
     const box=document.querySelector(`#${ID} .qcb`),all=last,m=all.slice(pos,pos+win);
     rendering=true;
     box.innerHTML=m.length?"":"<div class=a>No QuietChat messages.</div>";
-    if(all.length>win)box.insertAdjacentHTML("beforeend",`<div class=vspacer style="height:${pos*VIRT}px"></div>`);
     if(all.length>win)box.insertAdjacentHTML("beforeend",`<div class="msg a">Window ${pos+1}-${Math.min(pos+win,all.length)} of ${all.length}. Scroll up/down shifts one.</div>`);
     for(const r of m){
       const hit=r.message_id===findMid;
@@ -140,17 +164,17 @@
       box.insertAdjacentHTML("beforeend",`<div class="msg a" data-mid="${esc(r.message_id||"")}">${hit?hi(r.assistant_reply||statusText(r),findText):esc(r.assistant_reply||statusText(r))}</div>`);
       box.insertAdjacentHTML("beforeend",pinRow(r,hit,"a"));
     }
-    if(all.length>win)box.insertAdjacentHTML("beforeend",`<div class=vspacer style="height:${Math.max(0,all.length-pos-win)*VIRT}px"></div>`);
     box.querySelectorAll(".pinrow").forEach(wirePinRow);
     if(jump||first)scrollBottom(box);
-    else if(shift==="top")box.scrollTop=pos*VIRT+3;
-    else if(shift==="bottom")box.scrollTop=pos*VIRT+3;
-    else if(shift==="virtual")box.scrollTop=pos*VIRT+3;
+    else if(shift==="top")box.scrollTop=2;
+    else if(shift==="bottom")box.scrollTop=2;
+    else if(shift==="bar")box.scrollTop=2;
     else if(findMid&&findScroll){findScroll=false;setTimeout(()=>box.querySelector(`[data-mid="${CSS.escape(findMid)}"] mark`)?.scrollIntoView({block:"center"}),30);}
     jump=false;
     setTimeout(()=>{rendering=false;},120);
     const locked=["pending","running"].includes((all.at(-1)||{}).state);
     lock(locked);
+    updateBar();
     updateNewest();
     stat(`${m.length} shown · window ${pos+1}-${Math.min(pos+win,all.length)} of ${all.length} · ${(all.at(-1)||{}).state||"ready"}`);
   }
