@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.1.3
+// @version      0.1.4
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,7 +15,7 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",POS="qc-lite-pos-v1",VER="0.1.3";
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",POS="qc-lite-pos-v1",VER="0.1.4";
   let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
@@ -52,7 +52,7 @@
     h.querySelector(".hide").onclick=()=>{const w=h.querySelector(".qcw"),b=h.querySelector(".hide");w.classList.toggle("min");b.textContent=w.classList.contains("min")?"Open":"Dock";};
     h.querySelector(".send").onclick=send;
     load();
-    h.querySelector(".qcb").onscroll=e=>{if(rendering)return;const b=e.target;if(last.length<=win)return;if(b.scrollTop<8&&pos>0){pos-=1;render({messages:last,hiddenRecords:0},true);}};
+    h.querySelector(".qcb").onscroll=e=>{updateNewest();if(rendering)return;const b=e.target;if(last.length<=win)return;if(b.scrollTop<8&&pos>0){pos-=1;render({messages:last,hiddenRecords:0},true);}};
     timer=setInterval(()=>{if(pos>=Math.max(0,last.length-win))load(false);},5000);
   }
   function place(h){
@@ -67,6 +67,12 @@
   function stat(t){document.querySelector(`#${ID} .stat`).textContent=t;}
   function lock(on){busy=on;document.querySelector(`#${ID} .send`).disabled=on;}
   function jumpNewest(){toNewest=true;jump=true;load(true);}
+  function updateNewest(){
+    const box=document.querySelector(`#${ID} .qcb`),nb=document.querySelector(`#${ID} .newest`);
+    if(!box||!nb)return;
+    const max=Math.max(0,last.length-win),atBottom=box.scrollTop+box.clientHeight>=box.scrollHeight-24;
+    nb.style.display=(pos<max||!atBottom)?"block":"none";
+  }
   function render(d,fromTop=false){
     last=d.messages||last||[];
     const max=Math.max(0,last.length-win);
@@ -88,8 +94,7 @@
     setTimeout(()=>{rendering=false;},120);
     const locked=["pending","running"].includes((all.at(-1)||{}).state);
     lock(locked);
-    const nb=document.querySelector(`#${ID} .newest`);
-    if(nb)nb.style.display=pos<max?"block":"none";
+    updateNewest();
     stat(`${m.length} shown · window ${pos+1}-${Math.min(pos+win,all.length)} of ${all.length} · ${(all.at(-1)||{}).state||"ready"}`);
   }
   function statusText(r){const l=(r.status_log||[]).at(-1);return `[${r.state||"pending"}] ${(l&&l.note)||"Waiting for reply."}`;}
