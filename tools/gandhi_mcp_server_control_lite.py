@@ -22,6 +22,7 @@ CMDS={
 "qc.list":"listQuietChat(chatUrl,limit?,state?)",
 "qc.view":"viewQuietChat(chatUrl,limit?,scanLimit?,staleAfter?)",
 "qc.search":"searchQuietChat(chatUrl,query,limit?)",
+"qc.pin":"pinQuietChat(chatUrl,msgId,pinName)",
 "file.write":"writeFile(path,content,overwrite?)",
 "file.batch":"writeFiles(files,overwrite?)",
 "file.read":"readFile(path,maxChars?)",
@@ -195,7 +196,7 @@ def ip(o):
         try:return json.loads(body)
         except Exception:return {"status":"error","err":"HTTP","code":e.code,"body":body}
 def rn(kind,o):return jq({"kind":kind,"payload":o,"ram":True})
-DIS={"ping":lambda o:ok({"server":"gandhi_control_lite"}),"qc.create":qc.create,"qc.process":qc.process,"qc.status":qc.status,"qc.complete":qc.complete,"qc.get":qc.get,"qc.list":qc.list,"qc.view":lambda o:ip({"op":"qc.view","params":o}),"qc.search":lambda o:ip({"op":"qc.search","params":o}),"file.write":f_write,"file.batch":f_batch,"file.read":lambda o:ip({"op":"file.read","params":o}),"file.info":lambda o:ip({"op":"file.info","params":o}),"file.search":lambda o:ip({"op":"file.search","params":o}),"file.functions":lambda o:ip({"op":"file.functions","params":o}),"memory.exportChat":qc.export,"writer.queue":jq,"writer.status":js,"writer.flush":jf,"scratch.note":lambda o:rn("scratch.note",o),"scratch.list":lambda o:ig("/scratch"),"scratch.get":lambda o:ig("/scratch/"+ck(o.get("id"),"id")),"seg.note":lambda o:rn("seg.note",o),"seg.list":lambda o:ig("/segment"),"seg.get":lambda o:ig("/segment/"+ck(o.get("id"),"id")),"daemon.op":ip}
+DIS={"ping":lambda o:ok({"server":"gandhi_control_lite"}),"qc.create":qc.create,"qc.process":qc.process,"qc.status":qc.status,"qc.complete":qc.complete,"qc.get":qc.get,"qc.list":qc.list,"qc.view":lambda o:ip({"op":"qc.view","params":o}),"qc.search":lambda o:ip({"op":"qc.search","params":o}),"qc.pin":lambda o:ip({"op":"qc.pin","params":o}),"file.write":f_write,"file.batch":f_batch,"file.read":lambda o:ip({"op":"file.read","params":o}),"file.info":lambda o:ip({"op":"file.info","params":o}),"file.search":lambda o:ip({"op":"file.search","params":o}),"file.functions":lambda o:ip({"op":"file.functions","params":o}),"memory.exportChat":qc.export,"writer.queue":jq,"writer.status":js,"writer.flush":jf,"scratch.note":lambda o:rn("scratch.note",o),"scratch.list":lambda o:ig("/scratch"),"scratch.get":lambda o:ig("/scratch/"+ck(o.get("id"),"id")),"seg.note":lambda o:rn("seg.note",o),"seg.list":lambda o:ig("/segment"),"seg.get":lambda o:ig("/segment/"+ck(o.get("id"),"id")),"daemon.op":ip}
 
 @mcp.tool()
 def MCP_Control(controlObj:dict)->dict:
