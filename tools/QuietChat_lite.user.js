@@ -16,7 +16,7 @@
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
   const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",POS="qc-lite-pos-v1";
-  let busy=false,timer=null;
+  let busy=false,timer=null,off=0,last=[];
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
     const body=JSON.stringify(payload||{});
@@ -24,8 +24,8 @@
     return fetch(API+path,{method:"POST",headers:{"Content-Type":"application/json"},body}).then(r=>r.json());
   }
   async function view(){
-    try{return (await req("/view",{cmd:"qc.view",params:{chatUrl:location.href,limit:20,scanLimit:80,staleAfter:120}})).result;}
-    catch(e){const d=await req("/scan",{chat_url:location.href,limit:20});return {messages:d.messages||[],hiddenRecords:0,latestState:(d.messages||[]).at(-1)?.state};}
+    try{return (await req("/view",{cmd:"qc.view",params:{chatUrl:location.href,limit:80,scanLimit:80,staleAfter:120}})).result;}
+    catch(e){const d=await req("/scan",{chat_url:location.href,limit:80});return {messages:d.messages||[],hiddenRecords:0,latestState:(d.messages||[]).at(-1)?.state};}
   }
   function boot(){
     if(document.getElementById(ID))return;
@@ -42,15 +42,16 @@
         .qcb{flex:1;overflow:auto;padding:18px;background:#242424}.msg{max-width:88%;margin:0 0 14px;line-height:1.45;white-space:pre-wrap}.u{margin-left:auto;background:#3c3c3c;padding:10px 12px;border-radius:14px 14px 4px 14px}.a{margin-right:auto}.a:before{content:"QuietChat";display:block;color:#8fd;opacity:.8;font-size:11px;margin-bottom:4px}
         .qcf{display:flex;gap:8px;padding:12px;background:#303030;border-top:1px solid #444}#${ID} textarea{flex:1;min-height:42px;max-height:150px;resize:vertical;background:#3a3a3a;color:#eee;border:1px solid #555;border-radius:12px;padding:10px;outline:none}.stat{padding:6px 12px;text-align:center;color:#aaa;font-size:11px;background:#303030;border-top:1px solid #444}
       </style>
-      <section class=qcw><div class=qch><div><div class=qct>QuietChat Lite</div><div class=qcs>daemon view · max 20</div></div><button class=scan>Scan</button><button class=hide>Dock</button></div><main class=qcb></main><div class=stat>ready</div><footer class=qcf><textarea placeholder="Message QuietChat..."></textarea><button class=send>Send</button></footer></section>`;
+      <section class=qcw><div class=qch><div><div class=qct>QuietChat Lite</div><div class=qcs>daemon view · 5 at a time</div></div><button class=scan>Scan</button><button class=hide>Dock</button></div><main class=qcb></main><div class=stat>ready</div><footer class=qcf><textarea placeholder="Message QuietChat..."></textarea><button class=send>Send</button></footer></section>`;
     document.documentElement.appendChild(h);
     place(h);
     drag(h);
-    h.querySelector(".scan").onclick=()=>load();
+    h.querySelector(".scan").onclick=()=>{off=0;load();};
     h.querySelector(".hide").onclick=()=>{const w=h.querySelector(".qcw"),b=h.querySelector(".hide");w.classList.toggle("min");b.textContent=w.classList.contains("min")?"Open":"Dock";};
     h.querySelector(".send").onclick=send;
     load();
-    timer=setInterval(load,5000);
+    h.querySelector(".qcb").onscroll=e=>{if(e.target.scrollTop<8&&last.length>5){off=Math.min(Math.max(0,last.length-5),off+5);render({messages:last,hiddenRecords:0,latestState:last.at(-1)?.state},true);}};
+    timer=setInterval(()=>{if(off===0)load();},5000);
   }
   function place(h){
     try{const p=JSON.parse(localStorage.getItem(POS)||"{}");if(Number.isFinite(p.x)&&Number.isFinite(p.y)){h.style.left=p.x+"px";h.style.top=p.y+"px";h.style.right="auto";h.style.bottom="auto";}}catch{}
@@ -63,17 +64,19 @@
   }
   function stat(t){document.querySelector(`#${ID} .stat`).textContent=t;}
   function lock(on){busy=on;document.querySelector(`#${ID} .send`).disabled=on;}
-  function render(d){
-    const box=document.querySelector(`#${ID} .qcb`),m=d.messages||[];
+  function render(d,fromTop=false){
+    last=d.messages||last||[];
+    const box=document.querySelector(`#${ID} .qcb`),all=last,m=all.slice(Math.max(0,all.length-5-off),Math.max(0,all.length-off));
     box.innerHTML=m.length?"":"<div class=a>No QuietChat messages.</div>";
+    if(all.length>5)box.insertAdjacentHTML("beforeend",`<div class="msg a">${off+5<all.length?"Scroll up: older loaded.":"Oldest loaded."}</div>`);
     for(const r of m){
       if(r.user_message)box.insertAdjacentHTML("beforeend",`<div class="msg u">${esc(r.user_message)}</div>`);
       box.insertAdjacentHTML("beforeend",`<div class="msg a">${esc(r.assistant_reply||statusText(r))}</div>`);
     }
-    box.scrollTop=box.scrollHeight;
-    const locked=["pending","running"].includes(d.latestState);
+    box.scrollTop=fromTop?16:box.scrollHeight;
+    const locked=["pending","running"].includes((all.at(-1)||{}).state);
     lock(locked);
-    stat(`${m.length} shown · ${d.hiddenRecords||0} hidden · ${d.latestState||"ready"}`);
+    stat(`${m.length} shown · ${Math.max(0,all.length-m.length)} local hidden · ${d.hiddenRecords||0} daemon hidden · ${(all.at(-1)||{}).state||"ready"}`);
   }
   function statusText(r){const l=(r.status_log||[]).at(-1);return `[${r.state||"pending"}] ${(l&&l.note)||"Waiting for reply."}`;}
   async function load(){try{render(await view());}catch(e){stat("bridge offline: "+e.message);lock(false);}}
