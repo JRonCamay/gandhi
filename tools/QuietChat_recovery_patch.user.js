@@ -63,12 +63,21 @@
     u.send.style.opacity=on?".45":"1";
     u.send.style.cursor=on?"not-allowed":"pointer";
   }
+  async function view(limit){
+    try{
+      const d=await bridge("/view",{cmd:"qc.view",params:{chatUrl:location.href,limit:limit||20,scanLimit:80,staleAfter:120}});
+      return d.result||d;
+    }catch(e){
+      const d=await bridge("/scan",{chat_url:location.href,limit:limit||20});
+      return {messages:d.messages||[],totalRecords:d.count||0,visibleRecords:(d.messages||[]).length,hiddenRecords:0,latestState:((d.messages||[]).at(-1)||{}).state,latestMsgId:((d.messages||[]).at(-1)||{}).message_id};
+    }
+  }
 
   async function scan(){
     const u=ui();
     if(!u)return;
     try{
-      const d=await bridge("/scan",{chat_url:location.href,limit:80});
+      const d=await view(20);
       const m=d.messages||[];
       const last=m[m.length-1];
       if(u.scan)u.scan.click();
@@ -79,7 +88,7 @@
         return;
       }
       lock(u,false);
-      status(u,m.length?`Recovered ${m.length} QuietChat messages.`:"QuietChat ready.");
+      status(u,m.length?`Recovered ${m.length} QuietChat messages. ${d.hiddenRecords||0} hidden.`:"QuietChat ready.");
     }catch(e){
       lock(u,false);
       status(u,"Bridge offline. Start local bridge then press Scan.");
@@ -92,7 +101,7 @@
       const u=ui();
       if(!u)return;
       try{
-        const d=await bridge("/scan",{chat_url:location.href,limit:80});
+        const d=await view(20);
         const m=d.messages||[],last=m[m.length-1];
         if(u.scan)u.scan.click();
         if(last&&["completed","blocked","paused"].includes(last.state)){
