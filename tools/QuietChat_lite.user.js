@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.1.2
+// @version      0.1.3
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,7 +15,7 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",POS="qc-lite-pos-v1",VER="0.1.2";
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",POS="qc-lite-pos-v1",VER="0.1.3";
   let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
@@ -39,9 +39,9 @@
         .qch.drag{cursor:grabbing}
         .qct{font-weight:700;flex:1}.qcs{font-size:11px;color:#aaa}
         #${ID} button{border:1px solid #555;background:#3a3a3a;color:#eee;border-radius:9px;padding:7px 10px;cursor:pointer}#${ID} button:disabled{opacity:.45;cursor:not-allowed}
-        .qca{position:relative;flex:1;min-height:0;background:#242424}.qcb{height:100%;overflow:auto;padding:18px 18px 54px;background:#242424}.msg{max-width:88%;margin:0 0 14px;line-height:1.45;white-space:pre-wrap}.u{margin-left:auto;background:#3c3c3c;padding:10px 12px;border-radius:14px 14px 4px 14px}.a{margin-right:auto}.a:before{content:"QuietChat";display:block;color:#8fd;opacity:.8;font-size:11px;margin-bottom:4px}
+        .qca{position:relative;flex:1;min-height:0;background:#242424;overflow:hidden}.qcb{position:absolute;inset:0;overflow:auto;padding:18px 18px 62px;background:#242424}.msg{max-width:88%;margin:0 0 14px;line-height:1.45;white-space:pre-wrap}.u{margin-left:auto;background:#3c3c3c;padding:10px 12px;border-radius:14px 14px 4px 14px}.a{margin-right:auto}.a:before{content:"QuietChat";display:block;color:#8fd;opacity:.8;font-size:11px;margin-bottom:4px}
         .qcf{display:flex;gap:8px;padding:12px;background:#303030;border-top:1px solid #444}#${ID} textarea{flex:1;min-height:42px;max-height:150px;resize:vertical;background:#3a3a3a;color:#eee;border:1px solid #555;border-radius:12px;padding:10px;outline:none}.stat{padding:6px 12px;text-align:center;color:#aaa;font-size:11px;background:#303030;border-top:1px solid #444}
-        .newest{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:38px;height:38px;border-radius:999px!important;font-size:18px;z-index:2;display:none}
+        .newest{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);width:38px;height:38px;border-radius:999px!important;font-size:18px;z-index:10;display:none;box-shadow:0 6px 18px #000a;background:#2f8f7a!important;border-color:#47c7a7!important}
       </style>
       <section class=qcw><div class=qch><div><div class=qct>QuietChat Lite <span style="font-size:10px;color:#999">v${VER}</span></div><div class=qcs>daemon view · 10 sliding</div></div><button class=scan>Scan</button><button class=hide>Dock</button></div><div class=qca><main class=qcb></main><button class=newest title="Newest">↓</button></div><div class=stat>ready</div><footer class=qcf><textarea placeholder="Message QuietChat..."></textarea><button class=send>Send</button></footer></section>`;
     document.documentElement.appendChild(h);
