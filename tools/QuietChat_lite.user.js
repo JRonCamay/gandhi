@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.14
+// @version      0.3.15
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,7 +15,7 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.14";
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.15";
   let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
@@ -126,16 +126,9 @@
     const max=Math.max(0,last.length-win),bh=bar.clientHeight;
     bar.style.display=last.length>win?"block":"none";
     if(last.length<=win||bh<20)return;
-    const hh=Math.max(108,Math.min(bh-24,Math.round(bh*.86)));
+    const hh=Math.max(108,Math.min(bh-12,Math.round(bh*.95)));
     th.style.height=hh+"px";
     th.style.top=(max?Math.round((bh-hh)*pos/max):0)+"px";
-  }
-  function setPosFromBar(y){
-    const h=document.getElementById(ID),bar=h?.querySelector(".qbar"),th=h?.querySelector(".qthumb");
-    if(!bar||!th)return;
-    const max=Math.max(0,last.length-win),r=bar.getBoundingClientRect(),hh=th.offsetHeight,span=Math.max(1,r.height-hh);
-    pos=Math.max(0,Math.min(max,Math.round(((y-r.top-hh/2)/span)*max)));
-    render({messages:last},"bar");
   }
   function wireFakeScroll(h){
     const bar=h.querySelector(".qbar"),th=h.querySelector(".qthumb");let drag=false,dy=0,edge=0,edgeTimer=null;
@@ -147,16 +140,19 @@
       pos=np;render({messages:last},edge<0?"top":"bottom");
     };
     const checkEdge=y=>{
-      const r=bar.getBoundingClientRect(),pad=16;
+      const r=bar.getBoundingClientRect(),pad=18;
       edge=y<=r.top+pad?-1:y>=r.bottom-pad?1:0;
       if(edge&&!edgeTimer)edgeTimer=setInterval(bumpEdge,180);
       if(!edge)stopEdge();
     };
-    bar.onclick=e=>{if(e.target===th)return;setPosFromBar(e.clientY);};
+    const moveThumb=y=>{
+      const r=bar.getBoundingClientRect(),hh=th.offsetHeight,span=Math.max(0,r.height-hh);
+      th.style.top=Math.max(0,Math.min(span,y-dy-r.top))+"px";
+    };
     th.onpointerdown=e=>{drag=true;dy=e.clientY-th.getBoundingClientRect().top;th.setPointerCapture(e.pointerId);e.preventDefault();};
-    th.onpointermove=e=>{if(!drag)return;const r=bar.getBoundingClientRect(),hh=th.offsetHeight,max=Math.max(0,last.length-win),span=Math.max(1,r.height-hh);pos=Math.max(0,Math.min(max,Math.round(((e.clientY-dy-r.top)/span)*max)));render({messages:last},"bar");checkEdge(e.clientY);};
-    th.onpointerup=e=>{drag=false;stopEdge();try{th.releasePointerCapture(e.pointerId);}catch{};};
-    th.onpointercancel=()=>{drag=false;stopEdge();};
+    th.onpointermove=e=>{if(!drag)return;moveThumb(e.clientY);checkEdge(e.clientY);};
+    th.onpointerup=e=>{drag=false;stopEdge();updateBar();try{th.releasePointerCapture(e.pointerId);}catch{};};
+    th.onpointercancel=()=>{drag=false;stopEdge();updateBar();};
   }
   function render(d,shift=""){
     last=d.messages||last||[];
