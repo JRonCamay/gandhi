@@ -82,20 +82,34 @@ class Store:
         r["updated_at"]=now();wrj(p,r);return r
     def save(s,r):wrj(s.mp(r["chat_id"],r["message_id"]),r)
     def load(s,u,m):return rdj(s.mp(u,m))
-    def trig(s,m):return f"Use quietchat_process_message for {m}."
+    def trig(s,m):return "@mcp checkmessage"
+    def latest(s,u,state="pending"):
+        d=s.cd(u)/"messages";found=[]
+        for p in d.glob("QC-*/message.json"):
+            try:
+                r=rdj(p)
+                if state and r.get("state")!=state:continue
+                found.append((p.stat().st_mtime,r))
+            except QCE:
+                pass
+        if not found:raise QCE(f"no {state or 'matching'} message")
+        return sorted(found,key=lambda x:x[0],reverse=True)[0][1]
     def new(s,u,msg,title="",message_id="",meta=None):
         if not str(msg or "").strip():raise QCE("msg required")
         c=s.chat(u,title);m=mid(message_id);p=s.mp(c["chat_id"],m)
         if p.exists():raise QCE(f"exists:{m}")
         r={"schema_version":1,"chat_id":c["chat_id"],"chat_url":u,"message_id":m,"state":"pending","user_message":msg,"assistant_reply":"","metadata":meta or {},"created_at":now(),"updated_at":now(),"status_log":[]}
         wrj(p,r);c["messages"]=[x for x in c.get("messages",[]) if x.get("message_id")!=m]+[{"message_id":m,"state":"pending","created_at":r["created_at"],"updated_at":r["updated_at"]}];wrj(s.cp(c["chat_id"]),c)
-        return ok({"message_id":m,"trigger":s.trig(m),"record":r})
+        return ok({"message_id":m,"trigger":s.trig(m),"explicit_trigger":f"Use quietchat_process_message for {m}.","record":r})
     def run(s,u,m):
+        compact=not bool(str(m or "").strip())
+        if compact:m=s.latest(u,"pending").get("message_id")
         with s.lk(u,m):
             r=s.load(u,m)
             if r["state"] not in {"pending","running"}:raise QCE(f"bad state:{r['state']}")
             r["state"]="running";r["updated_at"]=now();r.setdefault("status_log",[]).append({"state":"running","note":"accepted","progress":0,"created_at":now()});s.save(r)
-        return ok({"message_id":m,"state":"running","user_message":r["user_message"],"metadata":r.get("metadata",{}),"silent_contract":{"progress_tool":"quietchat_update_status","completion_tool":"quietchat_complete_message","visible_complete_reply":f"Replied {m}","visible_paused_reply":f"Paused {m}","visible_blocked_reply":f"Blocked {m}"}})
+        visible="✓" if compact else f"Replied {m}"
+        return ok({"message_id":m,"state":"running","user_message":r["user_message"],"metadata":r.get("metadata",{}),"compact":compact,"silent_contract":{"progress_tool":"quietchat_update_status","completion_tool":"quietchat_complete_message","visible_complete_reply":visible,"visible_paused_reply":f"Paused {m}","visible_blocked_reply":f"Blocked {m}"}})
     def stat(s,u,m,state="running",note="",progress=None,data=None):
         if state and state not in {"pending","running","blocked","paused"}:raise QCE("bad state")
         with s.lk(u,m):
@@ -146,7 +160,7 @@ def register_quietchat_lite_tools(mcp,storage_root=ROOT,allowed_roots=None):
         """createQuietChat(msgObj:{chat_url,user_message,title?,message_id?,metadata?})."""
         x=msgObj or {};return call("QCNEW01",s.new,x.get("chat_url",""),x.get("user_message",""),x.get("title") or x.get("conversation_title",""),x.get("message_id",""),x.get("metadata"))
     @mcp.tool()
-    def quietchat_process_message(chat_url:str,message_id:str)->dict:
+    def quietchat_process_message(chat_url:str,message_id:str="")->dict:
         """processQuietChat(chat_url,message_id)."""
         return call("QCRUN01",s.run,chat_url,message_id)
     @mcp.tool()
