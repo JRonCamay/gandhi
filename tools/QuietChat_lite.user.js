@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.1
+// @version      0.3.2
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,7 +15,7 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.1";
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.2";
   let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
@@ -47,7 +47,7 @@
         .qca{position:relative;flex:1;min-height:0;background:#242424;overflow:hidden}.qcb{position:absolute;inset:0;overflow:auto;padding:18px 18px 62px;background:#242424}.msg{max-width:88%;margin:0 0 14px;line-height:1.45;white-space:pre-wrap}.u{margin-left:auto;background:#3c3c3c;padding:10px 12px;border-radius:14px 14px 4px 14px}.a{margin-right:auto}.a:before{content:"QuietChat";display:block;color:#8fd;opacity:.8;font-size:11px;margin-bottom:4px}.pinrow{max-width:88%;margin:-8px 0 14px;display:flex;align-items:center;gap:7px;color:#9ee8d0;font-size:11px}.pinrow.pu{margin-left:auto;justify-content:flex-end}.pinrow.pa{margin-right:auto}.pinrow .pname{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;border:1px solid #3b7769;background:#1f3f36;border-radius:8px;padding:4px 7px}.pinb{font-size:11px!important;padding:4px 7px!important;border-radius:8px!important;background:#263f39!important;border-color:#3b7769!important;color:#bfffee!important}.pinb.on{background:#bfffee!important;border-color:#7af0cf!important;color:#17352e!important}
         .qcf{display:flex;gap:8px;padding:12px;background:#303030;border-top:1px solid #444}#${ID} textarea{flex:1;min-height:42px;max-height:150px;resize:vertical;background:#3a3a3a;color:#eee;border:1px solid #555;border-radius:12px;padding:10px;outline:none}.stat{padding:6px 12px;text-align:center;color:#aaa;font-size:11px;background:#303030;border-top:1px solid #444}
         .newest{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);width:38px;height:38px;border-radius:999px!important;font-size:18px;z-index:10;display:none;box-shadow:0 6px 18px #000a;background:#2f8f7a!important;border-color:#47c7a7!important}
-        .qsp{position:absolute;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:20}.qsp.on{display:flex}.qspn{width:min(644px,calc(100% - 28px));height:min(506px,calc(100% - 40px));background:#292929;border:1px solid #666;border-radius:14px;box-shadow:0 18px 60px #000c;display:flex;flex-direction:column;overflow:hidden}.qsph{display:flex;gap:8px;padding:10px;background:#333;border-bottom:1px solid #444}#${ID} .qsph input{flex:1;background:#202020;color:#eee;border:1px solid #555;border-radius:9px;padding:9px;outline:none}.qspr{flex:1;overflow:auto;padding:10px;color:#bbb}.qspr .hint{font-size:12px;color:#999}.qleg{font-size:11px;color:#aaa;padding:2px 4px 9px}.dot{display:inline-block;width:9px;height:9px;border-radius:99px;margin:0 4px 0 10px}.du{background:#263f66}.da{background:#3d3d3d}.dp{background:#285c4e}.res{padding:9px 10px;margin:0 0 7px;border:1px solid #3d3d3d;border-radius:10px;white-space:normal;overflow:hidden;cursor:pointer;line-height:1.35}.res.user{background:#24344d;border-color:#31537d}.res.assistant{background:#333}.res.summary{background:#3a3324;border-color:#6d5b2c}.res.pin{background:#1f3f36;border-color:#3b8d78;color:#d8fff5}.res:hover{filter:brightness(1.12)}.res mark,.msg mark,.pinrow mark{background:#2f8f7a;color:#fff;border-radius:4px;padding:0 2px}.qtt{position:fixed;z-index:2147483647;max-width:560px;max-height:360px;overflow:auto;scrollbar-width:none;background:#171717;color:#ddd;border:1px solid #666;border-radius:10px;padding:10px 12px;box-shadow:0 12px 40px #000d;font:12px/1.45 system-ui;white-space:pre-wrap;display:none;pointer-events:none}.qtt::-webkit-scrollbar{display:none}
+        .qsp{position:absolute;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:20}.qsp.on{display:flex}.qspn{width:min(644px,calc(100% - 28px));height:min(506px,calc(100% - 40px));background:#292929;border:1px solid #666;border-radius:14px;box-shadow:0 18px 60px #000c;display:flex;flex-direction:column;overflow:hidden}.qsph{display:flex;gap:8px;padding:10px;background:#333;border-bottom:1px solid #444}#${ID} .qsph input{flex:1;background:#202020;color:#eee;border:1px solid #555;border-radius:9px;padding:9px;outline:none}.qspr{flex:1;overflow:auto;padding:10px;color:#bbb}.qspr .hint{font-size:12px;color:#999}.qleg{font-size:11px;color:#aaa;padding:2px 4px 9px}.dot{display:inline-block;width:9px;height:9px;border-radius:99px;margin:0 4px 0 10px}.du{background:#263f66}.da{background:#3d3d3d}.dp{background:#285c4e}.res{padding:9px 10px;margin:0 0 7px;border:1px solid #3d3d3d;border-radius:10px;white-space:normal;overflow:hidden;cursor:pointer;line-height:1.35}.res.user{background:#24344d;border-color:#31537d}.res.assistant{background:#333}.res.summary{background:#3a3324;border-color:#6d5b2c}.res.pin,.res.pin_user,.res.pin_assistant{background:#1f3f36;border-color:#3b8d78;color:#d8fff5}.res:hover{filter:brightness(1.12)}.res mark,.msg mark,.pinrow mark{background:#2f8f7a;color:#fff;border-radius:4px;padding:0 2px}.qtt{position:fixed;z-index:2147483647;max-width:560px;max-height:360px;overflow:auto;scrollbar-width:none;background:#171717;color:#ddd;border:1px solid #666;border-radius:10px;padding:10px 12px;box-shadow:0 12px 40px #000d;font:12px/1.45 system-ui;white-space:pre-wrap;display:none;pointer-events:none}.qtt::-webkit-scrollbar{display:none}
       </style>
       <section class=qcw><div class=qch><div><div class=qct>QuietChat Lite <span style="font-size:10px;color:#999">v${VER}</span></div><div class=qcs>daemon view · 10 sliding</div></div><button class=scan>Scan</button><button class=srch title="Search by Pin or Words" aria-label="Search by Pin or Words">⌕</button><button class=hide>Dock</button></div><div class=qca><main class=qcb></main><button class=newest title="Newest">↓</button></div><div class=stat>ready</div><footer class=qcf><textarea placeholder="Message QuietChat..."></textarea><button class=send>Send</button></footer><div class=qsp><div class=qspn><div class=qsph><input placeholder="Search pin or words..."><button class=sx title="Close">×</button></div><div class=qspr><div class=hint>Search panel ready. Results next.</div></div></div></div><div class=qtt></div></section>`;
     document.documentElement.appendChild(h);
@@ -85,8 +85,8 @@
   function closeSearch(h){h.querySelector(".qsp").classList.remove("on");}
   function tip(h,on,e,txt,q){const t=h.querySelector(".qtt");tipOpen=!!on;if(!on){t.style.display="none";return;}t.innerHTML=hi(txt||"",q);t.style.display="block";t.style.left=Math.min(innerWidth-580,e.clientX+16)+"px";t.style.top=Math.min(innerHeight-390,e.clientY+16)+"px";}
   function pinRow(r,hit,side){
-    const id=esc(r.message_id||""),pn=r.pin_name||"",cls=side==="u"?"pu":"pa";
-    return `<div class="pinrow ${cls}" data-mid="${id}">${pn?`<span class=pname data-mid="${id}" data-pin="${esc(pn)}" title="Edit pin name">📌 ${hit?hi(pn,findText):esc(pn)}</span>`:""}<button class="pinb ${pn?"on":""}" data-mid="${id}" data-pin="${esc(pn)}" title="${pn?"Pinned":"Pin"}">${pn?"Pinned":"Pin"}</button></div>`;
+    const id=esc(r.message_id||""),pn=side==="u"?(r.pin_user||r.pin_name||""):(r.pin_assistant||""),cls=side==="u"?"pu":"pa",sd=side==="u"?"user":"assistant";
+    return `<div class="pinrow ${cls}" data-mid="${id}">${pn?`<span class=pname data-mid="${id}" data-side="${sd}" data-pin="${esc(pn)}" title="Edit pin name">📌 ${hit?hi(pn,findText):esc(pn)}</span>`:""}<button class="pinb ${pn?"on":""}" data-mid="${id}" data-side="${sd}" data-pin="${esc(pn)}" title="${pn?"Pinned":"Pin"}">${pn?"Pinned":"Pin"}</button></div>`;
   }
   async function runSearch(h){
     const i=h.querySelector(".qsph input"),r=h.querySelector(".qspr"),q=i.value.trim();
@@ -123,10 +123,10 @@
         box.insertAdjacentHTML("beforeend",pinRow(r,hit,"u"));
       }
       box.insertAdjacentHTML("beforeend",`<div class="msg a" data-mid="${esc(r.message_id||"")}">${hit?hi(r.assistant_reply||statusText(r),findText):esc(r.assistant_reply||statusText(r))}</div>`);
-      if(!r.user_message)box.insertAdjacentHTML("beforeend",pinRow(r,hit,"a"));
+      box.insertAdjacentHTML("beforeend",pinRow(r,hit,"a"));
     }
-    box.querySelectorAll(".pinb").forEach(b=>b.onclick=()=>togglePin(b.dataset.mid,b.dataset.pin||""));
-    box.querySelectorAll(".pname").forEach(b=>b.onclick=()=>editPin(b.dataset.mid,b.dataset.pin||""));
+    box.querySelectorAll(".pinb").forEach(b=>b.onclick=()=>togglePin(b.dataset.mid,b.dataset.side,b.dataset.pin||""));
+    box.querySelectorAll(".pname").forEach(b=>b.onclick=()=>editPin(b.dataset.mid,b.dataset.side,b.dataset.pin||""));
     if(jump||first)box.scrollTop=box.scrollHeight;
     else if(fromTop)box.scrollTop=16;
     else if(findMid)setTimeout(()=>box.querySelector(`[data-mid="${CSS.escape(findMid)}"] mark`)?.scrollIntoView({block:"center"}),30);
@@ -138,30 +138,40 @@
     stat(`${m.length} shown · window ${pos+1}-${Math.min(pos+win,all.length)} of ${all.length} · ${(all.at(-1)||{}).state||"ready"}`);
   }
   function statusText(r){const l=(r.status_log||[]).at(-1);return `[${r.state||"pending"}] ${(l&&l.note)||"Waiting for reply."}`;}
-  async function savePin(id,name,msg){
+  async function savePin(id,side,name,msg){
     const box=document.querySelector(`#${ID} .qcb`),keep=box?box.scrollTop:0;
     try{
-      await dop("qc.pin",{chatUrl:location.href,msgId:id,pinName:name});
+      await dop("qc.pin",{chatUrl:location.href,msgId:id,side,pinName:name});
       const r=last.find(x=>x.message_id===id);
-      if(r){if(name)r.pin_name=name;else delete r.pin_name;}
+      if(r){const k=side==="assistant"?"pin_assistant":"pin_user";if(name)r[k]=name;else delete r[k];}
       render({messages:last});
       setTimeout(()=>{const b=document.querySelector(`#${ID} .qcb`);if(b)b.scrollTop=keep;},0);
       setTimeout(()=>{const b=document.querySelector(`#${ID} .qcb`);if(b)b.scrollTop=keep;},80);
       stat(msg);
     }catch(e){stat("pin failed: "+e.message);}
   }
-  async function togglePin(id,cur){
-    if(cur)return savePin(id,"","pin removed");
+  async function togglePin(id,side,cur){
+    if(cur)return savePin(id,side,"","pin removed");
     const name=prompt("Pin name for this message:","");
     if(name===null)return;
-    if(name.trim())return savePin(id,name.trim(),"pin saved");
+    if(name.trim())return savePin(id,side,name.trim(),"pin saved");
   }
-  async function editPin(id,cur){
+  async function editPin(id,side,cur){
     const name=prompt("Edit pin name:",cur||"");
     if(name===null)return;
-    return savePin(id,name.trim(),name.trim()?"pin saved":"pin removed");
+    return savePin(id,side,name.trim(),name.trim()?"pin saved":"pin removed");
   }
-  async function load(allowJump=false){try{if(allowJump)jump=true;render(await view());}catch(e){stat("bridge offline: "+e.message);lock(false);}}
+  async function load(allowJump=false){
+    const box=document.querySelector(`#${ID} .qcb`),keep=box?box.scrollTop:null;
+    try{
+      if(allowJump)jump=true;
+      render(await view());
+      if(!allowJump&&keep!==null){
+        setTimeout(()=>{const b=document.querySelector(`#${ID} .qcb`);if(b)b.scrollTop=keep;},0);
+        setTimeout(()=>{const b=document.querySelector(`#${ID} .qcb`);if(b)b.scrollTop=keep;},80);
+      }
+    }catch(e){stat("bridge offline: "+e.message);lock(false);}
+  }
   async function send(){
     if(busy)return;
     const ta=document.querySelector(`#${ID} textarea`),txt=ta.value.trim();
