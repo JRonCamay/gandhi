@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.6
+// @version      0.3.7
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,7 +15,7 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.6";
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.7";
   let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
@@ -159,6 +159,7 @@
       if(r){const k=side==="assistant"?"pin_assistant":"pin_user";if(name)r[k]=name;else delete r[k];}
       const btn=el.classList.contains("pinb")?el:el.closest(".pinrow")?.querySelector(".pinb");
       if(btn)paintPin(btn,id,side,name);
+      await load({preserve:true});
       stat(msg);
     }catch(e){stat("pin failed: "+e.message);}
   }
@@ -173,12 +174,13 @@
     if(name===null)return;
     return savePin(el,id,side,name.trim(),name.trim()?"pin saved":"pin removed");
   }
-  async function load(allowJump=false){
-    const box=document.querySelector(`#${ID} .qcb`),keep=box?box.scrollTop:null;
+  async function load(opt=false){
+    const o=typeof opt==="object"&&opt?opt:{jump:!!opt},box=document.querySelector(`#${ID} .qcb`),keep=box?box.scrollTop:null,keepPos=pos;
     try{
-      if(allowJump)jump=true;
+      if(o.jump)jump=true;
       render(await view());
-      if(!allowJump&&keep!==null){
+      if(o.preserve&&keep!==null){
+        pos=keepPos;render({messages:last});
         setTimeout(()=>{const b=document.querySelector(`#${ID} .qcb`);if(b)b.scrollTop=keep;},0);
         setTimeout(()=>{const b=document.querySelector(`#${ID} .qcb`);if(b)b.scrollTop=keep;},80);
       }
