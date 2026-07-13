@@ -18,6 +18,7 @@ CMDS={
 "qc.process":"processQuietChat(chatUrl,msgId)",
 "qc.status":"updateQuietChat(chatUrl,msgId,state,note?,progress?,data?)",
 "qc.complete":"completeQuietChat(chatUrl,msgId,reply,summary?,artifacts?)",
+"qc.next":"nextPendingQuietChat(chatUrl)",
 "qc.get":"getQuietChat(chatUrl,msgId)",
 "qc.list":"listQuietChat(chatUrl,limit?,state?)",
 "qc.view":"viewQuietChat(chatUrl,limit?,scanLimit?,staleAfter?)",
@@ -81,6 +82,18 @@ class QC:
     def cd(s,u):return s.r/chatId(u)
     def cp(s,u):return s.cd(u)/"chat.json"
     def mp(s,u,m):return s.cd(u)/"messages"/msgId(m)/"message.json"
+    def latest(s,u,state="pending"):
+        root=s.cd(u)/"messages"
+        found=[]
+        for p in root.glob("QC-*/message.json"):
+            try:
+                r=j(p)
+                if state and r.get("state")!=state:continue
+                found.append((p.stat().st_mtime,r))
+            except Exception:
+                pass
+        if not found:raise E(f"no {state or 'matching'} message")
+        return sorted(found,key=lambda x:x[0],reverse=True)[0][1]
     @contextmanager
     def lk(s,u,m):
         d=s.mp(u,m).parent;d.mkdir(parents=True,exist_ok=True);p=d/".quietchat.lock";end=time.monotonic()+8;fd=None
@@ -104,12 +117,19 @@ class QC:
         u=ck(o.get("chatUrl") or o.get("chat_url"),"chatUrl");m=msgId(o.get("msgId") or o.get("message_id"));r={"schema_version":1,"chat_id":chatId(u),"chat_url":u,"message_id":m,"state":"pending","user_message":ck(o.get("msg") or o.get("message") or o.get("user_message"),"msg"),"assistant_reply":"","metadata":o.get("meta") or o.get("metadata") or {},"created_at":n(),"updated_at":n(),"status_log":[]}
         if s.mp(u,m).exists():raise E("exists")
         c=s.chat(u,o.get("title",""));wj(s.mp(u,m),r);c["messages"]=[x for x in c.get("messages",[]) if x.get("message_id")!=m]+[{"message_id":m,"state":"pending","created_at":r["created_at"],"updated_at":r["updated_at"]}];wj(s.cp(u),c)
-        return ok({"msgId":m,"trigger":f"Use quietchat_process_message for {m}.","record":r})
+        return ok({"msgId":m,"trigger":"@mcp checkmessage","explicit_trigger":f"Use quietchat_process_message for {m}.","record":r})
+    def next(s,o):
+        u=ck(o.get("chatUrl") or o.get("chat_url"),"chatUrl");r=s.latest(u,o.get("state","pending"))
+        return ok({"msgId":r.get("message_id"),"state":r.get("state"),"user_message":r.get("user_message"),"metadata":r.get("metadata",{})})
     def process(s,o):
-        u=ck(o.get("chatUrl") or o.get("chat_url"),"chatUrl");m=ck(o.get("msgId") or o.get("message_id"),"msgId")
+        u=ck(o.get("chatUrl") or o.get("chat_url"),"chatUrl");m=o.get("msgId") or o.get("message_id")
+        compact=not bool(m)
+        if not m:m=s.latest(u,"pending").get("message_id")
+        m=ck(m,"msgId")
         with s.lk(u,m):
             r=j(s.mp(u,m));r["state"]="running";r["updated_at"]=n();r.setdefault("status_log",[]).append({"state":"running","note":"accepted","progress":0,"created_at":n()});wj(s.mp(u,m),r)
-        return ok({"msgId":m,"state":"running","user_message":r["user_message"],"metadata":r.get("metadata",{}),"silent_contract":{"progress_tool":"MCP_Control qc.status","completion_tool":"MCP_Control qc.complete","visible_complete_reply":f"Replied {m}"}})
+        visible="✓" if compact or o.get("compact") else f"Replied {m}"
+        return ok({"msgId":m,"state":"running","user_message":r["user_message"],"metadata":r.get("metadata",{}),"compact":compact,"silent_contract":{"progress_tool":"MCP_Control qc.status","completion_tool":"MCP_Control qc.complete","visible_complete_reply":visible}})
     def status(s,o):
         u=ck(o.get("chatUrl") or o.get("chat_url"),"chatUrl");m=ck(o.get("msgId") or o.get("message_id"),"msgId")
         with s.lk(u,m):
@@ -119,7 +139,7 @@ class QC:
         u=ck(o.get("chatUrl") or o.get("chat_url"),"chatUrl");m=ck(o.get("msgId") or o.get("message_id"),"msgId")
         with s.lk(u,m):
             r=j(s.mp(u,m));r["state"]="completed";r["assistant_reply"]=ck(o.get("reply") or o.get("assistant_reply"),"reply");r["summary"]=o.get("summary","");r["artifacts"]=o.get("artifacts") or [];r["updated_at"]=n();wj(s.mp(u,m),r)
-        return ok({"msgId":m,"state":"completed","visible_reply":f"Replied {m}"})
+        return ok({"msgId":m,"state":"completed","visible_reply":"✓" if o.get("compact") else f"Replied {m}"})
     def get(s,o):return ok({"record":j(s.mp(ck(o.get("chatUrl") or o.get("chat_url"),"chatUrl"),ck(o.get("msgId") or o.get("message_id"),"msgId")))})
     def list(s,o):
         u=ck(o.get("chatUrl") or o.get("chat_url"),"chatUrl");lim=max(1,min(int(o.get("limit",20)),200));st=o.get("state","");a=[]
@@ -196,7 +216,7 @@ def ip(o):
         try:return json.loads(body)
         except Exception:return {"status":"error","err":"HTTP","code":e.code,"body":body}
 def rn(kind,o):return jq({"kind":kind,"payload":o,"ram":True})
-DIS={"ping":lambda o:ok({"server":"gandhi_control_lite"}),"qc.create":qc.create,"qc.process":qc.process,"qc.status":qc.status,"qc.complete":qc.complete,"qc.get":qc.get,"qc.list":qc.list,"qc.view":lambda o:ip({"op":"qc.view","params":o}),"qc.search":lambda o:ip({"op":"qc.search","params":o}),"qc.pin":lambda o:ip({"op":"qc.pin","params":o}),"file.write":f_write,"file.batch":f_batch,"file.read":lambda o:ip({"op":"file.read","params":o}),"file.info":lambda o:ip({"op":"file.info","params":o}),"file.search":lambda o:ip({"op":"file.search","params":o}),"file.functions":lambda o:ip({"op":"file.functions","params":o}),"memory.exportChat":qc.export,"writer.queue":jq,"writer.status":js,"writer.flush":jf,"scratch.note":lambda o:rn("scratch.note",o),"scratch.list":lambda o:ig("/scratch"),"scratch.get":lambda o:ig("/scratch/"+ck(o.get("id"),"id")),"seg.note":lambda o:rn("seg.note",o),"seg.list":lambda o:ig("/segment"),"seg.get":lambda o:ig("/segment/"+ck(o.get("id"),"id")),"daemon.op":ip}
+DIS={"ping":lambda o:ok({"server":"gandhi_control_lite"}),"qc.create":qc.create,"qc.next":qc.next,"qc.process":qc.process,"qc.status":qc.status,"qc.complete":qc.complete,"qc.get":qc.get,"qc.list":qc.list,"qc.view":lambda o:ip({"op":"qc.view","params":o}),"qc.search":lambda o:ip({"op":"qc.search","params":o}),"qc.pin":lambda o:ip({"op":"qc.pin","params":o}),"file.write":f_write,"file.batch":f_batch,"file.read":lambda o:ip({"op":"file.read","params":o}),"file.info":lambda o:ip({"op":"file.info","params":o}),"file.search":lambda o:ip({"op":"file.search","params":o}),"file.functions":lambda o:ip({"op":"file.functions","params":o}),"memory.exportChat":qc.export,"writer.queue":jq,"writer.status":js,"writer.flush":jf,"scratch.note":lambda o:rn("scratch.note",o),"scratch.list":lambda o:ig("/scratch"),"scratch.get":lambda o:ig("/scratch/"+ck(o.get("id"),"id")),"seg.note":lambda o:rn("seg.note",o),"seg.list":lambda o:ig("/segment"),"seg.get":lambda o:ig("/segment/"+ck(o.get("id"),"id")),"daemon.op":ip}
 
 @mcp.tool()
 def MCP_Control(controlObj:dict)->dict:
