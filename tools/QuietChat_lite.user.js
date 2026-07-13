@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.1.7
+// @version      0.1.8
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,13 +15,18 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",POS="qc-lite-pos-v1",VER="0.1.7";
-  let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false;
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.1.8";
+  let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
     const body=JSON.stringify(payload||{});
     if(typeof GM_xmlhttpRequest==="function")return new Promise((ok,fail)=>GM_xmlhttpRequest({method:"POST",url:API+path,headers:{"Content-Type":"application/json"},data:body,timeout:12000,onload:r=>{try{const d=JSON.parse(r.responseText||"{}");if(r.status>=400||d.status==="error")fail(new Error(d.msg||d.error||"bridge error"));else ok(d);}catch(e){fail(e);}},onerror:()=>fail(new Error("bridge offline")),ontimeout:()=>fail(new Error("bridge timeout"))}));
     return fetch(API+path,{method:"POST",headers:{"Content-Type":"application/json"},body}).then(r=>r.json());
+  }
+  function dop(op,params){
+    const body=JSON.stringify({op,params:params||{}});
+    if(typeof GM_xmlhttpRequest==="function")return new Promise((ok,fail)=>GM_xmlhttpRequest({method:"POST",url:DAEMON+"/op",headers:{"Content-Type":"application/json"},data:body,timeout:12000,onload:r=>{try{const d=JSON.parse(r.responseText||"{}");if(r.status>=400||d.status==="error")fail(new Error(d.msg||d.error||"daemon error"));else ok(d.result||d);}catch(e){fail(e);}},onerror:()=>fail(new Error("daemon offline")),ontimeout:()=>fail(new Error("daemon timeout"))}));
+    return fetch(DAEMON+"/op",{method:"POST",headers:{"Content-Type":"application/json"},body}).then(r=>r.json()).then(d=>d.result||d);
   }
   async function view(){
     try{return (await req("/view",{cmd:"qc.view",params:{chatUrl:location.href,limit:80,scanLimit:80,staleAfter:120}})).result;}
@@ -42,7 +47,7 @@
         .qca{position:relative;flex:1;min-height:0;background:#242424;overflow:hidden}.qcb{position:absolute;inset:0;overflow:auto;padding:18px 18px 62px;background:#242424}.msg{max-width:88%;margin:0 0 14px;line-height:1.45;white-space:pre-wrap}.u{margin-left:auto;background:#3c3c3c;padding:10px 12px;border-radius:14px 14px 4px 14px}.a{margin-right:auto}.a:before{content:"QuietChat";display:block;color:#8fd;opacity:.8;font-size:11px;margin-bottom:4px}
         .qcf{display:flex;gap:8px;padding:12px;background:#303030;border-top:1px solid #444}#${ID} textarea{flex:1;min-height:42px;max-height:150px;resize:vertical;background:#3a3a3a;color:#eee;border:1px solid #555;border-radius:12px;padding:10px;outline:none}.stat{padding:6px 12px;text-align:center;color:#aaa;font-size:11px;background:#303030;border-top:1px solid #444}
         .newest{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);width:38px;height:38px;border-radius:999px!important;font-size:18px;z-index:10;display:none;box-shadow:0 6px 18px #000a;background:#2f8f7a!important;border-color:#47c7a7!important}
-        .qsp{position:absolute;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:20}.qsp.on{display:flex}.qspn{width:min(644px,calc(100% - 28px));height:min(506px,calc(100% - 40px));background:#292929;border:1px solid #666;border-radius:14px;box-shadow:0 18px 60px #000c;display:flex;flex-direction:column;overflow:hidden}.qsph{display:flex;gap:8px;padding:10px;background:#333;border-bottom:1px solid #444}#${ID} .qsph input{flex:1;background:#202020;color:#eee;border:1px solid #555;border-radius:9px;padding:9px;outline:none}.qspr{flex:1;overflow:auto;padding:14px;color:#bbb}.qspr .hint{font-size:12px;color:#999}
+        .qsp{position:absolute;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:20}.qsp.on{display:flex}.qspn{width:min(644px,calc(100% - 28px));height:min(506px,calc(100% - 40px));background:#292929;border:1px solid #666;border-radius:14px;box-shadow:0 18px 60px #000c;display:flex;flex-direction:column;overflow:hidden}.qsph{display:flex;gap:8px;padding:10px;background:#333;border-bottom:1px solid #444}#${ID} .qsph input{flex:1;background:#202020;color:#eee;border:1px solid #555;border-radius:9px;padding:9px;outline:none}.qspr{flex:1;overflow:auto;padding:10px;color:#bbb}.qspr .hint{font-size:12px;color:#999}.res{padding:8px 10px;border-bottom:1px solid #3d3d3d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}.res:hover{background:#343434}.res b{color:#8fd;font-weight:600}.rid{color:#888;font-size:11px;margin-right:7px}
       </style>
       <section class=qcw><div class=qch><div><div class=qct>QuietChat Lite <span style="font-size:10px;color:#999">v${VER}</span></div><div class=qcs>daemon view · 10 sliding</div></div><button class=scan>Scan</button><button class=srch title="Search by Pin or Words" aria-label="Search by Pin or Words">⌕</button><button class=hide>Dock</button></div><div class=qca><main class=qcb></main><button class=newest title="Newest">↓</button></div><div class=stat>ready</div><footer class=qcf><textarea placeholder="Message QuietChat..."></textarea><button class=send>Send</button></footer><div class=qsp><div class=qspn><div class=qsph><input placeholder="Search pin or words..."><button class=sx title="Close">×</button></div><div class=qspr><div class=hint>Search panel ready. Results next.</div></div></div></div></section>`;
     document.documentElement.appendChild(h);
@@ -53,7 +58,8 @@
     h.querySelector(".srch").onclick=()=>openSearch(h);
     h.querySelector(".sx").onclick=()=>closeSearch(h);
     h.querySelector(".qsp").onclick=e=>{if(e.target.classList.contains("qsp"))closeSearch(h);};
-    h.querySelector(".qsph input").onkeydown=e=>{if(e.key==="Escape")closeSearch(h);};
+    h.querySelector(".qsph input").oninput=()=>{clearTimeout(st);st=setTimeout(()=>runSearch(h),250);};
+    h.querySelector(".qsph input").onkeydown=e=>{if(e.key==="Escape")closeSearch(h);if(e.key==="Enter"){clearTimeout(st);runSearch(h);}};
     h.querySelector(".hide").onclick=()=>{const w=h.querySelector(".qcw"),b=h.querySelector(".hide");w.classList.toggle("min");b.textContent=w.classList.contains("min")?"Open":"Dock";};
     h.querySelector(".send").onclick=send;
     load();
@@ -74,6 +80,15 @@
   function jumpNewest(){toNewest=true;jump=true;load(true);}
   function openSearch(h){const p=h.querySelector(".qsp"),i=h.querySelector(".qsph input");p.classList.add("on");setTimeout(()=>i.focus(),30);}
   function closeSearch(h){h.querySelector(".qsp").classList.remove("on");}
+  async function runSearch(h){
+    const i=h.querySelector(".qsph input"),r=h.querySelector(".qspr"),q=i.value.trim();
+    if(!q){r.innerHTML='<div class=hint>Type to search all QuietChat history.</div>';return;}
+    r.innerHTML='<div class=hint>Searching daemon...</div>';
+    try{
+      const d=await dop("qc.search",{chatUrl:location.href,query:q,limit:50}),a=d.results||[];
+      r.innerHTML=a.length?a.map(x=>`<div class=res title="${esc(x.message_id||"")}"><span class=rid>${esc(x.role||"")}</span><b>${esc(x.message_id||"")}</b> ${esc(x.snippet||"")}</div>`).join(""):`<div class=hint>No matches for "${esc(q)}".</div>`;
+    }catch(e){r.innerHTML=`<div class=hint>Search failed: ${esc(e.message)}</div>`;}
+  }
   function updateNewest(){
     const box=document.querySelector(`#${ID} .qcb`),nb=document.querySelector(`#${ID} .newest`);
     if(!box||!nb)return;
