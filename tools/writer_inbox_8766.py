@@ -46,17 +46,23 @@ def qc_view(p):
         except Exception:stale=False
     note=last.get("note") or ("Waiting for assistant reply." if lock else "QuietChat ready.")
     if stale:note="No recent progress update. Assistant may be busy or stalled."
-    msgs=[{k:r.get(k) for k in ("message_id","state","user_message","assistant_reply","summary","pin_name","pinned_at","created_at","updated_at","status_log")} for r in vis]
+    msgs=[{k:r.get(k) for k in ("message_id","state","user_message","assistant_reply","summary","pin_name","pin_user","pin_assistant","pinned_at","pin_user_at","pin_assistant_at","created_at","updated_at","status_log")} for r in vis]
     return {"chatUrl":u,"lock":lock,"stale":stale,"statusText":note,"latestState":state,"latestMsgId":latest.get("message_id"),"totalRecords":total,"visibleRecords":len(vis),"hiddenRecords":max(0,total-len(vis)),"messages":msgs}
 def qc_search(p):
     u=p["chatUrl"];q=str(p.get("query") or p.get("q","")).strip();mx=max(1,min(int(p.get("limit",50)),200));out=[]
     if not q:return {"chatUrl":u,"query":q,"count":0,"results":[]}
     ql=q.lower()
     for r in qc_rows(u,500):
-        pn=str(r.get("pin_name") or "")
-        pi=pn.lower().find(ql)
-        if pi>=0:
-            out.append({"message_id":r.get("message_id"),"state":r.get("state"),"role":"pin","snippet":"📌 "+pn,"preview":pn,"created_at":r.get("created_at"),"updated_at":r.get("updated_at"),"pin_name":pn})
+        pins=(("pin_user","pin_user","user pin"),("pin_assistant","pin_assistant","assistant pin"),("pin_name","pin","pin"))
+        matched=False
+        for pk,role,label in pins:
+            pn=str(r.get(pk) or "")
+            pi=pn.lower().find(ql)
+            if pi<0:continue
+            out.append({"message_id":r.get("message_id"),"state":r.get("state"),"role":role,"snippet":"📌 "+pn,"preview":pn,"created_at":r.get("created_at"),"updated_at":r.get("updated_at"),"pin_name":pn,"pin_side":label})
+            matched=True
+            break
+        if matched:
             if len(out)>=mx:break
             continue
         for k,role in (("user_message","user"),("assistant_reply","assistant"),("summary","summary")):
@@ -75,13 +81,15 @@ def qc_pin(p):
     if not m:raise RuntimeError("missing msgId")
     f=QR/cid(u)/"messages"/m/"message.json"
     if not f.exists():raise RuntimeError("message not found")
-    r=rd(f);name=str(p.get("pinName") or p.get("pin_name") or p.get("name") or "").strip()
+    r=rd(f);name=str(p.get("pinName") or p.get("pin_name") or p.get("name") or "").strip();side=str(p.get("side") or p.get("target") or "").strip().lower()
+    key="pin_assistant" if side in ("assistant","a","reply") else "pin_user" if side in ("user","u","message") else "pin_name"
+    at={"pin_user":"pin_user_at","pin_assistant":"pin_assistant_at","pin_name":"pinned_at"}[key]
     if name:
-        r["pin_name"]=name[:120];r["pinned_at"]=now()
+        r[key]=name[:120];r[at]=now()
     else:
-        r.pop("pin_name",None);r.pop("pinned_at",None)
+        r.pop(key,None);r.pop(at,None)
     r["updated_at"]=now();wj(f,r)
-    return {"chatUrl":u,"msgId":m,"pinName":r.get("pin_name",""),"pinned":bool(r.get("pin_name"))}
+    return {"chatUrl":u,"msgId":m,"side":side or "legacy","pinName":r.get(key,""),"pinned":bool(r.get(key))}
 def export_chat(p):
     u=p["chatUrl"];days=int(p.get("days",5));cut=time.time()-days*86400;rows=[]
     for f in sorted((QR/cid(u)/"messages").glob("QC-*/message.json"),key=lambda x:x.stat().st_mtime):
