@@ -34,6 +34,7 @@
         #${ID}{position:fixed;right:24px;bottom:24px;z-index:2147483646;font:13px system-ui;color:#eee}
         #${ID} *{box-sizing:border-box}
         .qcw{width:min(760px,calc(100vw - 48px));height:min(680px,calc(100vh - 80px));display:flex;flex-direction:column;background:#282828;border:1px solid #555;border-radius:16px;box-shadow:0 20px 70px #0009;overflow:hidden}
+        .qcw.min{width:180px;height:48px}.qcw.min .qcb,.qcw.min .stat,.qcw.min .qcf{display:none}.qcw.min .qch{border:0}.qcw.min .qcs,.qcw.min .scan{display:none}
         .qch{height:48px;display:flex;align-items:center;gap:8px;padding:0 12px;background:#303030;border-bottom:1px solid #444}
         .qct{font-weight:700;flex:1}.qcs{font-size:11px;color:#aaa}
         button{border:1px solid #555;background:#3a3a3a;color:#eee;border-radius:9px;padding:7px 10px;cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}
@@ -43,7 +44,7 @@
       <section class=qcw><div class=qch><div><div class=qct>QuietChat Lite</div><div class=qcs>daemon view · max 20</div></div><button class=scan>Scan</button><button class=hide>Dock</button></div><main class=qcb></main><div class=stat>ready</div><footer class=qcf><textarea placeholder="Message QuietChat..."></textarea><button class=send>Send</button></footer></section>`;
     document.documentElement.appendChild(h);
     h.querySelector(".scan").onclick=()=>load();
-    h.querySelector(".hide").onclick=()=>{const w=h.querySelector(".qcw");w.style.display=w.style.display==="none"?"flex":"none";};
+    h.querySelector(".hide").onclick=()=>{const w=h.querySelector(".qcw"),b=h.querySelector(".hide");w.classList.toggle("min");b.textContent=w.classList.contains("min")?"Open":"Dock";};
     h.querySelector(".send").onclick=send;
     load();
     timer=setInterval(load,5000);
