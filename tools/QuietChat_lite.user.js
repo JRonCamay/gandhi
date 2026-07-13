@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.20
+// @version      0.3.21
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,7 +15,7 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.20";
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.21";
   let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
@@ -120,6 +120,14 @@
     nb.style.display=(pos<max||!atBottom)?"block":"none";
   }
   function scrollBottom(box){box.scrollTop=box.scrollHeight;setTimeout(()=>{box.scrollTop=box.scrollHeight;},0);setTimeout(()=>{box.scrollTop=box.scrollHeight;},80);}
+  function ding(){
+    try{
+      const C=window.AudioContext||window.webkitAudioContext,ctx=new C(),g=ctx.createGain();
+      g.gain.setValueAtTime(0.0001,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.045,ctx.currentTime+0.015);g.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.34);g.connect(ctx.destination);
+      [880,1320].forEach((f,i)=>{const o=ctx.createOscillator();o.type="sine";o.frequency.setValueAtTime(f,ctx.currentTime+i*0.075);o.connect(g);o.start(ctx.currentTime+i*0.075);o.stop(ctx.currentTime+i*0.075+0.18);});
+      setTimeout(()=>ctx.close?.(),520);
+    }catch{}
+  }
   function updateBar(force=false){
     const h=document.getElementById(ID),bar=h?.querySelector(".qbar"),th=h?.querySelector(".qthumb");
     if(!bar||!th)return;
@@ -224,7 +232,7 @@
       const d=await view(),after=(d.messages||[]).at(-1)||{};
       const replyArrived=after.message_id&&after.message_id===before.message_id&&!before.assistant_reply&&after.assistant_reply;
       const newer=after.message_id&&before.message_id&&after.message_id!==before.message_id;
-      if(!o.preserve&&(replyArrived||newer)){toNewest=true;jump=true;}
+      if(!o.preserve&&(replyArrived||newer)){toNewest=true;jump=true;if(after.assistant_reply)ding();}
       render(d);
       if(o.preserve&&keep!==null){
         pos=keepPos;render({messages:last});
