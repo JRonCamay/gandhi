@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.3
+// @version      0.3.4
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,7 +15,7 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.3";
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.4";
   let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
@@ -65,7 +65,7 @@
     document.addEventListener("keydown",e=>{const t=h.querySelector(".qtt");if(!tipOpen||t.style.display==="none")return;const k=e.key;if(!["ArrowDown","ArrowUp","PageDown","PageUp"].includes(k))return;e.preventDefault();t.scrollTop+=k==="ArrowDown"?36:k==="ArrowUp"?-36:k==="PageDown"?180:-180;});
     load();
     h.querySelector(".qcb").onscroll=e=>{updateNewest();if(rendering)return;const b=e.target,max=Math.max(0,last.length-win);if(last.length<=win)return;if(b.scrollTop<8&&pos>0){pos-=1;render({messages:last,hiddenRecords:0},"top");}else if(b.scrollTop+b.clientHeight>=b.scrollHeight-8&&pos<max){pos+=1;render({messages:last,hiddenRecords:0},"bottom");}};
-    timer=setInterval(()=>{if(pos>=Math.max(0,last.length-win))load(false);},5000);
+    timer=setInterval(()=>{const b=h.querySelector(".qcb"),atBottom=b&&b.scrollTop+b.clientHeight>=b.scrollHeight-24;if(pos>=Math.max(0,last.length-win)&&atBottom)load(false);},5000);
   }
   function place(h){
     try{const p=JSON.parse(localStorage.getItem(POS)||"{}");if(Number.isFinite(p.x)&&Number.isFinite(p.y)){h.style.left=p.x+"px";h.style.top=p.y+"px";h.style.right="auto";h.style.bottom="auto";}}catch{}
@@ -87,6 +87,18 @@
   function pinRow(r,hit,side){
     const id=esc(r.message_id||""),pn=side==="u"?(r.pin_user||r.pin_name||""):(r.pin_assistant||""),cls=side==="u"?"pu":"pa",sd=side==="u"?"user":"assistant";
     return `<div class="pinrow ${cls}" data-mid="${id}">${pn?`<span class=pname data-mid="${id}" data-side="${sd}" data-pin="${esc(pn)}" title="Edit pin name">📌 ${hit?hi(pn,findText):esc(pn)}</span>`:""}<button class="pinb ${pn?"on":""}" data-mid="${id}" data-side="${sd}" data-pin="${esc(pn)}" title="${pn?"Pinned":"Pin"}">${pn?"Pinned":"Pin"}</button></div>`;
+  }
+  function wirePinRow(row){
+    row.querySelectorAll(".pinb").forEach(b=>b.onclick=()=>togglePin(b,b.dataset.mid,b.dataset.side,b.dataset.pin||""));
+    row.querySelectorAll(".pname").forEach(b=>b.onclick=()=>editPin(b,b.dataset.mid,b.dataset.side,b.dataset.pin||""));
+  }
+  function paintPin(btn,id,side,name){
+    const row=btn.closest(".pinrow");if(!row)return;
+    const old=row.querySelector(".pname");if(old)old.remove();
+    btn.dataset.pin=name||"";btn.classList.toggle("on",!!name);btn.textContent=name?"Pinned":"Pin";btn.title=name?"Pinned":"Pin";
+    if(name){
+      const s=document.createElement("span");s.className="pname";s.dataset.mid=id;s.dataset.side=side;s.dataset.pin=name;s.title="Edit pin name";s.textContent="📌 "+name;row.insertBefore(s,btn);s.onclick=()=>editPin(s,id,side,name);
+    }
   }
   async function runSearch(h){
     const i=h.querySelector(".qsph input"),r=h.querySelector(".qspr"),q=i.value.trim();
@@ -125,8 +137,7 @@
       box.insertAdjacentHTML("beforeend",`<div class="msg a" data-mid="${esc(r.message_id||"")}">${hit?hi(r.assistant_reply||statusText(r),findText):esc(r.assistant_reply||statusText(r))}</div>`);
       box.insertAdjacentHTML("beforeend",pinRow(r,hit,"a"));
     }
-    box.querySelectorAll(".pinb").forEach(b=>b.onclick=()=>togglePin(b.dataset.mid,b.dataset.side,b.dataset.pin||""));
-    box.querySelectorAll(".pname").forEach(b=>b.onclick=()=>editPin(b.dataset.mid,b.dataset.side,b.dataset.pin||""));
+    box.querySelectorAll(".pinrow").forEach(wirePinRow);
     if(jump||first)box.scrollTop=box.scrollHeight;
     else if(shift==="top")box.scrollTop=16;
     else if(shift==="bottom")box.scrollTop=Math.max(0,box.scrollHeight-box.clientHeight-16);
@@ -139,28 +150,26 @@
     stat(`${m.length} shown · window ${pos+1}-${Math.min(pos+win,all.length)} of ${all.length} · ${(all.at(-1)||{}).state||"ready"}`);
   }
   function statusText(r){const l=(r.status_log||[]).at(-1);return `[${r.state||"pending"}] ${(l&&l.note)||"Waiting for reply."}`;}
-  async function savePin(id,side,name,msg){
-    const box=document.querySelector(`#${ID} .qcb`),keep=box?box.scrollTop:0;
+  async function savePin(el,id,side,name,msg){
     try{
       await dop("qc.pin",{chatUrl:location.href,msgId:id,side,pinName:name});
       const r=last.find(x=>x.message_id===id);
       if(r){const k=side==="assistant"?"pin_assistant":"pin_user";if(name)r[k]=name;else delete r[k];}
-      render({messages:last});
-      setTimeout(()=>{const b=document.querySelector(`#${ID} .qcb`);if(b)b.scrollTop=keep;},0);
-      setTimeout(()=>{const b=document.querySelector(`#${ID} .qcb`);if(b)b.scrollTop=keep;},80);
+      const btn=el.classList.contains("pinb")?el:el.closest(".pinrow")?.querySelector(".pinb");
+      if(btn)paintPin(btn,id,side,name);
       stat(msg);
     }catch(e){stat("pin failed: "+e.message);}
   }
-  async function togglePin(id,side,cur){
-    if(cur)return savePin(id,side,"","pin removed");
+  async function togglePin(el,id,side,cur){
+    if(cur)return savePin(el,id,side,"","pin removed");
     const name=prompt("Pin name for this message:","");
     if(name===null)return;
-    if(name.trim())return savePin(id,side,name.trim(),"pin saved");
+    if(name.trim())return savePin(el,id,side,name.trim(),"pin saved");
   }
-  async function editPin(id,side,cur){
+  async function editPin(el,id,side,cur){
     const name=prompt("Edit pin name:",cur||"");
     if(name===null)return;
-    return savePin(id,side,name.trim(),name.trim()?"pin saved":"pin removed");
+    return savePin(el,id,side,name.trim(),name.trim()?"pin saved":"pin removed");
   }
   async function load(allowJump=false){
     const box=document.querySelector(`#${ID} .qcb`),keep=box?box.scrollTop:null;
