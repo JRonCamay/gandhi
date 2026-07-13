@@ -16,7 +16,7 @@
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
   const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",POS="qc-lite-pos-v1";
-  let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false;
+  let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
     const body=JSON.stringify(payload||{});
@@ -52,7 +52,7 @@
     h.querySelector(".hide").onclick=()=>{const w=h.querySelector(".qcw"),b=h.querySelector(".hide");w.classList.toggle("min");b.textContent=w.classList.contains("min")?"Open":"Dock";};
     h.querySelector(".send").onclick=send;
     load();
-    h.querySelector(".qcb").onscroll=e=>{const b=e.target;if(last.length<=win)return;if(b.scrollTop<8&&pos>0){pos-=1;render({messages:last,hiddenRecords:0},true);}else if(b.scrollTop+b.clientHeight>b.scrollHeight-8&&pos<Math.max(0,last.length-win)){pos+=1;render({messages:last,hiddenRecords:0},false);}};
+    h.querySelector(".qcb").onscroll=e=>{if(rendering)return;const b=e.target;if(last.length<=win)return;if(b.scrollTop<8&&pos>0){pos-=1;render({messages:last,hiddenRecords:0},true);}};
     timer=setInterval(()=>{if(pos>=Math.max(0,last.length-win))load();},5000);
   }
   function place(h){
@@ -74,6 +74,7 @@
     if(pos>max)pos=max;
     if(pos<0)pos=0;
     const box=document.querySelector(`#${ID} .qcb`),all=last,m=all.slice(pos,pos+win);
+    rendering=true;
     box.innerHTML=m.length?"":"<div class=a>No QuietChat messages.</div>";
     if(all.length>win)box.insertAdjacentHTML("beforeend",`<div class="msg a">Window ${pos+1}-${Math.min(pos+win,all.length)} of ${all.length}. Scroll up/down shifts one.</div>`);
     for(const r of m){
@@ -81,6 +82,7 @@
       box.insertAdjacentHTML("beforeend",`<div class="msg a">${esc(r.assistant_reply||statusText(r))}</div>`);
     }
     box.scrollTop=fromTop?16:box.scrollHeight;
+    setTimeout(()=>{rendering=false;},120);
     const locked=["pending","running"].includes((all.at(-1)||{}).state);
     lock(locked);
     stat(`${m.length} shown · ${Math.max(0,all.length-m.length)} local hidden · ${d.hiddenRecords||0} daemon hidden · ${(all.at(-1)||{}).state||"ready"}`);
