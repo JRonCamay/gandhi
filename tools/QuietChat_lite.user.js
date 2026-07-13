@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.2.0
+// @version      0.2.1
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,8 +15,8 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.2.0";
-  let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null;
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.2.1";
+  let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="";
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
     const body=JSON.stringify(payload||{});
@@ -47,7 +47,7 @@
         .qca{position:relative;flex:1;min-height:0;background:#242424;overflow:hidden}.qcb{position:absolute;inset:0;overflow:auto;padding:18px 18px 62px;background:#242424}.msg{max-width:88%;margin:0 0 14px;line-height:1.45;white-space:pre-wrap}.u{margin-left:auto;background:#3c3c3c;padding:10px 12px;border-radius:14px 14px 4px 14px}.a{margin-right:auto}.a:before{content:"QuietChat";display:block;color:#8fd;opacity:.8;font-size:11px;margin-bottom:4px}
         .qcf{display:flex;gap:8px;padding:12px;background:#303030;border-top:1px solid #444}#${ID} textarea{flex:1;min-height:42px;max-height:150px;resize:vertical;background:#3a3a3a;color:#eee;border:1px solid #555;border-radius:12px;padding:10px;outline:none}.stat{padding:6px 12px;text-align:center;color:#aaa;font-size:11px;background:#303030;border-top:1px solid #444}
         .newest{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);width:38px;height:38px;border-radius:999px!important;font-size:18px;z-index:10;display:none;box-shadow:0 6px 18px #000a;background:#2f8f7a!important;border-color:#47c7a7!important}
-        .qsp{position:absolute;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:20}.qsp.on{display:flex}.qspn{width:min(644px,calc(100% - 28px));height:min(506px,calc(100% - 40px));background:#292929;border:1px solid #666;border-radius:14px;box-shadow:0 18px 60px #000c;display:flex;flex-direction:column;overflow:hidden}.qsph{display:flex;gap:8px;padding:10px;background:#333;border-bottom:1px solid #444}#${ID} .qsph input{flex:1;background:#202020;color:#eee;border:1px solid #555;border-radius:9px;padding:9px;outline:none}.qspr{flex:1;overflow:auto;padding:10px;color:#bbb}.qspr .hint{font-size:12px;color:#999}.qleg{font-size:11px;color:#aaa;padding:2px 4px 9px}.dot{display:inline-block;width:9px;height:9px;border-radius:99px;margin:0 4px 0 10px}.du{background:#263f66}.da{background:#3d3d3d}.res{padding:9px 10px;margin:0 0 7px;border:1px solid #3d3d3d;border-radius:10px;white-space:normal;overflow:hidden;cursor:pointer;line-height:1.35}.res.user{background:#24344d;border-color:#31537d}.res.assistant{background:#333}.res.summary{background:#3a3324;border-color:#6d5b2c}.res:hover{filter:brightness(1.12)}.res mark{background:#2f8f7a;color:#fff;border-radius:4px;padding:0 2px}
+        .qsp{position:absolute;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:20}.qsp.on{display:flex}.qspn{width:min(644px,calc(100% - 28px));height:min(506px,calc(100% - 40px));background:#292929;border:1px solid #666;border-radius:14px;box-shadow:0 18px 60px #000c;display:flex;flex-direction:column;overflow:hidden}.qsph{display:flex;gap:8px;padding:10px;background:#333;border-bottom:1px solid #444}#${ID} .qsph input{flex:1;background:#202020;color:#eee;border:1px solid #555;border-radius:9px;padding:9px;outline:none}.qspr{flex:1;overflow:auto;padding:10px;color:#bbb}.qspr .hint{font-size:12px;color:#999}.qleg{font-size:11px;color:#aaa;padding:2px 4px 9px}.dot{display:inline-block;width:9px;height:9px;border-radius:99px;margin:0 4px 0 10px}.du{background:#263f66}.da{background:#3d3d3d}.res{padding:9px 10px;margin:0 0 7px;border:1px solid #3d3d3d;border-radius:10px;white-space:normal;overflow:hidden;cursor:pointer;line-height:1.35}.res.user{background:#24344d;border-color:#31537d}.res.assistant{background:#333}.res.summary{background:#3a3324;border-color:#6d5b2c}.res:hover{filter:brightness(1.12)}.res mark,.msg mark{background:#2f8f7a;color:#fff;border-radius:4px;padding:0 2px}.hitmsg{outline:2px solid #2f8f7a;outline-offset:3px}
       </style>
       <section class=qcw><div class=qch><div><div class=qct>QuietChat Lite <span style="font-size:10px;color:#999">v${VER}</span></div><div class=qcs>daemon view · 10 sliding</div></div><button class=scan>Scan</button><button class=srch title="Search by Pin or Words" aria-label="Search by Pin or Words">⌕</button><button class=hide>Dock</button></div><div class=qca><main class=qcb></main><button class=newest title="Newest">↓</button></div><div class=stat>ready</div><footer class=qcf><textarea placeholder="Message QuietChat..."></textarea><button class=send>Send</button></footer><div class=qsp><div class=qspn><div class=qsph><input placeholder="Search pin or words..."><button class=sx title="Close">×</button></div><div class=qspr><div class=hint>Search panel ready. Results next.</div></div></div></div></section>`;
     document.documentElement.appendChild(h);
@@ -79,7 +79,7 @@
   function lock(on){busy=on;document.querySelector(`#${ID} .send`).disabled=on;}
   function hi(s,q){s=String(s||"");q=String(q||"");const l=s.toLowerCase(),x=l.indexOf(q.toLowerCase());return x<0?esc(s):esc(s.slice(0,x))+"<mark>"+esc(s.slice(x,x+q.length))+"</mark>"+esc(s.slice(x+q.length));}
   function jumpNewest(){toNewest=true;jump=true;load(true);}
-  function jumpMsg(id){const n=last.findIndex(x=>x.message_id===id);if(n<0){stat("message not in loaded window cache");return;}pos=Math.max(0,Math.min(n-4,Math.max(0,last.length-win)));jump=true;render({messages:last});closeSearch(document.getElementById(ID));}
+  function jumpMsg(id,q){const n=last.findIndex(x=>x.message_id===id);if(n<0){stat("message not in loaded window cache");return;}findMid=id;findText=q||"";pos=Math.max(0,Math.min(n-4,Math.max(0,last.length-win)));jump=false;render({messages:last});closeSearch(document.getElementById(ID));}
   function openSearch(h){const p=h.querySelector(".qsp"),i=h.querySelector(".qsph input");p.classList.add("on");setTimeout(()=>i.focus(),30);}
   function closeSearch(h){h.querySelector(".qsp").classList.remove("on");}
   async function runSearch(h){
@@ -89,7 +89,7 @@
     try{
       const d=await dop("qc.search",{chatUrl:location.href,query:q,limit:50}),a=d.results||[];
       r.innerHTML=a.length?`<div class=qleg><span class="dot du"></span>blue = user <span class="dot da"></span>gray = assistant <span class="dot" style="background:#6d5b2c"></span>amber = summary</div>`+a.map(x=>`<div class="res ${esc(x.role||"")}" data-mid="${esc(x.message_id||"")}" title="click to jump">${hi(x.snippet||"",q)}</div>`).join(""):`<div class=hint>No matches for "${esc(q)}".</div>`;
-      r.querySelectorAll(".res[data-mid]").forEach(e=>e.onclick=()=>jumpMsg(e.dataset.mid));
+      r.querySelectorAll(".res[data-mid]").forEach(e=>e.onclick=()=>jumpMsg(e.dataset.mid,q));
     }catch(e){r.innerHTML=`<div class=hint>Search failed: ${esc(e.message)}</div>`;}
   }
   function updateNewest(){
@@ -110,11 +110,13 @@
     box.innerHTML=m.length?"":"<div class=a>No QuietChat messages.</div>";
     if(all.length>win)box.insertAdjacentHTML("beforeend",`<div class="msg a">Window ${pos+1}-${Math.min(pos+win,all.length)} of ${all.length}. Scroll up/down shifts one.</div>`);
     for(const r of m){
-      if(r.user_message)box.insertAdjacentHTML("beforeend",`<div class="msg u">${esc(r.user_message)}</div>`);
-      box.insertAdjacentHTML("beforeend",`<div class="msg a">${esc(r.assistant_reply||statusText(r))}</div>`);
+      const hit=r.message_id===findMid,cls=hit?" hitmsg":"";
+      if(r.user_message)box.insertAdjacentHTML("beforeend",`<div class="msg u${cls}" data-mid="${esc(r.message_id||"")}">${hit?hi(r.user_message,findText):esc(r.user_message)}</div>`);
+      box.insertAdjacentHTML("beforeend",`<div class="msg a${cls}" data-mid="${esc(r.message_id||"")}">${hit?hi(r.assistant_reply||statusText(r),findText):esc(r.assistant_reply||statusText(r))}</div>`);
     }
     if(jump||first)box.scrollTop=box.scrollHeight;
     else if(fromTop)box.scrollTop=16;
+    else if(findMid)setTimeout(()=>box.querySelector(`[data-mid="${CSS.escape(findMid)}"] mark`)?.scrollIntoView({block:"center"}),30);
     jump=false;
     setTimeout(()=>{rendering=false;},120);
     const locked=["pending","running"].includes((all.at(-1)||{}).state);
