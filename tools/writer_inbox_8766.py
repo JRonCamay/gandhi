@@ -35,7 +35,7 @@ def qc_rows(u,limit=200,state=""):
         rows.append(r)
     return rows[-max(1,min(int(limit),500)):]
 def qc_view(p):
-    u=p["chatUrl"];mx=max(1,min(int(p.get("limit",20)),50));stale_after=int(p.get("staleAfter",120))
+    u=p["chatUrl"];mx=max(1,min(int(p.get("limit",20)),500));stale_after=int(p.get("staleAfter",120))
     rows=qc_rows(u,int(p.get("scanLimit",200)));total=len(rows);vis=rows[-mx:];latest=rows[-1] if rows else {}
     state=latest.get("state","idle");log=latest.get("status_log") or [];last=log[-1] if log else {}
     lock=state in ("pending","running");stale=False
