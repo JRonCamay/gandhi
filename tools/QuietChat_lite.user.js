@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.4
+// @version      0.3.5
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,7 +15,7 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.4";
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.5";
   let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
@@ -65,6 +65,7 @@
     document.addEventListener("keydown",e=>{const t=h.querySelector(".qtt");if(!tipOpen||t.style.display==="none")return;const k=e.key;if(!["ArrowDown","ArrowUp","PageDown","PageUp"].includes(k))return;e.preventDefault();t.scrollTop+=k==="ArrowDown"?36:k==="ArrowUp"?-36:k==="PageDown"?180:-180;});
     load();
     h.querySelector(".qcb").onscroll=e=>{updateNewest();if(rendering)return;const b=e.target,max=Math.max(0,last.length-win);if(last.length<=win)return;if(b.scrollTop<8&&pos>0){pos-=1;render({messages:last,hiddenRecords:0},"top");}else if(b.scrollTop+b.clientHeight>=b.scrollHeight-8&&pos<max){pos+=1;render({messages:last,hiddenRecords:0},"bottom");}};
+    h.querySelector(".qcb").onwheel=e=>{const b=e.currentTarget,max=Math.max(0,last.length-win);if(rendering||last.length<=win)return;if(e.deltaY<0&&b.scrollTop<4&&pos>0){e.preventDefault();pos-=1;render({messages:last,hiddenRecords:0},"top");}else if(e.deltaY>0&&b.scrollTop+b.clientHeight>=b.scrollHeight-4&&pos<max){e.preventDefault();pos+=1;render({messages:last,hiddenRecords:0},"bottom");}};
     timer=setInterval(()=>{const b=h.querySelector(".qcb"),atBottom=b&&b.scrollTop+b.clientHeight>=b.scrollHeight-24;if(pos>=Math.max(0,last.length-win)&&atBottom)load(false);},5000);
   }
   function place(h){
@@ -117,6 +118,7 @@
     const max=Math.max(0,last.length-win),atBottom=box.scrollTop+box.clientHeight>=box.scrollHeight-24;
     nb.style.display=(pos<max||!atBottom)?"block":"none";
   }
+  function scrollBottom(box){box.scrollTop=box.scrollHeight;setTimeout(()=>{box.scrollTop=box.scrollHeight;},0);setTimeout(()=>{box.scrollTop=box.scrollHeight;},80);}
   function render(d,shift=""){
     last=d.messages||last||[];
     const max=Math.max(0,last.length-win);
@@ -138,7 +140,7 @@
       box.insertAdjacentHTML("beforeend",pinRow(r,hit,"a"));
     }
     box.querySelectorAll(".pinrow").forEach(wirePinRow);
-    if(jump||first)box.scrollTop=box.scrollHeight;
+    if(jump||first)scrollBottom(box);
     else if(shift==="top")box.scrollTop=16;
     else if(shift==="bottom")box.scrollTop=Math.max(0,box.scrollHeight-box.clientHeight-16);
     else if(findMid&&findScroll){findScroll=false;setTimeout(()=>box.querySelector(`[data-mid="${CSS.escape(findMid)}"] mark`)?.scrollIntoView({block:"center"}),30);}
