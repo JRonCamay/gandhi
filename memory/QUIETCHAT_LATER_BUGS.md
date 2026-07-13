@@ -1,23 +1,21 @@
 # QuietChat Later Bugs
 
-Updated: 2026-07-13 20:05 Asia/Manila
 
-## Pin Edit Context Stolen By New Assistant Reply
+## Pinning Reorders Message To Bottom
 
 User report:
-- User clicked Pin on a selected message and was typing the pin name.
-- User pressed Enter around the same moment a new assistant message popped up.
-- The latest-reply jump/render happened at the same time.
-- The pin was applied to the latest assistant message instead of the originally selected message.
+- When user pinned a message, the pinned item together with the user message jumped to the bottom order.
+- This should not happen. Pinning should only update pin metadata/row state.
+- The original message order and current visible window position should remain stable.
 
-Simplest fix direction:
-- When the user clicks Pin, immediately store/freeze the exact target in memory:
-  - msgId
-  - side ("user" or "assistant")
-  - maybe current pin text
-- After prompt/Enter returns, save using that frozen target only.
-- Do not re-read msgId/side from the DOM after the prompt returns.
-- This avoids the pin being stolen if a new assistant reply arrives and re-renders the UI at the same time.
+Likely cause:
+- Pin save updates message updated_at.
+- Backend qc_rows sorts message files by file mtime.
+- Writing the pinned message changes mtime, so that message appears latest/bottom on next view/search/load.
+- Earlier pin no-refresh reduced this, but any later refresh can expose it.
 
-Optional extra guard:
-- A small pinEditActive flag can pause newest-reply auto-jump until save/cancel finishes, but the frozen target is the main simple fix.
+Future fix direction:
+- Do not sort conversation messages by file mtime for display order.
+- Store and sort by created_at or message_id sequence instead.
+- Pinning may update updated_at/pin_at, but must not affect timeline order.
+- Search can still rank pins first without changing base message order.
