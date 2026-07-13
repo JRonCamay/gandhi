@@ -36,7 +36,13 @@ def create(x):
     r={"schema_version":1,"chat_id":c["chat_id"],"chat_url":u,"message_id":m,"state":"pending","user_message":x.get("user_message") or x.get("message",""),"assistant_reply":"","metadata":x.get("metadata") or {},"created_at":now(),"updated_at":now(),"status_log":[]}
     if not r["user_message"].strip():raise ValueError("message required")
     wr(mp,r);c["messages"]=[z for z in c.get("messages",[]) if z.get("message_id")!=m]+[{"message_id":m,"state":"pending","created_at":r["created_at"],"updated_at":r["updated_at"]}];wr(cp,c)
-    return {"status":"success","message_id":m,"trigger":f"Use quietchat_process_message for {m}.","record":r}
+    return {
+        "status":"success",
+        "message_id":m,
+        "trigger":"@mcp checkmessage",
+        "explicit_trigger":f"Use quietchat_process_message for {m}.",
+        "record":r
+    }
 def scan(x):
     u=x.get("chat_url","");limit=max(1,min(int(x.get("limit") or 80),200));state=x.get("state","")
     c=chat(u);d=ROOT/c["chat_id"]/ "messages";a=[]
