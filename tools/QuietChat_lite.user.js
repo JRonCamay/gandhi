@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.18
+// @version      0.3.19
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,7 +15,7 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.18";
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.19";
   let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
@@ -136,7 +136,7 @@
     const stopEdge=()=>{edge=0;if(edgeTimer){clearInterval(edgeTimer);edgeTimer=null;}};
     const bumpEdge=()=>{
       if(!drag||!edge)return;
-      const box=h.querySelector(".qcb"),max=Math.max(0,last.length-win),step=42;
+      const box=h.querySelector(".qcb"),max=Math.max(0,last.length-win),step=58;
       if(edge<0&&box.scrollTop>2){box.scrollTop=Math.max(0,box.scrollTop-step);return;}
       if(edge>0&&box.scrollTop+box.clientHeight<box.scrollHeight-3){box.scrollTop=Math.min(box.scrollHeight,box.scrollTop+step);return;}
       const np=Math.max(0,Math.min(max,pos+edge));
@@ -146,7 +146,7 @@
     const checkEdge=y=>{
       const r=bar.getBoundingClientRect(),tr=th.getBoundingClientRect(),pad=4;
       edge=tr.top<=r.top+pad?-1:tr.bottom>=r.bottom-pad?1:0;
-      if(edge&&!edgeTimer){bumpEdge();edgeTimer=setInterval(bumpEdge,180);}
+      if(edge&&!edgeTimer){bumpEdge();edgeTimer=setInterval(bumpEdge,140);}
       if(!edge)stopEdge();
     };
     const moveThumb=y=>{
