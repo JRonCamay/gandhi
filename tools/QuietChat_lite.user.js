@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.2.3
+// @version      0.2.4
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,8 +15,8 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.2.3";
-  let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="";
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.2.4";
+  let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
     const body=JSON.stringify(payload||{});
@@ -47,7 +47,7 @@
         .qca{position:relative;flex:1;min-height:0;background:#242424;overflow:hidden}.qcb{position:absolute;inset:0;overflow:auto;padding:18px 18px 62px;background:#242424}.msg{max-width:88%;margin:0 0 14px;line-height:1.45;white-space:pre-wrap}.u{margin-left:auto;background:#3c3c3c;padding:10px 12px;border-radius:14px 14px 4px 14px}.a{margin-right:auto}.a:before{content:"QuietChat";display:block;color:#8fd;opacity:.8;font-size:11px;margin-bottom:4px}
         .qcf{display:flex;gap:8px;padding:12px;background:#303030;border-top:1px solid #444}#${ID} textarea{flex:1;min-height:42px;max-height:150px;resize:vertical;background:#3a3a3a;color:#eee;border:1px solid #555;border-radius:12px;padding:10px;outline:none}.stat{padding:6px 12px;text-align:center;color:#aaa;font-size:11px;background:#303030;border-top:1px solid #444}
         .newest{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);width:38px;height:38px;border-radius:999px!important;font-size:18px;z-index:10;display:none;box-shadow:0 6px 18px #000a;background:#2f8f7a!important;border-color:#47c7a7!important}
-        .qsp{position:absolute;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:20}.qsp.on{display:flex}.qspn{width:min(644px,calc(100% - 28px));height:min(506px,calc(100% - 40px));background:#292929;border:1px solid #666;border-radius:14px;box-shadow:0 18px 60px #000c;display:flex;flex-direction:column;overflow:hidden}.qsph{display:flex;gap:8px;padding:10px;background:#333;border-bottom:1px solid #444}#${ID} .qsph input{flex:1;background:#202020;color:#eee;border:1px solid #555;border-radius:9px;padding:9px;outline:none}.qspr{flex:1;overflow:auto;padding:10px;color:#bbb}.qspr .hint{font-size:12px;color:#999}.qleg{font-size:11px;color:#aaa;padding:2px 4px 9px}.dot{display:inline-block;width:9px;height:9px;border-radius:99px;margin:0 4px 0 10px}.du{background:#263f66}.da{background:#3d3d3d}.res{padding:9px 10px;margin:0 0 7px;border:1px solid #3d3d3d;border-radius:10px;white-space:normal;overflow:hidden;cursor:pointer;line-height:1.35}.res.user{background:#24344d;border-color:#31537d}.res.assistant{background:#333}.res.summary{background:#3a3324;border-color:#6d5b2c}.res:hover{filter:brightness(1.12)}.res mark,.msg mark{background:#2f8f7a;color:#fff;border-radius:4px;padding:0 2px}.qtt{position:fixed;z-index:2147483647;max-width:560px;max-height:360px;overflow:auto;background:#171717;color:#ddd;border:1px solid #666;border-radius:10px;padding:10px 12px;box-shadow:0 12px 40px #000d;font:12px/1.45 system-ui;white-space:pre-wrap;display:none;pointer-events:none}
+        .qsp{position:absolute;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:20}.qsp.on{display:flex}.qspn{width:min(644px,calc(100% - 28px));height:min(506px,calc(100% - 40px));background:#292929;border:1px solid #666;border-radius:14px;box-shadow:0 18px 60px #000c;display:flex;flex-direction:column;overflow:hidden}.qsph{display:flex;gap:8px;padding:10px;background:#333;border-bottom:1px solid #444}#${ID} .qsph input{flex:1;background:#202020;color:#eee;border:1px solid #555;border-radius:9px;padding:9px;outline:none}.qspr{flex:1;overflow:auto;padding:10px;color:#bbb}.qspr .hint{font-size:12px;color:#999}.qleg{font-size:11px;color:#aaa;padding:2px 4px 9px}.dot{display:inline-block;width:9px;height:9px;border-radius:99px;margin:0 4px 0 10px}.du{background:#263f66}.da{background:#3d3d3d}.res{padding:9px 10px;margin:0 0 7px;border:1px solid #3d3d3d;border-radius:10px;white-space:normal;overflow:hidden;cursor:pointer;line-height:1.35}.res.user{background:#24344d;border-color:#31537d}.res.assistant{background:#333}.res.summary{background:#3a3324;border-color:#6d5b2c}.res:hover{filter:brightness(1.12)}.res mark,.msg mark{background:#2f8f7a;color:#fff;border-radius:4px;padding:0 2px}.qtt{position:fixed;z-index:2147483647;max-width:560px;max-height:360px;overflow:auto;scrollbar-width:none;background:#171717;color:#ddd;border:1px solid #666;border-radius:10px;padding:10px 12px;box-shadow:0 12px 40px #000d;font:12px/1.45 system-ui;white-space:pre-wrap;display:none;pointer-events:none}.qtt::-webkit-scrollbar{display:none}
       </style>
       <section class=qcw><div class=qch><div><div class=qct>QuietChat Lite <span style="font-size:10px;color:#999">v${VER}</span></div><div class=qcs>daemon view · 10 sliding</div></div><button class=scan>Scan</button><button class=srch title="Search by Pin or Words" aria-label="Search by Pin or Words">⌕</button><button class=hide>Dock</button></div><div class=qca><main class=qcb></main><button class=newest title="Newest">↓</button></div><div class=stat>ready</div><footer class=qcf><textarea placeholder="Message QuietChat..."></textarea><button class=send>Send</button></footer><div class=qsp><div class=qspn><div class=qsph><input placeholder="Search pin or words..."><button class=sx title="Close">×</button></div><div class=qspr><div class=hint>Search panel ready. Results next.</div></div></div></div><div class=qtt></div></section>`;
     document.documentElement.appendChild(h);
@@ -62,6 +62,7 @@
     h.querySelector(".qsph input").onkeydown=e=>{if(e.key==="Escape")closeSearch(h);if(e.key==="Enter"){clearTimeout(st);runSearch(h);}};
     h.querySelector(".hide").onclick=()=>{const w=h.querySelector(".qcw"),b=h.querySelector(".hide");w.classList.toggle("min");b.textContent=w.classList.contains("min")?"Open":"Dock";};
     h.querySelector(".send").onclick=send;
+    document.addEventListener("keydown",e=>{const t=h.querySelector(".qtt");if(!tipOpen||t.style.display==="none")return;const k=e.key;if(!["ArrowDown","ArrowUp","PageDown","PageUp"].includes(k))return;e.preventDefault();t.scrollTop+=k==="ArrowDown"?36:k==="ArrowUp"?-36:k==="PageDown"?180:-180;});
     load();
     h.querySelector(".qcb").onscroll=e=>{updateNewest();if(rendering)return;const b=e.target;if(last.length<=win)return;if(b.scrollTop<8&&pos>0){pos-=1;render({messages:last,hiddenRecords:0},true);}};
     timer=setInterval(()=>{if(pos>=Math.max(0,last.length-win))load(false);},5000);
@@ -82,7 +83,7 @@
   function jumpMsg(id,q){const n=last.findIndex(x=>x.message_id===id);if(n<0){stat("message not in loaded window cache");return;}findMid=id;findText=q||"";pos=Math.max(0,Math.min(n-4,Math.max(0,last.length-win)));jump=false;render({messages:last});closeSearch(document.getElementById(ID));}
   function openSearch(h){const p=h.querySelector(".qsp"),i=h.querySelector(".qsph input");p.classList.add("on");setTimeout(()=>i.focus(),30);}
   function closeSearch(h){h.querySelector(".qsp").classList.remove("on");}
-  function tip(h,on,e,txt,q){const t=h.querySelector(".qtt");if(!on){t.style.display="none";return;}t.innerHTML=hi(txt||"",q);t.style.display="block";t.style.left=Math.min(innerWidth-540,e.clientX+16)+"px";t.style.top=Math.min(innerHeight-180,e.clientY+16)+"px";}
+  function tip(h,on,e,txt,q){const t=h.querySelector(".qtt");tipOpen=!!on;if(!on){t.style.display="none";return;}t.innerHTML=hi(txt||"",q);t.style.display="block";t.style.left=Math.min(innerWidth-580,e.clientX+16)+"px";t.style.top=Math.min(innerHeight-390,e.clientY+16)+"px";}
   async function runSearch(h){
     const i=h.querySelector(".qsph input"),r=h.querySelector(".qspr"),q=i.value.trim();
     if(!q){r.innerHTML='<div class=hint>Type to search all QuietChat history.</div>';return;}
@@ -91,7 +92,7 @@
       const d=await dop("qc.search",{chatUrl:location.href,query:q,limit:50}),a=d.results||[];
       r.innerHTML=a.length?`<div class=qleg><span class="dot du"></span>blue = user <span class="dot da"></span>gray = assistant <span class="dot" style="background:#6d5b2c"></span>amber = summary</div>`+a.map((x,n)=>`<div class="res ${esc(x.role||"")}" data-i="${n}" data-mid="${esc(x.message_id||"")}" title="click to jump">${hi(x.snippet||"",q)}</div>`).join(""):`<div class=hint>No matches for "${esc(q)}".</div>`;
       r.querySelectorAll(".res[data-mid]").forEach(e=>e.onclick=()=>jumpMsg(e.dataset.mid,q));
-      r.querySelectorAll(".res[data-i]").forEach(e=>{const x=a[+e.dataset.i];e.onmouseenter=v=>tip(h,true,v,x.preview||x.snippet||"",q);e.onmousemove=v=>tip(h,true,v,x.preview||x.snippet||"",q);e.onmouseleave=()=>tip(h,false);});
+      r.querySelectorAll(".res[data-i]").forEach(e=>{const x=a[+e.dataset.i];e.onmouseenter=v=>tip(h,true,v,x.preview||x.snippet||"",q);e.onmousemove=v=>tip(h,true,v,x.preview||x.snippet||"",q);e.onwheel=v=>{h.querySelector(".qtt").scrollTop+=v.deltaY;v.preventDefault();};e.onmouseleave=()=>tip(h,false);});
     }catch(e){r.innerHTML=`<div class=hint>Search failed: ${esc(e.message)}</div>`;}
   }
   function updateNewest(){
