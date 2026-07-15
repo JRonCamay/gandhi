@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.26
+// @version      0.3.27
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,7 +15,7 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.26";
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.27";
   let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false,es=null;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
@@ -53,7 +53,7 @@
     document.documentElement.appendChild(h);
     place(h);
     drag(h);
-    h.querySelector(".scan").onclick=()=>jumpNewest();
+    h.querySelector(".scan").onclick=()=>scanNewest();
     h.querySelector(".newest").onclick=()=>jumpNewest();
     h.querySelector(".srch").onclick=()=>openSearch(h);
     h.querySelector(".sx").onclick=()=>closeSearch(h);
@@ -63,7 +63,7 @@
     h.querySelector(".hide").onclick=()=>{const w=h.querySelector(".qcw"),b=h.querySelector(".hide");w.classList.toggle("min");b.textContent=w.classList.contains("min")?"Open":"Dock";};
     h.querySelector(".send").onclick=send;
     document.addEventListener("keydown",e=>{const t=h.querySelector(".qtt");if(!tipOpen||t.style.display==="none")return;const k=e.key;if(!["ArrowDown","ArrowUp","PageDown","PageUp"].includes(k))return;e.preventDefault();t.scrollTop+=k==="ArrowDown"?36:k==="ArrowUp"?-36:k==="PageDown"?180:-180;});
-    load();
+    scanNewest();
     wireEvents();
     wireFakeScroll(h);
     h.querySelector(".qcb").onscroll=()=>updateNewest();
@@ -82,6 +82,13 @@
   function lock(on){busy=on;document.querySelector(`#${ID} .send`).disabled=on;}
   function hi(s,q){s=String(s||"");q=String(q||"");const l=s.toLowerCase(),x=l.indexOf(q.toLowerCase());return x<0?esc(s):esc(s.slice(0,x))+"<mark>"+esc(s.slice(x,x+q.length))+"</mark>"+esc(s.slice(x+q.length));}
   function jumpNewest(){toNewest=true;jump=true;load(true);}
+  async function scanNewest(){
+    toNewest=true;jump=true;stat("scanning...");
+    try{
+      const d=await req("/scan",{chat_url:location.href,limit:500});
+      render({messages:d.messages||[],hiddenRecords:0,latestState:(d.messages||[]).at(-1)?.state});
+    }catch(e){stat("scan failed: "+e.message);lock(false);}
+  }
   function jumpMsg(id,q){const n=last.findIndex(x=>x.message_id===id);if(n<0){stat("message not in loaded window cache");return;}findMid=id;findText=q||"";findScroll=true;pos=Math.max(0,Math.min(n-4,Math.max(0,last.length-win)));jump=false;render({messages:last});closeSearch(document.getElementById(ID));}
   function openSearch(h){const p=h.querySelector(".qsp"),i=h.querySelector(".qsph input");p.classList.add("on");setTimeout(()=>i.focus(),30);}
   function closeSearch(h){h.querySelector(".qsp").classList.remove("on");}
