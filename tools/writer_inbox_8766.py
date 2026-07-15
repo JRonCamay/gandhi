@@ -2,7 +2,7 @@ import json,os,time,uuid,hashlib,gzip,threading,queue,urllib.request
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 
-VERSION="writer_inbox_8766 v0.4.2"
+VERSION="writer_inbox_8766 v0.4.3"
 QR=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
 MEM=Path(os.environ.get("MEMORY_DIR",r"D:\Projects\Chad\memory"))
 QB=os.environ.get("QUIETCHAT_BRIDGE_URL","http://127.0.0.1:8765/quietchat/api")
@@ -160,11 +160,36 @@ def slot_complete(p):
         arts.append({"type":ext,"title":out.name,"filename":out.name,"path":str(out),"bytes":out.stat().st_size,"line_count":len(lines),"display":"link","created_at":now()})
     else:
         r["assistant_reply"]=reply;r["reply_mode"]="inline";r["reply_line_count"]=len(lines)
-    r["artifacts"]=arts;persist_record(f,r)
-    saved=rd(f)
-    notify_ui("qc.updated",{"chat_url":saved.get("chat_url"),"chat_id":saved.get("chat_id"),"message_id":saved.get("message_id"),"state":saved.get("state"),"path":str(f)})
-    QC_SLOT={}
-    return {"state":"completed","path":str(f),"record":saved,"visible_reply":"✓"}
+    r["artifacts"]=arts
+    notify_ui("qc.updated",{"chat_url":r.get("chat_url"),"chat_id":r.get("chat_id"),"message_id":r.get("message_id"),"state":r.get("state"),"path":str(f),"record":r})
+    def save_done():
+        global QC_SLOT
+        try:
+            saved=persist_record(f,r)
+            notify_ui("qc.saved",{"chat_url":saved.get("chat_url"),"chat_id":saved.get("chat_id"),"message_id":saved.get("message_id"),"state":saved.get("state"),"path":str(f),"record":saved})
+            QC_SLOT={}
+        except Exception as e:
+            notify_ui("qc.error",{"chat_url":r.get("chat_url"),"chat_id":r.get("chat_id"),"message_id":r.get("message_id"),"error":str(e)})
+    threading.Thread(target=save_done,daemon=True).start()
+    return {"state":"completed","path":str(f),"record":r,"visible_reply":"✓","save":"background"}
+
+def slot_reply(p):
+    text=str(p.get("reply") or p.get("assistant_reply") or p.get("text") or p.get("message") or "").strip()
+    done=bool(p.get("done")) or str(p.get("status","")).strip().lower() in ("done","[done]")
+    if text.startswith("{"):
+        try:
+            x=json.loads(text)
+            text=str(x.get("reply") or x.get("assistant_reply") or x.get("message") or text)
+            done=done or bool(x.get("done")) or str(x.get("status","")).strip().lower() in ("done","[done]")
+        except Exception:pass
+    low=text.lower()
+    for mark in ("status:[done]","status: [done]","[done]"):
+        if low.endswith(mark):
+            text=text[:len(text)-len(mark)].rstrip()
+            done=True
+            break
+    if not done:raise RuntimeError("missing status:[DONE]")
+    return slot_complete({"reply":text,"summary":p.get("summary",""),"artifacts":p.get("artifacts") or []})
 
 def slot_clear(p=None):
     global QC_SLOT
@@ -220,6 +245,7 @@ def op(x):
     if o in ("qc.slot.get","qc.slot.process","message","slot.get"):return slot_get(p)
     if o in ("qc.slot.status","slot.status"):return slot_status(p)
     if o in ("qc.slot.complete","slot.complete"):return slot_complete(p)
+    if o in ("qc.reply","done","qc.done","slot.reply"):return slot_reply(p)
     if o in ("qc.slot.clear","slot.clear"):return slot_clear(p)
     if o in ("memory.exportChat","exportChat"):return export_chat(p)
     if o in ("file.info","info"):return file_info(p)
