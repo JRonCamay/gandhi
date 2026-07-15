@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.34
+// @version      0.3.35
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,8 +15,8 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.34";
-  let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false,es=null,eventCursor=0,refreshTimer=null;
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.35";
+  let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false,es=null,eventCursor=0,latestCursor=0,refreshTimer=null,eventSlot=null;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
     const body=JSON.stringify(payload||{});
@@ -105,6 +105,15 @@
         el.appendChild(x);
       }
     });
+  }
+  function chatId(){return (location.href.match(/\/c\/([0-9a-f-]{20,})/i)||[])[1]||"";}
+  function guardEvent(p){
+    if(eventSlot)return;
+    eventSlot=p||{};
+    setTimeout(()=>{
+      const x=eventSlot;eventSlot=null;
+      refreshPayload(x);
+    },0);
   }
   async function scanNewest(){
     toNewest=true;jump=true;stat("scanning...");
@@ -272,16 +281,26 @@
       }
     }catch(e){stat("bridge offline: "+e.message);lock(false);}
   }
+  function refreshPayload(p){
+    p=p||{};
+    const idOk=p.chat_id&&location.href.includes(p.chat_id);
+    const urlOk=p.chat_url&&p.chat_url===location.href;
+    if((p.chat_id||p.chat_url)&&!idOk&&!urlOk)return;
+    if(p.save_state||p.ok===false){markSave(p);if(!p.record)return;}
+    if(p.record){upsertLocal(p.record);return;}
+    scheduleRefresh(60);
+  }
   function wireEvents(){
     if(es)return;
-    const refreshPayload=p=>{
-      const idOk=p.chat_id&&location.href.includes(p.chat_id);
-      const urlOk=p.chat_url&&p.chat_url===location.href;
-      if((p.chat_id||p.chat_url)&&!idOk&&!urlOk)return;
-      if(p.save_state||p.ok===false){markSave(p);if(!p.record)return;}
-      if(p.record){upsertLocal(p.record);return;}
-      scheduleRefresh(60);
-    };
+    setInterval(()=>{
+      const c=chatId();if(!c||eventSlot)return;
+      const url=API+"/events/latest?chat_id="+encodeURIComponent(c)+"&since="+latestCursor;
+      if(typeof GM_xmlhttpRequest==="function"){
+        GM_xmlhttpRequest({method:"GET",url,timeout:1200,onload:r=>{try{const x=(JSON.parse(r.responseText||"{}").result)||{};if(x.id)latestCursor=Math.max(latestCursor,x.id);if(x.event&&x.event!=="empty")guardEvent(x.payload||{});}catch{}}});
+      }else{
+        fetch(url).then(r=>r.json()).then(d=>{const x=d.result||{};if(x.id)latestCursor=Math.max(latestCursor,x.id);if(x.event&&x.event!=="empty")guardEvent(x.payload||{});}).catch(()=>{});
+      }
+    },350);
     const longPoll=()=>{
       const onDone=()=>setTimeout(longPoll,150);
       if(typeof GM_xmlhttpRequest==="function"){
@@ -289,13 +308,13 @@
           try{
             const d=JSON.parse(r.responseText||"{}"),x=d.result||{};
             if(x.id)eventCursor=Math.max(eventCursor,x.id);
-            if(x.event&&x.event!=="timeout")refreshPayload(x.payload||{});
+            if(x.event&&x.event!=="timeout")guardEvent(x.payload||{});
           }catch{}
           onDone();
         },onerror:onDone,ontimeout:onDone});
         return;
       }
-      fetch(API+"/events/next?since="+eventCursor).then(r=>r.json()).then(d=>{const x=d.result||{};if(x.id)eventCursor=Math.max(eventCursor,x.id);if(x.event&&x.event!=="timeout")refreshPayload(x.payload||{});}).finally(onDone);
+      fetch(API+"/events/next?since="+eventCursor).then(r=>r.json()).then(d=>{const x=d.result||{};if(x.id)eventCursor=Math.max(eventCursor,x.id);if(x.event&&x.event!=="timeout")guardEvent(x.payload||{});}).finally(onDone);
     };
     if(typeof GM_xmlhttpRequest==="function"){es={mode:"long-poll"};longPoll();return;}
     try{
@@ -303,7 +322,7 @@
       const refresh=e=>{
         try{
           const d=JSON.parse(e.data||"{}"),p=d.payload||{};
-          refreshPayload(p);
+          guardEvent(p);
         }catch{}
       };
       es.addEventListener("qc.created",refresh);
