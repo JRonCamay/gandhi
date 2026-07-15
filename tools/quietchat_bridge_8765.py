@@ -1,10 +1,11 @@
-import json,os,re,time,uuid,urllib.request
+import json,os,re,time,uuid,urllib.request,queue
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 
-VERSION="quietchat_bridge_8765 v0.4.0"
+VERSION="quietchat_bridge_8765 v0.4.1"
 ROOT=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
 WI=os.environ.get("WRITER_INBOX_URL","http://127.0.0.1:8766")
+SUBS=[]
 CID=re.compile(r"(?i)(?:https?://[^/]+)?(?:/[^?#]*)?/c/([0-9a-f-]{20,})|^([0-9a-f-]{20,})$")
 MID=re.compile(r"^QC-[A-Za-z0-9_.-]{3,64}$")
 BOOTSTRAP_HELP={
@@ -61,6 +62,15 @@ def mid(v=""):
     return f"QC-{time.strftime('%H%M%S')}-{uuid.uuid4().hex[:6]}"
 def rd(p):return json.loads(p.read_text(encoding="utf-8"))
 def wr(p,d):p.parent.mkdir(parents=True,exist_ok=True);p.write_text(json.dumps(d,ensure_ascii=False,indent=2),encoding="utf-8")
+def emit(event,payload):
+    dead=[]
+    item={"event":event,"payload":payload,"created_at":now()}
+    for q in list(SUBS):
+        try:q.put_nowait(item)
+        except Exception:dead.append(q)
+    for q in dead:
+        try:SUBS.remove(q)
+        except ValueError:pass
 def daemon_op(op,params):
     try:
         b=json.dumps({"op":op,"params":params},ensure_ascii=False).encode()
@@ -88,6 +98,7 @@ def create(x):
     if not r["user_message"].strip():raise ValueError("message required")
     wr(mp,r);c["messages"]=[z for z in c.get("messages",[]) if z.get("message_id")!=m]+[{"message_id":m,"state":"pending","created_at":r["created_at"],"updated_at":r["updated_at"]}];wr(cp,c)
     slot=daemon_op("qc.slot.set",{"path":str(mp),"date":r["created_at"],"record":r})
+    emit("qc.created",{"chat_url":u,"chat_id":c["chat_id"],"message_id":m,"state":"pending","path":str(mp)})
     return {
         "status":"success",
         "message_id":m,
@@ -114,9 +125,27 @@ def get(x):
 
 class H(BaseHTTPRequestHandler):
     def end_headers(s):
-        s.send_header("Access-Control-Allow-Origin","*");s.send_header("Access-Control-Allow-Headers","content-type");s.send_header("Access-Control-Allow-Methods","POST,OPTIONS");super().end_headers()
+        s.send_header("Access-Control-Allow-Origin","*");s.send_header("Access-Control-Allow-Headers","content-type");s.send_header("Access-Control-Allow-Methods","GET,POST,OPTIONS");super().end_headers()
     def do_OPTIONS(s):s.send_response(204);s.end_headers()
     def do_GET(s):
+        if s.path.endswith("/events"):
+            q=queue.Queue(maxsize=20);SUBS.append(q)
+            s.send_response(200);s.send_header("content-type","text/event-stream");s.send_header("cache-control","no-cache");s.send_header("connection","keep-alive");s.end_headers()
+            try:
+                s.wfile.write(b": quietchat events\n\n");s.wfile.flush()
+                while True:
+                    try:
+                        item=q.get(timeout=25)
+                        b=("event: "+item["event"]+"\n"+"data: "+json.dumps(item,ensure_ascii=False)+"\n\n").encode()
+                        s.wfile.write(b);s.wfile.flush()
+                    except queue.Empty:
+                        s.wfile.write(b": ping\n\n");s.wfile.flush()
+            except Exception:
+                pass
+            finally:
+                try:SUBS.remove(q)
+                except ValueError:pass
+            return
         if s.path.endswith("/version"):
             b=json.dumps({"status":"success","result":version_info()},ensure_ascii=False).encode()
             s.send_response(200);s.send_header("content-type","application/json");s.send_header("content-length",str(len(b)));s.end_headers();s.wfile.write(b)
@@ -127,6 +156,9 @@ class H(BaseHTTPRequestHandler):
         try:
             n=int(s.headers.get("content-length","0"));x=json.loads(s.rfile.read(n) or b"{}")
             if s.path.endswith("/version"):y=version_info()
+            elif s.path.endswith("/notify"):
+                emit(x.get("event") or "qc.updated",x.get("payload") or x)
+                y={"status":"success","subscribers":len(SUBS)}
             elif s.path.endswith("/create"):y=create(x)
             elif s.path.endswith("/scan"):y=scan(x)
             elif s.path.endswith("/get"):y=get(x)
