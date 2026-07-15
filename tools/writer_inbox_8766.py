@@ -2,7 +2,7 @@ import json,os,time,uuid,hashlib,gzip,threading,queue,urllib.request
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 
-VERSION="writer_inbox_8766 v0.4.8"
+VERSION="writer_inbox_8766 v0.4.9"
 QR=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
 MEM=Path(os.environ.get("MEMORY_DIR",r"D:\Projects\Chad\memory"))
 QB=os.environ.get("QUIETCHAT_BRIDGE_URL","http://127.0.0.1:8765/quietchat/api")
@@ -267,13 +267,13 @@ def file_write(p):
     try:
         r=smart_op("file.write.smart",{**p,"path":str(f),"content":content,"mode":mode})
         rr=(r.get("result") or {}).get("result") or r.get("result") or {}
-        if rr.get("state") in ("created","updated","dry_run"):return {"path":rr.get("path",str(f)),"bytes":rr.get("bytes",len(content.encode())),"sha256":rr.get("final_sha256") or rr.get("new_sha256"),"worker":r}
+        if rr.get("state") in ("created","updated","dry_run"):return {"path":rr.get("path",str(f)),"bytes":rr.get("bytes",len(content.encode())),"sha256":rr.get("final_sha256") or rr.get("new_sha256"),"write_engine":"smart_worker","worker_state":rr.get("state"),"worker":r}
         raise RuntimeError(rr.get("error") or rr.get("state") or "worker write failed")
     except Exception as e:
         if p.get("expected_sha256"):raise
         b=content.encode("utf-8")
         if f.exists() and mode=="create":raise RuntimeError("exists")
-        wb(f,b);return {"path":str(f),"bytes":len(b),"sha256":sha(f),"worker_fallback":str(e)}
+        wb(f,b);return {"path":str(f),"bytes":len(b),"sha256":sha(f),"write_engine":"legacy_fallback","worker_fallback":str(e)}
 def file_search(p):
     f=safe(p["path"]);q=str(p.get("query") or p.get("q",""));mx=int(p.get("max",50));out=[]
     for i,l in enumerate(f.read_text(encoding="utf-8",errors="replace").splitlines(),1):
