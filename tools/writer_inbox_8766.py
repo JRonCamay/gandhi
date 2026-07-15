@@ -2,12 +2,13 @@ import json,os,time,uuid,hashlib,gzip,threading,queue,urllib.request
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 
-VERSION="writer_inbox_8766 v0.5.1"
+VERSION="writer_inbox_8766 v0.5.2"
 QR=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
 MEM=Path(os.environ.get("MEMORY_DIR",r"D:\Projects\Chad\memory"))
 QB=os.environ.get("QUIETCHAT_BRIDGE_URL","http://127.0.0.1:8765/quietchat/api")
 QW=os.environ.get("QUIETCHAT_WRITER_URL","http://127.0.0.1:8767")
 SW=os.environ.get("SMART_WORKER_URL","http://127.0.0.1:8768")
+DS=os.environ.get("DEEPSEEK_MEMORY_URL","http://127.0.0.1:8769")
 FR=[Path(x.strip()) for x in os.environ.get("LOCAL_FILE_ALLOWED_ROOTS",r"D:\Projects\Chad;D:\Projects\Chad\local\AI_MEMORY_FIN").split(";") if x.strip()]
 Q=queue.Queue();J={};S={};G={};QC_SLOT={}
 
@@ -19,7 +20,10 @@ def version_info():
     smart={}
     try:smart=json.loads(urllib.request.urlopen(SW+"/version",timeout=1).read().decode())
     except Exception as e:smart={"status":"offline","msg":str(e)}
-    return {"name":"writer_inbox","version":VERSION,"port":8766,"writer":writer,"smart_worker":smart,"features":["qc.slot","quietchat-view","quietchat-search","quietchat-pin","file-ops","smart-worker-file-write","scratch","segment","queue","writer-daemon-queue","qc-blip-data-saved-events"]}
+    deepseek={}
+    try:deepseek=json.loads(urllib.request.urlopen(DS+"/version",timeout=1).read().decode())
+    except Exception as e:deepseek={"status":"offline","msg":str(e)}
+    return {"name":"writer_inbox","version":VERSION,"port":8766,"writer":writer,"smart_worker":smart,"deepseek_memory":deepseek,"features":["qc.slot","quietchat-view","quietchat-search","quietchat-pin","file-ops","smart-worker-file-write","deepseek-memory-status","scratch","segment","queue","writer-daemon-queue","qc-blip-data-saved-events"]}
 def rd(p):return json.loads(Path(p).read_text(encoding="utf-8"))
 def wb(p,b):Path(p).parent.mkdir(parents=True,exist_ok=True);Path(p).write_bytes(b)
 def wj(p,x):Path(p).parent.mkdir(parents=True,exist_ok=True);Path(p).write_text(json.dumps(x,ensure_ascii=False,indent=2),encoding="utf-8")
