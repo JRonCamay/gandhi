@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.35
+// @version      0.3.36
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,8 +15,8 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.35";
-  let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false,es=null,eventCursor=0,latestCursor=0,refreshTimer=null,eventSlot=null;
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.36";
+  let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false,es=null,eventCursor=0,latestCursor=0,refreshTimer=null,eventSlot=null,domStatusSlot="",domStatusTimer=null;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
     const body=JSON.stringify(payload||{});
@@ -66,6 +66,7 @@
     scanNewest();
     wireEvents();
     wireDoneObserver();
+    wireDomStatusObserver();
     wireFakeScroll(h);
     h.querySelector(".qcb").onscroll=()=>updateNewest();
     h.querySelector(".qcb").onwheel=e=>{const b=e.currentTarget,max=Math.max(0,last.length-win);if(rendering||last.length<=win)return;if(e.deltaY<0&&b.scrollTop<32&&pos>0){e.preventDefault();pos-=1;render({messages:last,hiddenRecords:0},"top");}else if(e.deltaY>0&&b.scrollTop+b.clientHeight>=b.scrollHeight-32&&pos<max){e.preventDefault();pos+=1;render({messages:last,hiddenRecords:0},"bottom");}};
@@ -105,6 +106,37 @@
         el.appendChild(x);
       }
     });
+  }
+  function setDomStatus(t){
+    t=String(t||"").replace(/\s+/g," ").trim();
+    if(t.length>140)t=t.slice(0,137)+"...";
+    if(domStatusSlot===t)return;
+    domStatusSlot=t;
+    paintDomStatus();
+  }
+  function paintDomStatus(){
+    const r=[...last].reverse().find(x=>x&&x.state!=="completed"&&!x.assistant_reply);
+    if(!r||!r.message_id)return;
+    const txt=statusText(r);
+    document.querySelectorAll(`#${ID} .msg.a[data-mid="${CSS.escape(r.message_id)}"]`).forEach(el=>{el.textContent=txt;});
+  }
+  function visible(el){
+    const r=el.getBoundingClientRect(),s=getComputedStyle(el);
+    return r.width>0&&r.height>0&&s.visibility!=="hidden"&&s.display!=="none";
+  }
+  function extractDomStatus(){
+    const re=/\b(thinking|working|running|reading|writing|editing|searching|pushing|committing|fetching|loading|generating|analyzing|checking|updating|saving|calling|using)\b/i;
+    const qs='[aria-live],[role="status"],[data-testid*="status" i],[data-testid*="toast" i],[class*="status" i]';
+    const vals=[...document.querySelectorAll(qs)].filter(visible).map(n=>(n.innerText||n.textContent||"").trim()).filter(t=>t&&t.length<180&&re.test(t));
+    return vals.at(-1)||"";
+  }
+  function wireDomStatusObserver(){
+    const tick=()=>{
+      clearTimeout(domStatusTimer);
+      domStatusTimer=setTimeout(()=>setDomStatus(extractDomStatus()),120);
+    };
+    new MutationObserver(tick).observe(document.body,{childList:true,subtree:true,characterData:true});
+    tick();
   }
   function chatId(){return (location.href.match(/\/c\/([0-9a-f-]{20,})/i)||[])[1]||"";}
   function guardEvent(p){
@@ -242,7 +274,7 @@
     updateNewest();
     stat(`${m.length} shown · window ${pos+1}-${Math.min(pos+win,all.length)} of ${all.length} · ${(all.at(-1)||{}).state||"ready"}`);
   }
-  function statusText(r){const l=(r.status_log||[]).at(-1);return `[${r.state||"pending"}] ${(l&&l.note)||"Waiting for reply."}`;}
+  function statusText(r){const l=(r.status_log||[]).at(-1),note=(l&&l.note)||domStatusSlot||"Waiting for reply.";return `[${r.state||"pending"}] ${note}`;}
   async function savePin(el,id,side,name,msg){
     try{
       await dop("qc.pin",{chatUrl:location.href,msgId:id,side,pinName:name});
