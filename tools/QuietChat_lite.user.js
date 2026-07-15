@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.31
+// @version      0.3.32
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,8 +15,8 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.31";
-  let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false,es=null,eventCursor=0;
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.32";
+  let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false,es=null,eventCursor=0,refreshTimer=null;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
     const body=JSON.stringify(payload||{});
@@ -83,6 +83,10 @@
   function lock(on){busy=on;document.querySelector(`#${ID} .send`).disabled=on;}
   function hi(s,q){s=String(s||"");q=String(q||"");const l=s.toLowerCase(),x=l.indexOf(q.toLowerCase());return x<0?esc(s):esc(s.slice(0,x))+"<mark>"+esc(s.slice(x,x+q.length))+"</mark>"+esc(s.slice(x+q.length));}
   function jumpNewest(){toNewest=true;jump=true;load(true);}
+  function scheduleRefresh(ms=80){
+    clearTimeout(refreshTimer);
+    refreshTimer=setTimeout(()=>{toNewest=true;jump=true;load(true);},ms);
+  }
   function upsertLocal(r){
     if(!r||!r.message_id)return;
     last=[...last.filter(x=>x.message_id!==r.message_id),r];
@@ -259,7 +263,7 @@
       if(p.chat_url&&p.chat_url!==location.href)return;
       if(p.chat_id&&!location.href.includes(p.chat_id))return;
       if(p.record){upsertLocal(p.record);return;}
-      toNewest=true;jump=true;load(true);
+      scheduleRefresh(60);
     };
     const longPoll=()=>{
       const onDone=()=>setTimeout(longPoll,150);
@@ -287,6 +291,8 @@
       };
       es.addEventListener("qc.created",refresh);
       es.addEventListener("qc.updated",refresh);
+      es.addEventListener("qc.dirty",refresh);
+      es.addEventListener("qc.saved",refresh);
       es.onerror=()=>{try{es.close();}catch{};es={mode:"long-poll"};longPoll();};
     }catch(e){es=null;}
   }
