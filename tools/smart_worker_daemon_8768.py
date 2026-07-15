@@ -2,9 +2,9 @@ import json, os, queue, sys, threading, time, traceback, uuid, urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from smart_worker_ops_file import VERSION as FILE_OPS_VERSION, run_file_write_smart as file_write_smart
+from smart_worker_ops_file import VERSION as FILE_OPS_VERSION, run_file_functions as file_functions_smart, run_file_info as file_info_smart, run_file_read as file_read_smart, run_file_search as file_search_smart, run_file_write_smart as file_write_smart
 
-VERSION = "smart_worker_daemon_8768 v0.3.0"
+VERSION = "smart_worker_daemon_8768 v0.3.1"
 PORT = int(os.environ.get("SMART_WORKER_PORT", "8768"))
 ROOT = Path(os.environ.get("SMART_WORKER_DIR", r"D:\Projects\Chad\local\AI_MEMORY_FIN\SMART_WORKER_DONT_DELETE"))
 MAIN = os.environ.get("WRITER_INBOX_URL", "http://127.0.0.1:8766")
@@ -66,6 +66,26 @@ REGISTRY = {
             "encoding": "optional, default utf-8",
             "dry_run": "optional bool",
         },
+    },
+    "file.info": {
+        "desc": "File info through the smart worker file module.",
+        "safety": "read",
+        "status": "ready",
+    },
+    "file.read": {
+        "desc": "Read an allowed local text file through the smart worker file module.",
+        "safety": "read",
+        "status": "ready",
+    },
+    "file.search": {
+        "desc": "Search an allowed local text file through the smart worker file module.",
+        "safety": "read",
+        "status": "ready",
+    },
+    "file.functions": {
+        "desc": "List simple function definitions in an allowed local text file through the smart worker file module.",
+        "safety": "read",
+        "status": "ready",
     },
 }
 
@@ -156,6 +176,22 @@ def step(job, name, note="", data=None):
 def run_file_write_smart(params, job=None):
     return file_write_smart(params, job=job, allowed_roots=ALLOWED_ROOTS, now=now, step=step)
 
+
+def run_file_info(params, job=None):
+    return file_info_smart(params, allowed_roots=ALLOWED_ROOTS)
+
+
+def run_file_read(params, job=None):
+    return file_read_smart(params, allowed_roots=ALLOWED_ROOTS)
+
+
+def run_file_search(params, job=None):
+    return file_search_smart(params, allowed_roots=ALLOWED_ROOTS)
+
+
+def run_file_functions(params, job=None):
+    return file_functions_smart(params, allowed_roots=ALLOWED_ROOTS)
+
 def run_noop(params):
     return {"echo": params or {}, "checked_at": now()}
 
@@ -163,6 +199,10 @@ def run_noop(params):
 OPS = {
     "noop": run_noop,
     "file.write.smart": run_file_write_smart,
+    "file.info": run_file_info,
+    "file.read": run_file_read,
+    "file.search": run_file_search,
+    "file.functions": run_file_functions,
 }
 
 
