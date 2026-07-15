@@ -2,10 +2,10 @@ import json,os,re,time,uuid,urllib.request,queue
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 
-VERSION="quietchat_bridge_8765 v0.4.6"
+VERSION="quietchat_bridge_8765 v0.4.7"
 ROOT=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
 WI=os.environ.get("WRITER_INBOX_URL","http://127.0.0.1:8766")
-SUBS=[];EVENTS=[];SEQ=0
+SUBS=[];EVENTS=[];LATEST={};SEQ=0
 CID=re.compile(r"(?i)(?:https?://[^/]+)?(?:/[^?#]*)?/c/([0-9a-f-]{20,})|^([0-9a-f-]{20,})$")
 MID=re.compile(r"^QC-[A-Za-z0-9_.-]{3,64}$")
 BOOTSTRAP_HELP={
@@ -48,7 +48,7 @@ BOOTSTRAP_HELP={
 
 def now():return time.strftime("%Y-%m-%dT%H:%M:%S%z")
 def version_info():
-    return {"name":"quietchat_bridge","version":VERSION,"port":8765,"features":["create-message","scan","get","first-message-bootstrap","ram-slot-set"]}
+    return {"name":"quietchat_bridge","version":VERSION,"port":8765,"features":["create-message","scan","get","first-message-bootstrap","ram-slot-set","latest-event-slot"]}
 def cid(v):
     v=str(v or "").strip();m=CID.search(v)
     if m:return (m.group(1) or m.group(2)).lower(),v if v.startswith(("http://","https://")) else ""
@@ -69,6 +69,9 @@ def emit(event,payload):
     SEQ+=1;item={"id":SEQ,"event":event,"payload":payload,"created_at":now()}
     EVENTS.append(item)
     if len(EVENTS)>50:del EVENTS[:-50]
+    cidv=(payload or {}).get("chat_id")
+    if cidv and event in ("qc.data","qc.updated","qc.saved","qc.dirty","qc.blip","qc.created"):
+        LATEST[str(cidv)]=item
     for q in list(SUBS):
         try:q.put_nowait(item)
         except Exception:dead.append(q)
@@ -131,6 +134,16 @@ class H(BaseHTTPRequestHandler):
         s.send_header("Access-Control-Allow-Origin","*");s.send_header("Access-Control-Allow-Headers","content-type");s.send_header("Access-Control-Allow-Methods","GET,POST,OPTIONS");super().end_headers()
     def do_OPTIONS(s):s.send_response(204);s.end_headers()
     def do_GET(s):
+        if s.path.startswith("/quietchat/api/events/latest") or s.path.endswith("/events/latest"):
+            import urllib.parse
+            qs=urllib.parse.parse_qs(urllib.parse.urlparse(s.path).query)
+            c=(qs.get("chat_id") or qs.get("chatId") or [""])[0]
+            since=int((qs.get("since") or ["0"])[0] or 0)
+            item=LATEST.get(str(c)) if c else None
+            if item and item.get("id",0)<=since:item=None
+            b=json.dumps({"status":"success","result":item or {"event":"empty","payload":{},"id":since}},ensure_ascii=False).encode()
+            s.send_response(200);s.send_header("content-type","application/json");s.send_header("content-length",str(len(b)));s.end_headers();s.wfile.write(b)
+            return
         if s.path.endswith("/events/next"):
             import urllib.parse
             qs=urllib.parse.parse_qs(urllib.parse.urlparse(s.path).query);since=int((qs.get("since") or ["0"])[0] or 0)
