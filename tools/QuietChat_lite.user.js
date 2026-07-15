@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.23
+// @version      0.3.24
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,7 +15,7 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.23";
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.24";
   let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
@@ -67,7 +67,6 @@
     wireFakeScroll(h);
     h.querySelector(".qcb").onscroll=()=>updateNewest();
     h.querySelector(".qcb").onwheel=e=>{const b=e.currentTarget,max=Math.max(0,last.length-win);if(rendering||last.length<=win)return;if(e.deltaY<0&&b.scrollTop<32&&pos>0){e.preventDefault();pos-=1;render({messages:last,hiddenRecords:0},"top");}else if(e.deltaY>0&&b.scrollTop+b.clientHeight>=b.scrollHeight-32&&pos<max){e.preventDefault();pos+=1;render({messages:last,hiddenRecords:0},"bottom");}};
-    timer=setInterval(()=>{const b=h.querySelector(".qcb"),atBottom=b&&b.scrollTop+b.clientHeight>=b.scrollHeight-24;if(pos>=Math.max(0,last.length-win)&&atBottom)load(false);},5000);
   }
   function place(h){
     try{const p=JSON.parse(localStorage.getItem(POS)||"{}");if(Number.isFinite(p.x)&&Number.isFinite(p.y)){h.style.left=p.x+"px";h.style.top=p.y+"px";h.style.right="auto";h.style.bottom="auto";}}catch{}
