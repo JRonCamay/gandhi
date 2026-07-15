@@ -2,7 +2,7 @@ import json,os,time,uuid,hashlib,gzip,threading,queue,urllib.request
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 
-VERSION="writer_inbox_8766 v0.4.1"
+VERSION="writer_inbox_8766 v0.4.2"
 QR=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
 MEM=Path(os.environ.get("MEMORY_DIR",r"D:\Projects\Chad\memory"))
 QB=os.environ.get("QUIETCHAT_BRIDGE_URL","http://127.0.0.1:8765/quietchat/api")
@@ -38,6 +38,18 @@ def cid(u):
     import re
     m=re.search(r"/c/([0-9a-f-]{20,})",str(u),re.I)
     return (m.group(1) if m else re.sub(r"[^A-Za-z0-9_.-]+","-",str(u)).strip("-.").lower()[:120])
+def persist_record(path,record):
+    f=Path(path);r=dict(record or {})
+    if not r:raise RuntimeError("missing record")
+    r.setdefault("schema_version",1);r.setdefault("state","pending");r.setdefault("assistant_reply","");r.setdefault("status_log",[])
+    r["updated_at"]=now()
+    wj(f,r)
+    cp=f.parents[1]/"chat.json"
+    c=rd(cp) if cp.exists() else {"schema_version":1,"chat_id":r.get("chat_id") or cid(r.get("chat_url","")),"page_url":r.get("chat_url",""),"title":"ChatGPT","created_at":r.get("created_at") or now(),"updated_at":now(),"messages":[]}
+    c["updated_at"]=now()
+    c["messages"]=[z for z in c.get("messages",[]) if z.get("message_id")!=r.get("message_id")]+[{"message_id":r.get("message_id"),"state":r.get("state"),"created_at":r.get("created_at"),"updated_at":r.get("updated_at")}]
+    wj(cp,c)
+    return r
 def qc_rows(u,limit=200,state=""):
     rows=[]
     for f in sorted((QR/cid(u)/"messages").glob("QC-*/message.json"),key=lambda x:x.stat().st_mtime):
@@ -48,6 +60,11 @@ def qc_rows(u,limit=200,state=""):
 def qc_view(p):
     u=p["chatUrl"];mx=max(1,min(int(p.get("limit",20)),500));stale_after=int(p.get("staleAfter",120))
     rows=qc_rows(u,int(p.get("scanLimit",200)));total=len(rows);vis=rows[-mx:];latest=rows[-1] if rows else {}
+    if QC_SLOT and QC_SLOT.get("unsaved"):
+        sr=QC_SLOT.get("record") or {}
+        if sr.get("chat_url")==u or sr.get("chat_id")==cid(u):
+            rows=[r for r in rows if r.get("message_id")!=sr.get("message_id")]+[sr]
+            total=len(rows);vis=rows[-mx:];latest=rows[-1] if rows else {}
     state=latest.get("state","idle");log=latest.get("status_log") or [];last=log[-1] if log else {}
     lock=state in ("pending","running");stale=False
     if lock:
@@ -100,6 +117,8 @@ def qc_pin(p):
 
 def slot_set(p):
     global QC_SLOT
+    if QC_SLOT and QC_SLOT.get("unsaved"):
+        persist_record(QC_SLOT["path"],QC_SLOT.get("record") or {})
     path=Path(p.get("path") or p.get("message_file") or "")
     record=p.get("record") or {}
     if path and not record and path.exists():record=rd(path)
@@ -108,7 +127,7 @@ def slot_set(p):
         path=QR/cid(u)/"messages"/record["message_id"]/"message.json"
     if not path:raise RuntimeError("missing path")
     if not record:raise RuntimeError("missing record")
-    QC_SLOT={"path":str(path),"date":p.get("date") or now(),"record":record,"completion":{}}
+    QC_SLOT={"path":str(path),"date":p.get("date") or now(),"record":record,"completion":{},"unsaved":bool(p.get("unsaved"))}
     return {"slot":QC_SLOT,"trigger":"@mcp message"}
 
 def slot_get(p=None):
@@ -141,7 +160,7 @@ def slot_complete(p):
         arts.append({"type":ext,"title":out.name,"filename":out.name,"path":str(out),"bytes":out.stat().st_size,"line_count":len(lines),"display":"link","created_at":now()})
     else:
         r["assistant_reply"]=reply;r["reply_mode"]="inline";r["reply_line_count"]=len(lines)
-    r["artifacts"]=arts;wj(f,r)
+    r["artifacts"]=arts;persist_record(f,r)
     saved=rd(f)
     notify_ui("qc.updated",{"chat_url":saved.get("chat_url"),"chat_id":saved.get("chat_id"),"message_id":saved.get("message_id"),"state":saved.get("state"),"path":str(f)})
     QC_SLOT={}
