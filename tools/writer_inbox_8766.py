@@ -2,7 +2,7 @@ import json,os,time,uuid,hashlib,gzip,threading,queue,urllib.request
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 
-VERSION="writer_inbox_8766 v0.4.6"
+VERSION="writer_inbox_8766 v0.4.7"
 QR=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
 MEM=Path(os.environ.get("MEMORY_DIR",r"D:\Projects\Chad\memory"))
 QB=os.environ.get("QUIETCHAT_BRIDGE_URL","http://127.0.0.1:8765/quietchat/api")
@@ -191,6 +191,7 @@ def slot_complete(p):
     base={"chat_url":r.get("chat_url"),"chat_id":r.get("chat_id"),"message_id":r.get("message_id"),"state":r.get("state"),"path":str(f)}
     notify_ui("qc.blip",{**base,"phase":"completed","ts":now()})
     notify_ui("qc.data",{**base,"record":r,"save_state":"pending"})
+    notify_ui("qc.updated",{**base,"record":r,"save_state":"pending"})
     def save_done():
         global QC_SLOT
         try:
@@ -200,6 +201,7 @@ def slot_complete(p):
             ok=(wr or {}).get("status")=="fallback" or job.get("state")=="done"
             notify_ui("qc.saved",{**base,"ok":ok,"save_state":"saved" if ok else "error","writer":done or wr,"error":job.get("error","")})
             notify_ui("qc.blip",{**base,"phase":"saved" if ok else "save-error","ok":ok,"ts":now()})
+            notify_ui("qc.dirty",{**base,"phase":"saved" if ok else "save-error","ok":ok,"ts":now()})
             if ok:QC_SLOT={}
         except Exception as e:
             notify_ui("qc.saved",{**base,"ok":False,"save_state":"error","error":str(e)})
