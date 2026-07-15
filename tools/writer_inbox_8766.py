@@ -2,7 +2,7 @@ import json,os,time,uuid,hashlib,gzip,threading,queue,urllib.request
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 
-VERSION="writer_inbox_8766 v0.4.4"
+VERSION="writer_inbox_8766 v0.4.5"
 QR=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
 MEM=Path(os.environ.get("MEMORY_DIR",r"D:\Projects\Chad\memory"))
 QB=os.environ.get("QUIETCHAT_BRIDGE_URL","http://127.0.0.1:8765/quietchat/api")
@@ -15,7 +15,7 @@ def version_info():
     writer={}
     try:writer=json.loads(urllib.request.urlopen(QW+"/version",timeout=1).read().decode())
     except Exception as e:writer={"status":"offline","msg":str(e)}
-    return {"name":"writer_inbox","version":VERSION,"port":8766,"writer":writer,"features":["qc.slot","quietchat-view","quietchat-search","quietchat-pin","file-ops","scratch","segment","queue","writer-daemon-queue"]}
+    return {"name":"writer_inbox","version":VERSION,"port":8766,"writer":writer,"features":["qc.slot","quietchat-view","quietchat-search","quietchat-pin","file-ops","scratch","segment","queue","writer-daemon-queue","dirty-ui-events"]}
 def rd(p):return json.loads(Path(p).read_text(encoding="utf-8"))
 def wb(p,b):Path(p).parent.mkdir(parents=True,exist_ok=True);Path(p).write_bytes(b)
 def wj(p,x):Path(p).parent.mkdir(parents=True,exist_ok=True);Path(p).write_text(json.dumps(x,ensure_ascii=False,indent=2),encoding="utf-8")
@@ -174,11 +174,13 @@ def slot_complete(p):
         r["assistant_reply"]=reply;r["reply_mode"]="inline";r["reply_line_count"]=len(lines)
     r["artifacts"]=arts
     notify_ui("qc.updated",{"chat_url":r.get("chat_url"),"chat_id":r.get("chat_id"),"message_id":r.get("message_id"),"state":r.get("state"),"path":str(f),"record":r})
+    notify_ui("qc.dirty",{"chat_url":r.get("chat_url"),"chat_id":r.get("chat_id"),"message_id":r.get("message_id"),"state":r.get("state"),"ts":now()})
     def save_done():
         global QC_SLOT
         try:
             wr=enqueue_write(f,r)
-            notify_ui("qc.saved",{"chat_url":r.get("chat_url"),"chat_id":r.get("chat_id"),"message_id":r.get("message_id"),"state":r.get("state"),"path":str(f),"record":r,"writer":wr})
+            notify_ui("qc.saved",{"chat_url":r.get("chat_url"),"chat_id":r.get("chat_id"),"message_id":r.get("message_id"),"state":r.get("state"),"path":str(f),"writer":wr})
+            notify_ui("qc.dirty",{"chat_url":r.get("chat_url"),"chat_id":r.get("chat_id"),"message_id":r.get("message_id"),"state":r.get("state"),"ts":now()})
             QC_SLOT={}
         except Exception as e:
             notify_ui("qc.error",{"chat_url":r.get("chat_url"),"chat_id":r.get("chat_id"),"message_id":r.get("message_id"),"error":str(e)})
