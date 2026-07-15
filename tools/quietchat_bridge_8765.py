@@ -2,7 +2,7 @@ import json,os,re,time,uuid,urllib.request,queue
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 
-VERSION="quietchat_bridge_8765 v0.4.3"
+VERSION="quietchat_bridge_8765 v0.4.4"
 ROOT=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
 WI=os.environ.get("WRITER_INBOX_URL","http://127.0.0.1:8766")
 SUBS=[]
@@ -96,8 +96,7 @@ def create(x):
         meta["first_quietchat_message"]=True
     r={"schema_version":1,"chat_id":c["chat_id"],"chat_url":u,"message_id":m,"state":"pending","user_message":x.get("user_message") or x.get("message",""),"assistant_reply":"","metadata":meta,"created_at":now(),"updated_at":now(),"status_log":[]}
     if not r["user_message"].strip():raise ValueError("message required")
-    wr(mp,r);c["messages"]=[z for z in c.get("messages",[]) if z.get("message_id")!=m]+[{"message_id":m,"state":"pending","created_at":r["created_at"],"updated_at":r["updated_at"]}];wr(cp,c)
-    slot=daemon_op("qc.slot.set",{"path":str(mp),"date":r["created_at"],"record":r})
+    slot=daemon_op("qc.slot.set",{"path":str(mp),"date":r["created_at"],"record":r,"unsaved":True})
     emit("qc.created",{"chat_url":u,"chat_id":c["chat_id"],"message_id":m,"state":"pending","path":str(mp)})
     return {
         "status":"success",
@@ -131,7 +130,7 @@ class H(BaseHTTPRequestHandler):
         if s.path.endswith("/events/next"):
             q=queue.Queue(maxsize=1);SUBS.append(q)
             try:
-                try:item=q.get(timeout=30)
+                try:item=q.get(timeout=2)
                 except queue.Empty:item={"event":"timeout","payload":{},"created_at":now()}
                 b=json.dumps({"status":"success","result":item},ensure_ascii=False).encode()
                 s.send_response(200);s.send_header("content-type","application/json");s.send_header("content-length",str(len(b)));s.end_headers();s.wfile.write(b)
