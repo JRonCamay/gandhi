@@ -1,7 +1,7 @@
-import hashlib, os, shutil, tempfile, time, uuid
+import hashlib, os, re, shutil, tempfile, time, uuid
 from pathlib import Path
 
-VERSION = "smart_worker_ops_file v0.1.0"
+VERSION = "smart_worker_ops_file v0.2.0"
 
 
 def sha_bytes(data):
@@ -175,3 +175,48 @@ def run_file_write_smart(params, *, job=None, allowed_roots=(), now=None, step=N
         "steps": steps,
     }
 
+
+def run_file_info(params, *, allowed_roots=()):
+    path = safe_path(params.get("path"), allowed_roots)
+    info = inspect_file(path)
+    if not info.get("exists"):
+        raise RuntimeError("not found")
+    info["read_engine"] = "smart_worker"
+    return info
+
+
+def run_file_read(params, *, allowed_roots=()):
+    path = safe_path(params.get("path"), allowed_roots)
+    if not path.is_file():
+        raise RuntimeError("not file")
+    max_chars = int(params.get("maxChars") or params.get("max_chars") or 12000)
+    text = path.read_text(encoding=params.get("encoding") or "utf-8", errors="replace")
+    return {"path": str(path), "content": text[:max_chars], "bytes": path.stat().st_size, "sha256": sha_file(path), "read_engine": "smart_worker"}
+
+
+def run_file_search(params, *, allowed_roots=()):
+    path = safe_path(params.get("path"), allowed_roots)
+    if not path.is_file():
+        raise RuntimeError("not file")
+    query = str(params.get("query") or params.get("q") or "")
+    max_matches = int(params.get("max") or 50)
+    matches = []
+    for line_no, line in enumerate(path.read_text(encoding=params.get("encoding") or "utf-8", errors="replace").splitlines(), 1):
+        if query in line:
+            matches.append({"line": line_no, "text": line[:240]})
+            if len(matches) >= max_matches:
+                break
+    return {"path": str(path), "query": query, "matches": matches, "count": len(matches), "read_engine": "smart_worker"}
+
+
+def run_file_functions(params, *, allowed_roots=()):
+    path = safe_path(params.get("path"), allowed_roots)
+    if not path.is_file():
+        raise RuntimeError("not file")
+    funcs = []
+    pattern = re.compile(r"\s*(?:async\s+)?def\s+([A-Za-z_]\w*)\s*\(|\s*(?:function\s+)?([A-Za-z_$][\w$]*)\s*\(")
+    for line_no, line in enumerate(path.read_text(encoding=params.get("encoding") or "utf-8", errors="replace").splitlines(), 1):
+        match = pattern.match(line)
+        if match:
+            funcs.append({"line": line_no, "name": match.group(1) or match.group(2)})
+    return {"path": str(path), "functions": funcs, "count": len(funcs), "read_engine": "smart_worker"}
