@@ -5,7 +5,7 @@ from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 from mcp.server.streamable_http import TransportSecuritySettings
 
-VERSION="gandhi_mcp_server_control_lite v0.4.2"
+VERSION="gandhi_mcp_server_control_lite v0.4.3"
 mcp=FastMCP("Gandhi Control Lite",host="127.0.0.1",port=int(os.environ.get("GANDHI_PORT","8001")),streamable_http_path="/mcp",transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=True,allowed_hosts=[x.strip() for x in os.environ.get("GANDHI_ALLOWED_HOSTS","127.0.0.1,localhost,perch-tripping-crushed.ngrok-free.dev").split(",") if x.strip()]))
 QR=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
 FR=[Path(x.strip()) for x in os.environ.get("LOCAL_FILE_ALLOWED_ROOTS",r"D:\Projects\Chad;D:\Projects\Chad\local\AI_MEMORY_FIN").split(";") if x.strip()]
@@ -185,13 +185,13 @@ def f_write(o):
     try:
         r=swop("file.write.smart",{**o,"path":str(p),"content":content,"mode":mode})
         rr=(r.get("result") or {}).get("result") or r.get("result") or {}
-        if rr.get("state") in ("created","updated","dry_run"):return ok({"path":rr.get("path",str(p)),"bytes":rr.get("bytes",len(content.encode())),"sha256":rr.get("final_sha256") or rr.get("new_sha256"),"worker":r})
+        if rr.get("state") in ("created","updated","dry_run"):return ok({"path":rr.get("path",str(p)),"bytes":rr.get("bytes",len(content.encode())),"sha256":rr.get("final_sha256") or rr.get("new_sha256"),"write_engine":"smart_worker","worker_state":rr.get("state"),"worker":r})
         raise E(rr.get("error") or rr.get("state") or "worker write failed")
     except Exception as e:
         b=content.encode()
         if o.get("expected_sha256"):raise
         if p.exists() and mode=="create":raise E("exists")
-        wb(p,b);return ok({"path":str(p),"bytes":len(b),"sha256":sha(p),"worker_fallback":str(e)})
+        wb(p,b);return ok({"path":str(p),"bytes":len(b),"sha256":sha(p),"write_engine":"legacy_fallback","worker_fallback":str(e)})
 def f_batch(o):
     fs=ck(o.get("files"),"files");out=[];bad=[]
     for i,x in enumerate(fs):
