@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.28
+// @version      0.3.29
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,7 +15,7 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.28";
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.29";
   let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false,es=null;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
@@ -65,6 +65,7 @@
     document.addEventListener("keydown",e=>{const t=h.querySelector(".qtt");if(!tipOpen||t.style.display==="none")return;const k=e.key;if(!["ArrowDown","ArrowUp","PageDown","PageUp"].includes(k))return;e.preventDefault();t.scrollTop+=k==="ArrowDown"?36:k==="ArrowUp"?-36:k==="PageDown"?180:-180;});
     load(true);
     wireEvents();
+    wireDoneObserver();
     wireFakeScroll(h);
     h.querySelector(".qcb").onscroll=()=>updateNewest();
     h.querySelector(".qcb").onwheel=e=>{const b=e.currentTarget,max=Math.max(0,last.length-win);if(rendering||last.length<=win)return;if(e.deltaY<0&&b.scrollTop<32&&pos>0){e.preventDefault();pos-=1;render({messages:last,hiddenRecords:0},"top");}else if(e.deltaY>0&&b.scrollTop+b.clientHeight>=b.scrollHeight-32&&pos<max){e.preventDefault();pos+=1;render({messages:last,hiddenRecords:0},"bottom");}};
@@ -257,6 +258,7 @@
     const refreshPayload=p=>{
       if(p.chat_url&&p.chat_url!==location.href)return;
       if(p.chat_id&&!location.href.includes(p.chat_id))return;
+      if(p.record){upsertLocal(p.record);return;}
       toNewest=true;jump=true;load(true);
     };
     const longPoll=()=>{
@@ -288,6 +290,21 @@
     }catch(e){es=null;}
   }
   function goNewest(){toNewest=true;jump=true;render({messages:last});}
+  function wireDoneObserver(){
+    let sent="";
+    const clean=t=>String(t||"").replace(/status:\s*\[done\]|\[done\]/ig,"").trim();
+    const tick=()=>{
+      const nodes=[...document.querySelectorAll('[data-message-author-role="assistant"],article')];
+      const n=nodes.at(-1);if(!n)return;
+      const t=(n.innerText||n.textContent||"").trim();
+      if(!/status:\s*\[done\]|\[done\]\s*$/i.test(t))return;
+      const body=clean(t),key=body.slice(-500);
+      if(!body||key===sent)return;
+      sent=key;
+      req("/reply",{reply:body,status:"[DONE]"}).catch(()=>{});
+    };
+    new MutationObserver(()=>setTimeout(tick,250)).observe(document.body,{childList:true,subtree:true,characterData:true});
+  }
   async function send(){
     if(busy)return;
     const ta=document.querySelector(`#${ID} textarea`),txt=ta.value.trim();
