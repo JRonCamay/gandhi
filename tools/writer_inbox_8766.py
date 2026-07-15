@@ -5,7 +5,7 @@ from pathlib import Path
 QR=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
 MEM=Path(os.environ.get("MEMORY_DIR",r"D:\Projects\Chad\memory"))
 FR=[Path(x.strip()) for x in os.environ.get("LOCAL_FILE_ALLOWED_ROOTS",r"D:\Projects\Chad;D:\Projects\Chad\local\AI_MEMORY_FIN").split(";") if x.strip()]
-Q=queue.Queue();J={};S={};G={}
+Q=queue.Queue();J={};S={};G={};QC_SLOT={}
 
 def now():return time.strftime("%Y-%m-%dT%H:%M:%S%z")
 def rd(p):return json.loads(Path(p).read_text(encoding="utf-8"))
@@ -86,6 +86,59 @@ def qc_pin(p):
         r.pop(key,None);r.pop(at,None)
     r["updated_at"]=now();wj(f,r)
     return {"chatUrl":u,"msgId":m,"side":side or "legacy","pinName":r.get(key,""),"pinned":bool(r.get(key))}
+
+def slot_set(p):
+    global QC_SLOT
+    path=Path(p.get("path") or p.get("message_file") or "")
+    record=p.get("record") or {}
+    if path and not record and path.exists():record=rd(path)
+    if not path and record.get("message_id"):
+        u=record.get("chat_url") or record.get("chat_id") or ""
+        path=QR/cid(u)/"messages"/record["message_id"]/"message.json"
+    if not path:raise RuntimeError("missing path")
+    if not record:raise RuntimeError("missing record")
+    QC_SLOT={"path":str(path),"date":p.get("date") or now(),"record":record,"completion":{}}
+    return {"slot":QC_SLOT,"trigger":"@mcp message"}
+
+def slot_get(p=None):
+    if not QC_SLOT:return {"empty":True,"slot":None}
+    return {"empty":False,"slot":QC_SLOT}
+
+def slot_status(p):
+    if not QC_SLOT:raise RuntimeError("empty slot")
+    f=Path(QC_SLOT["path"]);r=rd(f) if f.exists() else dict(QC_SLOT.get("record") or {})
+    x={"state":p.get("state","running"),"note":str(p.get("note",""))[:1200],"progress":p.get("progress"),"data":p.get("data") or {},"created_at":now()}
+    r["state"]=x["state"];r["updated_at"]=now();r.setdefault("status_log",[]).append(x);wj(f,r)
+    QC_SLOT["record"]=r;QC_SLOT["date"]=now()
+    return {"slot":QC_SLOT,"latest_status":x}
+
+def slot_complete(p):
+    global QC_SLOT
+    if not QC_SLOT:raise RuntimeError("empty slot")
+    f=Path(QC_SLOT["path"]);r=rd(f) if f.exists() else dict(QC_SLOT.get("record") or {})
+    reply=str(p.get("assistant_reply") or p.get("reply") or "")
+    if not reply.strip():raise RuntimeError("missing reply")
+    lines=reply.splitlines();arts=p.get("artifacts") or []
+    r["state"]="completed";r["summary"]=p.get("summary","");r["updated_at"]=now()
+    if len(lines)>300:
+        ad=f.parent/"artifacts";ad.mkdir(parents=True,exist_ok=True)
+        ext=str(p.get("format") or "md").strip(".").lower() or "md"
+        out=ad/f"quietchat_reply_{r.get('message_id','message')}.{ext}"
+        out.write_text(reply,encoding="utf-8")
+        r["assistant_reply"]=f"Output is long. Saved as {out.name}"
+        r["reply_mode"]="artifact";r["reply_line_count"]=len(lines)
+        arts.append({"type":ext,"title":out.name,"filename":out.name,"path":str(out),"bytes":out.stat().st_size,"line_count":len(lines),"display":"link","created_at":now()})
+    else:
+        r["assistant_reply"]=reply;r["reply_mode"]="inline";r["reply_line_count"]=len(lines)
+    r["artifacts"]=arts;wj(f,r)
+    saved=rd(f)
+    QC_SLOT={}
+    return {"state":"completed","path":str(f),"record":saved,"visible_reply":"✓"}
+
+def slot_clear(p=None):
+    global QC_SLOT
+    old=QC_SLOT;QC_SLOT={}
+    return {"cleared":True,"old":old}
 def export_chat(p):
     u=p["chatUrl"];days=int(p.get("days",5));cut=time.time()-days*86400;rows=[]
     for f in sorted((QR/cid(u)/"messages").glob("QC-*/message.json"),key=lambda x:x.stat().st_mtime):
@@ -131,6 +184,11 @@ def op(x):
     if o in ("qc.view","view"):return qc_view(p)
     if o in ("qc.search","qsearch"):return qc_search(p)
     if o in ("qc.pin","pin"):return qc_pin(p)
+    if o in ("qc.slot.set","slot.set"):return slot_set(p)
+    if o in ("qc.slot.get","qc.slot.process","message","slot.get"):return slot_get(p)
+    if o in ("qc.slot.status","slot.status"):return slot_status(p)
+    if o in ("qc.slot.complete","slot.complete"):return slot_complete(p)
+    if o in ("qc.slot.clear","slot.clear"):return slot_clear(p)
     if o in ("memory.exportChat","exportChat"):return export_chat(p)
     if o in ("file.info","info"):return file_info(p)
     if o in ("file.read","read"):return file_read(p)
