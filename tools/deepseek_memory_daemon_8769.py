@@ -2,7 +2,7 @@ import hashlib, json, os, queue, re, threading, time, traceback, urllib.request,
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-VERSION = "deepseek_memory_daemon_8769 v0.1.0"
+VERSION = "deepseek_memory_daemon_8769 v0.2.0"
 PORT = int(os.environ.get("DEEPSEEK_MEMORY_PORT", "8769"))
 ROOT = Path(os.environ.get("DEEPSEEK_MEMORY_DIR", r"D:\Projects\Chad\local\AI_MEMORY_FIN\DEEPSEEK_MEMORY_DONT_DELETE"))
 QUIETCHAT_ROOT = Path(os.environ.get("QUIETCHAT_DIR", r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
@@ -13,6 +13,8 @@ DEEPSEEK_MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat")
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 SCHEDULE_TIME = os.environ.get("DEEPSEEK_MEMORY_SCHEDULE", "20:00")
 SCHEDULE_ENABLED = os.environ.get("DEEPSEEK_MEMORY_SCHEDULE_ENABLED", "0").lower() in ("1", "true", "yes", "on")
+SCHEDULE_DAYS = int(os.environ.get("DEEPSEEK_MEMORY_DAYS", "10"))
+CATCHUP_ON_START = os.environ.get("DEEPSEEK_MEMORY_CATCHUP_ON_START", "1").lower() in ("1", "true", "yes", "on")
 MAX_CHARS = int(os.environ.get("DEEPSEEK_MEMORY_MAX_CHARS", "18000"))
 
 Q = queue.Queue()
@@ -108,10 +110,12 @@ def version_info():
         "quietchat_bridge_url": QUIETCHAT_BRIDGE_URL,
         "schedule_enabled": SCHEDULE_ENABLED,
         "schedule_time": SCHEDULE_TIME,
+        "schedule_days": SCHEDULE_DAYS,
+        "catchup_on_start": CATCHUP_ON_START,
         "api_configured": bool(DEEPSEEK_API_KEY),
         "model": DEEPSEEK_MODEL,
         "registry": {k: {"status": v["status"], "safety": v["safety"]} for k, v in REGISTRY.items()},
-        "features": ["quietchat-handoff-memory", "chunked-deepseek-summary", "local-emergency-fallback", "text-correction", "daily-scheduler"],
+        "features": ["quietchat-handoff-memory", "chat-local-main-log-backup", "chunked-deepseek-summary", "local-emergency-fallback", "text-correction", "daily-scheduler", "missed-schedule-catchup", "pending-summary-ui-signal"],
     }
 
 
@@ -141,6 +145,20 @@ def latest_chat_folder():
     if not candidates:
         raise RuntimeError("no QuietChat chat folders found")
     return sorted(candidates, key=lambda p: p.stat().st_mtime, reverse=True)[0]
+
+
+def resolve_chat_folder(params=None, rows=None):
+    params = params or {}
+    if params.get("chat_folder"):
+        return Path(params["chat_folder"])
+    url = params.get("chatUrl") or params.get("chat_url")
+    if url:
+        return QUIETCHAT_ROOT / chat_id(url)
+    if rows:
+        paths = [row.get("path") for row in rows if row.get("path")]
+        if paths:
+            return Path(paths[-1]).parents[2]
+    return latest_chat_folder()
 
 
 def record_text(row):
@@ -232,6 +250,7 @@ def summarize_chunk(text, index, total):
 def handoff_from_summaries(rows, summaries, params):
     paths = [row["path"] for row in rows]
     latest = rows[-1]["record"] if rows else {}
+    chat_folder = resolve_chat_folder(params, rows)
     body = {
         "schema_version": 1,
         "kind": "handoff_memory",
@@ -239,14 +258,15 @@ def handoff_from_summaries(rows, summaries, params):
         "source": "deepseek_memory_daemon",
         "source_mode": "deepseek" if any(s.get("mode") == "deepseek" for s in summaries) else "local_fallback",
         "chat_url": params.get("chatUrl") or params.get("chat_url") or latest.get("chat_url", ""),
-        "chat_id": latest.get("chat_id") or chat_id(params.get("chatUrl") or params.get("chat_url") or ""),
-        "days": int(params.get("days", 10)),
+        "chat_id": latest.get("chat_id") or chat_folder.name or chat_id(params.get("chatUrl") or params.get("chat_url") or ""),
+        "days": int(params.get("days", SCHEDULE_DAYS)),
         "record_count": len(rows),
         "storage": {
             "quietchat_root": str(QUIETCHAT_ROOT),
-            "chat_folder": str(Path(paths[-1]).parents[2]) if paths else "",
+            "chat_folder": str(chat_folder),
             "latest_message_path": paths[-1] if paths else "",
             "memory_root": str(ROOT / "memory"),
+            "chat_main_log_root": str(chat_folder / "main_conversation_log"),
         },
         "summaries": summaries,
         "important_paths": sorted(set(paths[-50:])),
@@ -285,31 +305,71 @@ def markdown_handoff(data):
 
 def write_handoff(data):
     stamp = time.strftime("%Y-%m-%d_%H%M%S")
+    day = time.strftime("%Y-%m-%d")
     mem = ROOT / "memory"
     archive = mem / "archive"
+    chat_log = Path(data.get("storage", {}).get("chat_main_log_root") or "") / "deepseek_summaries"
     md = markdown_handoff(data)
     latest_json = mem / "latest_handoff.json"
     latest_md = mem / "latest_handoff.md"
     archive_json = archive / f"{stamp}_handoff.json"
     archive_md = archive / f"{stamp}_handoff.md"
+    chat_latest_json = chat_log / "latest_deepseek_handoff.json"
+    chat_latest_md = chat_log / "latest_deepseek_handoff.md"
+    chat_daily_json = chat_log / f"{day}_deepseek_handoff.json"
+    chat_daily_md = chat_log / f"{day}_deepseek_handoff.md"
     write_json(latest_json, data)
     latest_md.parent.mkdir(parents=True, exist_ok=True)
     latest_md.write_text(md, encoding="utf-8")
     write_json(archive_json, data)
     archive_md.parent.mkdir(parents=True, exist_ok=True)
     archive_md.write_text(md, encoding="utf-8")
+    write_json(chat_latest_json, data)
+    chat_latest_md.parent.mkdir(parents=True, exist_ok=True)
+    chat_latest_md.write_text(md, encoding="utf-8")
+    write_json(chat_daily_json, data)
+    chat_daily_md.parent.mkdir(parents=True, exist_ok=True)
+    chat_daily_md.write_text(md, encoding="utf-8")
     return {
         "latest_json": str(latest_json),
         "latest_md": str(latest_md),
         "archive_json": str(archive_json),
         "archive_md": str(archive_md),
+        "chat_latest_json": str(chat_latest_json),
+        "chat_latest_md": str(chat_latest_md),
+        "chat_daily_json": str(chat_daily_json),
+        "chat_daily_md": str(chat_daily_md),
         "sha256": sha_text(md),
         "bytes": len(md.encode("utf-8")),
     }
 
 
+def write_pending_summary(data, files):
+    pending = {
+        "schema_version": 1,
+        "kind": "pending_deepseek_summary",
+        "created_at": now(),
+        "chat_id": data.get("chat_id", ""),
+        "chat_url": data.get("chat_url", ""),
+        "days": data.get("days"),
+        "record_count": data.get("record_count"),
+        "source_mode": data.get("source_mode"),
+        "insert_command": "mcp message",
+        "button": {
+            "label": "Insert DeepSeek summary",
+            "action": "insert_summary_to_active_chat",
+            "source_markdown": files.get("chat_latest_md") or files.get("latest_md"),
+            "source_json": files.get("chat_latest_json") or files.get("latest_json"),
+        },
+        "storage": files,
+    }
+    path = Path(data.get("storage", {}).get("chat_main_log_root") or ROOT / "memory") / "pending_deepseek_summary.json"
+    write_json(path, pending)
+    return str(path)
+
+
 def memory_extract(params, job=None):
-    rows = collect_records(params.get("chatUrl") or params.get("chat_url", ""), params.get("chat_folder", ""), params.get("days", 10), params.get("limit", 500))
+    rows = collect_records(params.get("chatUrl") or params.get("chat_url", ""), params.get("chat_folder", ""), params.get("days", SCHEDULE_DAYS), params.get("limit", 500))
     chunks = chunk_text(rows, int(params.get("maxChars") or MAX_CHARS))
     summaries = []
     for i, chunk in enumerate(chunks, 1):
@@ -319,8 +379,10 @@ def memory_extract(params, job=None):
     data = handoff_from_summaries(rows, summaries, params)
     files = write_handoff(data)
     data["storage"].update(files)
+    data["storage"]["pending_summary"] = write_pending_summary(data, files)
     write_json(files["latest_json"], data)
-    notify_ui("memory.extraction.complete", {"message": "Memory extraction complete", "handoff": files})
+    notify_ui("memory.extraction.complete", {"message": "Memory extraction complete", "handoff": files, "chat_id": data.get("chat_id"), "days": data.get("days")})
+    notify_ui("memory.summary.pending", {"message": "DeepSeek summary ready", "button": "Insert DeepSeek summary", "handoff": files, "pending_summary": data["storage"]["pending_summary"], "chat_id": data.get("chat_id")})
     return {"state": "complete", "records": len(rows), "chunks": len(chunks), "storage": data["storage"], "source_mode": data["source_mode"]}
 
 
@@ -429,6 +491,60 @@ def submit(params):
     return {"job_id": jid, "state": "queued", "status_url": f"/status/{jid}", "result_url": f"/result/{jid}"}
 
 
+def schedule_state_path():
+    return ROOT / "schedule_state.json"
+
+
+def load_schedule_state():
+    path = schedule_state_path()
+    if path.exists():
+        try:
+            return read_json(path)
+        except Exception:
+            return {}
+    return {}
+
+
+def save_schedule_state(data):
+    write_json(schedule_state_path(), data)
+
+
+def today_schedule_elapsed():
+    try:
+        target = time.strptime(time.strftime("%Y-%m-%d") + " " + SCHEDULE_TIME, "%Y-%m-%d %H:%M")
+        return time.time() >= time.mktime(target)
+    except Exception:
+        return False
+
+
+def today_summary_exists():
+    day = time.strftime("%Y-%m-%d")
+    try:
+        chat_folder = latest_chat_folder()
+        daily = chat_folder / "main_conversation_log" / "deepseek_summaries" / f"{day}_deepseek_handoff.json"
+        if daily.exists():
+            return True
+    except Exception:
+        pass
+    latest = ROOT / "memory" / "latest_handoff.json"
+    if latest.exists():
+        try:
+            data = read_json(latest)
+            return str(data.get("created_at", "")).startswith(day)
+        except Exception:
+            return False
+    return False
+
+
+def queue_scheduled_extract(reason):
+    result = submit({"op": "memory.extract", "params": {"days": SCHEDULE_DAYS, "scheduled": True, "reason": reason}})
+    state = load_schedule_state()
+    state.update({"last_queued_date": time.strftime("%Y-%m-%d"), "last_reason": reason, "last_job_id": result["job_id"], "updated_at": now()})
+    save_schedule_state(state)
+    notify_ui("memory.extraction.queued", {"message": "DeepSeek memory extraction queued", "reason": reason, "job": result, "days": SCHEDULE_DAYS})
+    return result
+
+
 def route(op, params):
     params = params or {}
     if op in ("ping", "memory.ping"):
@@ -457,15 +573,26 @@ def route(op, params):
 
 
 def scheduler():
-    last = ""
     while True:
         try:
-            if SCHEDULE_ENABLED and time.strftime("%H:%M") == SCHEDULE_TIME and time.strftime("%Y-%m-%d") != last:
-                last = time.strftime("%Y-%m-%d")
-                submit({"op": "memory.extract", "params": {"days": 10, "scheduled": True}})
+            state = load_schedule_state()
+            today = time.strftime("%Y-%m-%d")
+            if SCHEDULE_ENABLED and time.strftime("%H:%M") == SCHEDULE_TIME and state.get("last_queued_date") != today:
+                queue_scheduled_extract("scheduled_time")
             time.sleep(30)
         except Exception:
             time.sleep(30)
+
+
+def startup_catchup():
+    if not (SCHEDULE_ENABLED and CATCHUP_ON_START):
+        return
+    state = load_schedule_state()
+    today = time.strftime("%Y-%m-%d")
+    if state.get("last_queued_date") == today or today_summary_exists():
+        return
+    if today_schedule_elapsed() or not (ROOT / "memory" / "latest_handoff.json").exists():
+        queue_scheduled_extract("startup_catchup")
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -518,5 +645,6 @@ if __name__ == "__main__":
     ROOT.mkdir(parents=True, exist_ok=True)
     threading.Thread(target=worker, daemon=True).start()
     threading.Thread(target=scheduler, daemon=True).start()
+    startup_catchup()
     print(f"deepseek_memory: http://127.0.0.1:{PORT}")
     ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
