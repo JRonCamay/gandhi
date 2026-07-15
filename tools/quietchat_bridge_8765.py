@@ -2,6 +2,7 @@ import json,os,re,time,uuid,urllib.request
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 
+VERSION="quietchat_bridge_8765 v0.4.0"
 ROOT=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
 WI=os.environ.get("WRITER_INBOX_URL","http://127.0.0.1:8766")
 CID=re.compile(r"(?i)(?:https?://[^/]+)?(?:/[^?#]*)?/c/([0-9a-f-]{20,})|^([0-9a-f-]{20,})$")
@@ -44,6 +45,8 @@ BOOTSTRAP_HELP={
 }
 
 def now():return time.strftime("%Y-%m-%dT%H:%M:%S%z")
+def version_info():
+    return {"name":"quietchat_bridge","version":VERSION,"port":8765,"features":["create-message","scan","get","first-message-bootstrap","ram-slot-set"]}
 def cid(v):
     v=str(v or "").strip();m=CID.search(v)
     if m:return (m.group(1) or m.group(2)).lower(),v if v.startswith(("http://","https://")) else ""
@@ -113,10 +116,18 @@ class H(BaseHTTPRequestHandler):
     def end_headers(s):
         s.send_header("Access-Control-Allow-Origin","*");s.send_header("Access-Control-Allow-Headers","content-type");s.send_header("Access-Control-Allow-Methods","POST,OPTIONS");super().end_headers()
     def do_OPTIONS(s):s.send_response(204);s.end_headers()
+    def do_GET(s):
+        if s.path.endswith("/version"):
+            b=json.dumps({"status":"success","result":version_info()},ensure_ascii=False).encode()
+            s.send_response(200);s.send_header("content-type","application/json");s.send_header("content-length",str(len(b)));s.end_headers();s.wfile.write(b)
+            return
+        b=json.dumps({"status":"error","error":"bad endpoint"},ensure_ascii=False).encode()
+        s.send_response(404);s.send_header("content-type","application/json");s.send_header("content-length",str(len(b)));s.end_headers();s.wfile.write(b)
     def do_POST(s):
         try:
             n=int(s.headers.get("content-length","0"));x=json.loads(s.rfile.read(n) or b"{}")
-            if s.path.endswith("/create"):y=create(x)
+            if s.path.endswith("/version"):y=version_info()
+            elif s.path.endswith("/create"):y=create(x)
             elif s.path.endswith("/scan"):y=scan(x)
             elif s.path.endswith("/get"):y=get(x)
             else:raise ValueError("bad endpoint")
