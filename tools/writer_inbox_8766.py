@@ -2,12 +2,15 @@ import json,os,time,uuid,hashlib,gzip,threading,queue
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 
+VERSION="writer_inbox_8766 v0.4.0"
 QR=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
 MEM=Path(os.environ.get("MEMORY_DIR",r"D:\Projects\Chad\memory"))
 FR=[Path(x.strip()) for x in os.environ.get("LOCAL_FILE_ALLOWED_ROOTS",r"D:\Projects\Chad;D:\Projects\Chad\local\AI_MEMORY_FIN").split(";") if x.strip()]
 Q=queue.Queue();J={};S={};G={};QC_SLOT={}
 
 def now():return time.strftime("%Y-%m-%dT%H:%M:%S%z")
+def version_info():
+    return {"name":"writer_inbox","version":VERSION,"port":8766,"features":["qc.slot","quietchat-view","quietchat-search","quietchat-pin","file-ops","scratch","segment","queue"]}
 def rd(p):return json.loads(Path(p).read_text(encoding="utf-8"))
 def wb(p,b):Path(p).parent.mkdir(parents=True,exist_ok=True);Path(p).write_bytes(b)
 def wj(p,x):Path(p).parent.mkdir(parents=True,exist_ok=True);Path(p).write_text(json.dumps(x,ensure_ascii=False,indent=2),encoding="utf-8")
@@ -181,6 +184,7 @@ def file_funcs(p):
     return {"path":str(f),"functions":a,"count":len(a)}
 def op(x):
     o=x.get("op") or x.get("operation") or x.get("kind");p=x.get("params") or x.get("payload") or {}
+    if o in ("version","system.version","daemon.version"):return version_info()
     if o in ("qc.view","view"):return qc_view(p)
     if o in ("qc.search","qsearch"):return qc_search(p)
     if o in ("qc.pin","pin"):return qc_pin(p)
@@ -218,7 +222,8 @@ class H(BaseHTTPRequestHandler):
     def do_GET(s):
         if s.path.startswith("/status/"):
             jid=s.path.rsplit("/",1)[-1];return s.send({"status":"success","job":J.get(jid) or {"state":"missing","id":jid}})
-        if s.path=="/health":return s.send({"status":"success","server":"writer_inbox","jobs":len(J),"queued":Q.qsize()})
+        if s.path=="/health":return s.send({"status":"success","server":"writer_inbox","version":VERSION,"jobs":len(J),"queued":Q.qsize()})
+        if s.path=="/version":return s.send({"status":"success","result":version_info()})
         if s.path=="/scratch":return s.send({"status":"success","items":list(S.values())})
         if s.path.startswith("/scratch/"):
             i=s.path.rsplit("/",1)[-1];return s.send({"status":"success","item":S.get(i)})
