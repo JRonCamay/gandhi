@@ -1,10 +1,11 @@
-import json,os,time,uuid,hashlib,gzip,threading,queue
+import json,os,time,uuid,hashlib,gzip,threading,queue,urllib.request
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 
-VERSION="writer_inbox_8766 v0.4.0"
+VERSION="writer_inbox_8766 v0.4.1"
 QR=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
 MEM=Path(os.environ.get("MEMORY_DIR",r"D:\Projects\Chad\memory"))
+QB=os.environ.get("QUIETCHAT_BRIDGE_URL","http://127.0.0.1:8765/quietchat/api")
 FR=[Path(x.strip()) for x in os.environ.get("LOCAL_FILE_ALLOWED_ROOTS",r"D:\Projects\Chad;D:\Projects\Chad\local\AI_MEMORY_FIN").split(";") if x.strip()]
 Q=queue.Queue();J={};S={};G={};QC_SLOT={}
 
@@ -14,6 +15,13 @@ def version_info():
 def rd(p):return json.loads(Path(p).read_text(encoding="utf-8"))
 def wb(p,b):Path(p).parent.mkdir(parents=True,exist_ok=True);Path(p).write_bytes(b)
 def wj(p,x):Path(p).parent.mkdir(parents=True,exist_ok=True);Path(p).write_text(json.dumps(x,ensure_ascii=False,indent=2),encoding="utf-8")
+def notify_ui(event,payload):
+    try:
+        b=json.dumps({"event":event,"payload":payload},ensure_ascii=False).encode()
+        req=urllib.request.Request(QB+"/notify",data=b,headers={"Content-Type":"application/json"},method="POST")
+        urllib.request.urlopen(req,timeout=2).read()
+    except Exception:
+        pass
 def sha(p):
     h=hashlib.sha256()
     with Path(p).open("rb") as f:
@@ -135,6 +143,7 @@ def slot_complete(p):
         r["assistant_reply"]=reply;r["reply_mode"]="inline";r["reply_line_count"]=len(lines)
     r["artifacts"]=arts;wj(f,r)
     saved=rd(f)
+    notify_ui("qc.updated",{"chat_url":saved.get("chat_url"),"chat_id":saved.get("chat_id"),"message_id":saved.get("message_id"),"state":saved.get("state"),"path":str(f)})
     QC_SLOT={}
     return {"state":"completed","path":str(f),"record":saved,"visible_reply":"✓"}
 
