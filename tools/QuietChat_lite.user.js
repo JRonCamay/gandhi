@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.33
+// @version      0.3.34
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,7 +15,7 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.33";
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.34";
   let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false,es=null,eventCursor=0,refreshTimer=null;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
@@ -275,8 +275,9 @@
   function wireEvents(){
     if(es)return;
     const refreshPayload=p=>{
-      if(p.chat_url&&p.chat_url!==location.href)return;
-      if(p.chat_id&&!location.href.includes(p.chat_id))return;
+      const idOk=p.chat_id&&location.href.includes(p.chat_id);
+      const urlOk=p.chat_url&&p.chat_url===location.href;
+      if((p.chat_id||p.chat_url)&&!idOk&&!urlOk)return;
       if(p.save_state||p.ok===false){markSave(p);if(!p.record)return;}
       if(p.record){upsertLocal(p.record);return;}
       scheduleRefresh(60);
