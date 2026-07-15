@@ -2,7 +2,7 @@ import hashlib, json, os, queue, re, threading, time, traceback, urllib.request,
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-VERSION = "deepseek_memory_daemon_8769 v0.2.1"
+VERSION = "deepseek_memory_daemon_8769 v0.3.0"
 PORT = int(os.environ.get("DEEPSEEK_MEMORY_PORT", "8769"))
 ROOT = Path(os.environ.get("DEEPSEEK_MEMORY_DIR", r"D:\Projects\Chad\local\AI_MEMORY_FIN\DEEPSEEK_MEMORY_DONT_DELETE"))
 QUIETCHAT_ROOT = Path(os.environ.get("QUIETCHAT_DIR", r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
@@ -117,7 +117,7 @@ def version_info():
         "api_configured": bool(DEEPSEEK_API_KEY),
         "model": DEEPSEEK_MODEL,
         "registry": {k: {"status": v["status"], "safety": v["safety"]} for k, v in REGISTRY.items()},
-        "features": ["quietchat-handoff-memory", "chat-local-main-log-backup", "chunked-deepseek-summary", "local-emergency-fallback", "text-correction", "daily-scheduler", "missed-schedule-catchup", "pending-summary-ui-signal"],
+        "features": ["quietchat-handoff-memory", "chat-local-main-log-backup", "rolling-days-memory", "delta-after-bootstrap", "chunked-deepseek-summary", "local-emergency-fallback", "text-correction", "daily-scheduler", "missed-schedule-catchup", "pending-summary-ui-signal"],
     }
 
 
@@ -266,6 +266,9 @@ def handoff_from_summaries(rows, summaries, params):
         "chat_id": latest.get("chat_id") or chat_folder.name or chat_id(params.get("chatUrl") or params.get("chat_url") or ""),
         "days": int(params.get("days", SCHEDULE_DAYS)),
         "record_count": len(rows),
+        "first_record_mtime": rows[0]["mtime"] if rows else 0,
+        "last_record_mtime": rows[-1]["mtime"] if rows else 0,
+        "extraction_mode": params.get("extraction_mode", "auto"),
         "storage": {
             "quietchat_root": str(QUIETCHAT_ROOT),
             "chat_folder": str(chat_folder),
@@ -308,6 +311,94 @@ def markdown_handoff(data):
     return "\n".join(lines).strip() + "\n"
 
 
+def rolling_memory_paths(data):
+    chat_log = Path(data.get("storage", {}).get("chat_main_log_root") or "") / "deepseek_summaries"
+    return {
+        "rolling_json": chat_log / "rolling_memory.json",
+        "rolling_md": chat_log / "rolling_memory.md",
+    }
+
+
+def load_rolling_memory(chat_folder):
+    path = Path(chat_folder) / "main_conversation_log" / "deepseek_summaries" / "rolling_memory.json"
+    if path.exists():
+        try:
+            return read_json(path)
+        except Exception:
+            return {}
+    return {}
+
+
+def markdown_rolling_memory(data):
+    lines = [
+        "# QuietChat Rolling Memory",
+        "",
+        f"- updated_at: {data.get('updated_at')}",
+        f"- chat_id: {data.get('chat_id')}",
+        f"- days_window: {data.get('days_window')}",
+        f"- entries: {len(data.get('entries', []))}",
+        f"- last_record_mtime: {data.get('last_record_mtime', 0)}",
+        "",
+        "## Daily Memory",
+    ]
+    for entry in data.get("entries", []):
+        lines += [
+            "",
+            f"### {entry.get('day')} ({entry.get('mode')})",
+            f"- records: {entry.get('record_count')}",
+            f"- created_at: {entry.get('created_at')}",
+        ]
+        for summary in entry.get("summaries", []):
+            lines += ["", f"#### Chunk {summary.get('chunk')}"]
+            if summary.get("text"):
+                lines.append(summary["text"].strip())
+            else:
+                for bullet in summary.get("bullets", []):
+                    lines.append(f"- {bullet}")
+                if summary.get("error"):
+                    lines.append(f"- fallback_reason: {summary.get('error')}")
+    return "\n".join(lines).strip() + "\n"
+
+
+def update_rolling_memory(data):
+    paths = rolling_memory_paths(data)
+    existing = {}
+    if paths["rolling_json"].exists():
+        try:
+            existing = read_json(paths["rolling_json"])
+        except Exception:
+            existing = {}
+    days = int(data.get("days") or SCHEDULE_DAYS)
+    day = time.strftime("%Y-%m-%d")
+    entries = [e for e in existing.get("entries", []) if e.get("day") != day]
+    entries.append({
+        "day": day,
+        "created_at": data.get("created_at"),
+        "mode": data.get("source_mode"),
+        "record_count": data.get("record_count"),
+        "first_record_mtime": data.get("first_record_mtime", 0),
+        "last_record_mtime": data.get("last_record_mtime", 0),
+        "summaries": data.get("summaries", []),
+        "important_paths": data.get("important_paths", []),
+    })
+    entries = sorted(entries, key=lambda e: e.get("day", ""))[-max(1, days):]
+    rolling = {
+        "schema_version": 1,
+        "kind": "rolling_memory",
+        "updated_at": now(),
+        "chat_id": data.get("chat_id", ""),
+        "chat_url": data.get("chat_url", ""),
+        "days_window": days,
+        "last_record_mtime": max([float(e.get("last_record_mtime") or 0) for e in entries] or [0]),
+        "entries": entries,
+        "storage": {**data.get("storage", {}), "rolling_json": str(paths["rolling_json"]), "rolling_md": str(paths["rolling_md"])},
+    }
+    write_json(paths["rolling_json"], rolling)
+    paths["rolling_md"].parent.mkdir(parents=True, exist_ok=True)
+    paths["rolling_md"].write_text(markdown_rolling_memory(rolling), encoding="utf-8")
+    return rolling
+
+
 def write_handoff(data):
     stamp = time.strftime("%Y-%m-%d_%H%M%S")
     day = time.strftime("%Y-%m-%d")
@@ -335,6 +426,7 @@ def write_handoff(data):
     write_json(chat_daily_json, data)
     chat_daily_md.parent.mkdir(parents=True, exist_ok=True)
     chat_daily_md.write_text(md, encoding="utf-8")
+    rolling = update_rolling_memory(data)
     return {
         "latest_json": str(latest_json),
         "latest_md": str(latest_md),
@@ -344,6 +436,8 @@ def write_handoff(data):
         "chat_latest_md": str(chat_latest_md),
         "chat_daily_json": str(chat_daily_json),
         "chat_daily_md": str(chat_daily_md),
+        "rolling_json": rolling.get("storage", {}).get("rolling_json", ""),
+        "rolling_md": rolling.get("storage", {}).get("rolling_md", ""),
         "sha256": sha_text(md),
         "bytes": len(md.encode("utf-8")),
     }
@@ -374,7 +468,18 @@ def write_pending_summary(data, files):
 
 
 def memory_extract(params, job=None):
+    chat_folder = resolve_chat_folder(params)
+    rolling = load_rolling_memory(chat_folder)
     rows = collect_records(params.get("chatUrl") or params.get("chat_url", ""), params.get("chat_folder", ""), params.get("days", SCHEDULE_DAYS), params.get("limit", DEFAULT_LIMIT))
+    force_full = bool(params.get("force_full") or params.get("full_rebuild"))
+    last_mtime = float(rolling.get("last_record_mtime") or 0)
+    if rolling and last_mtime and not force_full:
+        rows = [row for row in rows if float(row.get("mtime") or 0) > last_mtime]
+        params = {**params, "extraction_mode": "delta"}
+        if not rows:
+            return {"state": "no_new_records", "records": 0, "chunks": 0, "storage": rolling.get("storage", {}), "source_mode": rolling.get("source_mode", "rolling_memory"), "last_record_mtime": last_mtime}
+    else:
+        params = {**params, "extraction_mode": "bootstrap" if not rolling else "full_rebuild"}
     chunks = chunk_text(rows, int(params.get("maxChars") or MAX_CHARS))
     summaries = []
     for i, chunk in enumerate(chunks, 1):
