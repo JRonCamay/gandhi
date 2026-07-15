@@ -4,7 +4,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from smart_worker_ops_file import VERSION as FILE_OPS_VERSION, run_file_functions as file_functions_smart, run_file_info as file_info_smart, run_file_read as file_read_smart, run_file_search as file_search_smart, run_file_write_smart as file_write_smart
 
-VERSION = "smart_worker_daemon_8768 v0.3.1"
+VERSION = "smart_worker_daemon_8768 v0.4.0"
 PORT = int(os.environ.get("SMART_WORKER_PORT", "8768"))
 ROOT = Path(os.environ.get("SMART_WORKER_DIR", r"D:\Projects\Chad\local\AI_MEMORY_FIN\SMART_WORKER_DONT_DELETE"))
 MAIN = os.environ.get("WRITER_INBOX_URL", "http://127.0.0.1:8766")
@@ -73,9 +73,19 @@ REGISTRY = {
         "status": "ready",
     },
     "file.read": {
-        "desc": "Read an allowed local text file through the smart worker file module.",
+        "desc": "Smart read with chunk cursors, line ranges, profile mode, missing-file suggestions, and file-change detection.",
         "safety": "read",
         "status": "ready",
+        "inputs": {
+            "path": "target file path",
+            "maxChars": "chunk size, default 12000",
+            "cursor": "optional cursor from a previous partial read",
+            "next": "optional bool to read the next cursor chunk",
+            "part": "optional chunk number",
+            "startLine/endLine": "optional exact line range",
+            "mode": "optional profile",
+            "full_read": "optional bool to return full content",
+        },
     },
     "file.search": {
         "desc": "Search an allowed local text file through the smart worker file module.",
@@ -129,6 +139,9 @@ def version_info():
             "main-daemon-status-callback",
             "sidecar-safe-migration",
             "file-write-smart",
+            "file-read-chunks",
+            "file-read-profile",
+            "file-read-missing-suggestions",
             "modular-worker-ops",
         ],
         "registry": {k: {"status": v["status"], "safety": v["safety"]} for k, v in REGISTRY.items()},
