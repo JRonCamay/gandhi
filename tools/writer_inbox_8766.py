@@ -2,7 +2,7 @@ import json,os,time,uuid,hashlib,gzip,threading,queue,urllib.request
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 
-VERSION="writer_inbox_8766 v0.4.9"
+VERSION="writer_inbox_8766 v0.5.0"
 QR=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
 MEM=Path(os.environ.get("MEMORY_DIR",r"D:\Projects\Chad\memory"))
 QB=os.environ.get("QUIETCHAT_BRIDGE_URL","http://127.0.0.1:8765/quietchat/api")
@@ -189,10 +189,10 @@ def slot_complete(p):
         ad=f.parent/"artifacts";ad.mkdir(parents=True,exist_ok=True)
         ext=str(p.get("format") or "md").strip(".").lower() or "md"
         out=ad/f"quietchat_reply_{r.get('message_id','message')}.{ext}"
-        out.write_text(reply,encoding="utf-8")
+        wr=file_write({"path":str(out),"content":reply,"mode":"upsert","overwrite":True})
         r["assistant_reply"]=f"Output is long. Saved as {out.name}"
         r["reply_mode"]="artifact";r["reply_line_count"]=len(lines)
-        arts.append({"type":ext,"title":out.name,"filename":out.name,"path":str(out),"bytes":out.stat().st_size,"line_count":len(lines),"display":"link","created_at":now()})
+        arts.append({"type":ext,"title":out.name,"filename":out.name,"path":str(out),"bytes":wr.get("bytes",out.stat().st_size if out.exists() else 0),"line_count":len(lines),"display":"link","write_engine":wr.get("write_engine","unknown"),"worker_state":wr.get("worker_state",""),"created_at":now()})
     else:
         r["assistant_reply"]=reply;r["reply_mode"]="inline";r["reply_line_count"]=len(lines)
     r["artifacts"]=arts
