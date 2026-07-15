@@ -2,7 +2,7 @@ import hashlib, json, os, queue, re, threading, time, traceback, urllib.request,
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-VERSION = "deepseek_memory_daemon_8769 v0.2.0"
+VERSION = "deepseek_memory_daemon_8769 v0.2.1"
 PORT = int(os.environ.get("DEEPSEEK_MEMORY_PORT", "8769"))
 ROOT = Path(os.environ.get("DEEPSEEK_MEMORY_DIR", r"D:\Projects\Chad\local\AI_MEMORY_FIN\DEEPSEEK_MEMORY_DONT_DELETE"))
 QUIETCHAT_ROOT = Path(os.environ.get("QUIETCHAT_DIR", r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
@@ -16,6 +16,7 @@ SCHEDULE_ENABLED = os.environ.get("DEEPSEEK_MEMORY_SCHEDULE_ENABLED", "0").lower
 SCHEDULE_DAYS = int(os.environ.get("DEEPSEEK_MEMORY_DAYS", "10"))
 CATCHUP_ON_START = os.environ.get("DEEPSEEK_MEMORY_CATCHUP_ON_START", "1").lower() in ("1", "true", "yes", "on")
 MAX_CHARS = int(os.environ.get("DEEPSEEK_MEMORY_MAX_CHARS", "18000"))
+DEFAULT_LIMIT = int(os.environ.get("DEEPSEEK_MEMORY_LIMIT", "0"))
 
 Q = queue.Queue()
 JOBS = {}
@@ -111,6 +112,7 @@ def version_info():
         "schedule_enabled": SCHEDULE_ENABLED,
         "schedule_time": SCHEDULE_TIME,
         "schedule_days": SCHEDULE_DAYS,
+        "default_limit": DEFAULT_LIMIT,
         "catchup_on_start": CATCHUP_ON_START,
         "api_configured": bool(DEEPSEEK_API_KEY),
         "model": DEEPSEEK_MODEL,
@@ -119,7 +121,7 @@ def version_info():
     }
 
 
-def collect_records(chat_url="", chat_folder="", days=10, limit=500):
+def collect_records(chat_url="", chat_folder="", days=10, limit=DEFAULT_LIMIT):
     if chat_folder:
         root = Path(chat_folder)
     elif chat_url:
@@ -137,7 +139,10 @@ def collect_records(chat_url="", chat_folder="", days=10, limit=500):
             rows.append({"path": str(path), "mtime": path.stat().st_mtime, "record": record})
         except Exception:
             pass
-    return rows[-max(1, min(int(limit), 2000)):]
+    limit = int(limit or 0)
+    if limit > 0:
+        return rows[-limit:]
+    return rows
 
 
 def latest_chat_folder():
@@ -369,7 +374,7 @@ def write_pending_summary(data, files):
 
 
 def memory_extract(params, job=None):
-    rows = collect_records(params.get("chatUrl") or params.get("chat_url", ""), params.get("chat_folder", ""), params.get("days", SCHEDULE_DAYS), params.get("limit", 500))
+    rows = collect_records(params.get("chatUrl") or params.get("chat_url", ""), params.get("chat_folder", ""), params.get("days", SCHEDULE_DAYS), params.get("limit", DEFAULT_LIMIT))
     chunks = chunk_text(rows, int(params.get("maxChars") or MAX_CHARS))
     summaries = []
     for i, chunk in enumerate(chunks, 1):
