@@ -2,11 +2,12 @@ import json,os,time,uuid,hashlib,gzip,threading,queue,urllib.request
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 
-VERSION="writer_inbox_8766 v0.4.7"
+VERSION="writer_inbox_8766 v0.4.8"
 QR=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
 MEM=Path(os.environ.get("MEMORY_DIR",r"D:\Projects\Chad\memory"))
 QB=os.environ.get("QUIETCHAT_BRIDGE_URL","http://127.0.0.1:8765/quietchat/api")
 QW=os.environ.get("QUIETCHAT_WRITER_URL","http://127.0.0.1:8767")
+SW=os.environ.get("SMART_WORKER_URL","http://127.0.0.1:8768")
 FR=[Path(x.strip()) for x in os.environ.get("LOCAL_FILE_ALLOWED_ROOTS",r"D:\Projects\Chad;D:\Projects\Chad\local\AI_MEMORY_FIN").split(";") if x.strip()]
 Q=queue.Queue();J={};S={};G={};QC_SLOT={}
 
@@ -15,7 +16,10 @@ def version_info():
     writer={}
     try:writer=json.loads(urllib.request.urlopen(QW+"/version",timeout=1).read().decode())
     except Exception as e:writer={"status":"offline","msg":str(e)}
-    return {"name":"writer_inbox","version":VERSION,"port":8766,"writer":writer,"features":["qc.slot","quietchat-view","quietchat-search","quietchat-pin","file-ops","scratch","segment","queue","writer-daemon-queue","qc-blip-data-saved-events"]}
+    smart={}
+    try:smart=json.loads(urllib.request.urlopen(SW+"/version",timeout=1).read().decode())
+    except Exception as e:smart={"status":"offline","msg":str(e)}
+    return {"name":"writer_inbox","version":VERSION,"port":8766,"writer":writer,"smart_worker":smart,"features":["qc.slot","quietchat-view","quietchat-search","quietchat-pin","file-ops","smart-worker-file-write","scratch","segment","queue","writer-daemon-queue","qc-blip-data-saved-events"]}
 def rd(p):return json.loads(Path(p).read_text(encoding="utf-8"))
 def wb(p,b):Path(p).parent.mkdir(parents=True,exist_ok=True);Path(p).write_bytes(b)
 def wj(p,x):Path(p).parent.mkdir(parents=True,exist_ok=True);Path(p).write_text(json.dumps(x,ensure_ascii=False,indent=2),encoding="utf-8")
@@ -61,6 +65,10 @@ def safe(p):
     p=Path(p).expanduser().resolve()
     if not any(inside(p,r) or p==Path(r).expanduser().resolve() for r in FR):raise RuntimeError("blocked path")
     return p
+def smart_op(op,p,timeout=20):
+    b=json.dumps({"op":op,"params":p or {}},ensure_ascii=False).encode()
+    req=urllib.request.Request(SW+"/op",data=b,headers={"Content-Type":"application/json"},method="POST")
+    return json.loads(urllib.request.urlopen(req,timeout=timeout).read().decode())
 def cid(u):
     import re
     m=re.search(r"/c/([0-9a-f-]{20,})",str(u),re.I)
@@ -255,7 +263,17 @@ def file_info(p):
 def file_read(p):
     f=safe(p["path"]);t=f.read_text(encoding="utf-8",errors="replace");return {"path":str(f),"content":t[:int(p.get("maxChars",12000))],"bytes":f.stat().st_size,"sha256":sha(f)}
 def file_write(p):
-    f=safe(p["path"]);b=str(p.get("content") or p.get("text","")).encode("utf-8");wb(f,b);return {"path":str(f),"bytes":len(b),"sha256":sha(f)}
+    f=safe(p["path"]);content=str(p.get("content") if "content" in p else p.get("text",""));mode=str(p.get("mode") or ("upsert" if p.get("overwrite",True) else "create")).lower()
+    try:
+        r=smart_op("file.write.smart",{**p,"path":str(f),"content":content,"mode":mode})
+        rr=(r.get("result") or {}).get("result") or r.get("result") or {}
+        if rr.get("state") in ("created","updated","dry_run"):return {"path":rr.get("path",str(f)),"bytes":rr.get("bytes",len(content.encode())),"sha256":rr.get("final_sha256") or rr.get("new_sha256"),"worker":r}
+        raise RuntimeError(rr.get("error") or rr.get("state") or "worker write failed")
+    except Exception as e:
+        if p.get("expected_sha256"):raise
+        b=content.encode("utf-8")
+        if f.exists() and mode=="create":raise RuntimeError("exists")
+        wb(f,b);return {"path":str(f),"bytes":len(b),"sha256":sha(f),"worker_fallback":str(e)}
 def file_search(p):
     f=safe(p["path"]);q=str(p.get("query") or p.get("q",""));mx=int(p.get("max",50));out=[]
     for i,l in enumerate(f.read_text(encoding="utf-8",errors="replace").splitlines(),1):
