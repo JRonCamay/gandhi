@@ -5,12 +5,13 @@ from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 from mcp.server.streamable_http import TransportSecuritySettings
 
-VERSION="gandhi_mcp_server_control_lite v0.4.1"
+VERSION="gandhi_mcp_server_control_lite v0.4.2"
 mcp=FastMCP("Gandhi Control Lite",host="127.0.0.1",port=int(os.environ.get("GANDHI_PORT","8001")),streamable_http_path="/mcp",transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=True,allowed_hosts=[x.strip() for x in os.environ.get("GANDHI_ALLOWED_HOSTS","127.0.0.1,localhost,perch-tripping-crushed.ngrok-free.dev").split(",") if x.strip()]))
 QR=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
 FR=[Path(x.strip()) for x in os.environ.get("LOCAL_FILE_ALLOWED_ROOTS",r"D:\Projects\Chad;D:\Projects\Chad\local\AI_MEMORY_FIN").split(";") if x.strip()]
 WQ=Path(os.environ.get("WRITER_QUEUE_DIR",r"D:\Projects\Chad\writer_queue"))
 WI=os.environ.get("WRITER_INBOX_URL","http://127.0.0.1:8766")
+SW=os.environ.get("SMART_WORKER_URL","http://127.0.0.1:8768")
 CID=re.compile(r"(?i)(?:https?://[^/]+)?(?:/[^?#]*)?/c/([0-9a-f-]{20,})|^([0-9a-f-]{20,})$")
 MID=re.compile(r"^QC-[A-Za-z0-9_.-]{3,64}$")
 CMDS={
@@ -180,9 +181,17 @@ class QC:
 
 qc=QC()
 def f_write(o):
-    p=safe(o.get("path"));b=str(ck(o.get("content") if "content" in o else o.get("text"),"content")).encode()
-    if p.exists() and not o.get("overwrite",False):raise E("exists")
-    wb(p,b);return ok({"path":str(p),"bytes":len(b),"sha256":sha(p)})
+    p=safe(o.get("path"));content=str(ck(o.get("content") if "content" in o else o.get("text"),"content"));mode=str(o.get("mode") or ("upsert" if o.get("overwrite",False) else "create")).lower()
+    try:
+        r=swop("file.write.smart",{**o,"path":str(p),"content":content,"mode":mode})
+        rr=(r.get("result") or {}).get("result") or r.get("result") or {}
+        if rr.get("state") in ("created","updated","dry_run"):return ok({"path":rr.get("path",str(p)),"bytes":rr.get("bytes",len(content.encode())),"sha256":rr.get("final_sha256") or rr.get("new_sha256"),"worker":r})
+        raise E(rr.get("error") or rr.get("state") or "worker write failed")
+    except Exception as e:
+        b=content.encode()
+        if o.get("expected_sha256"):raise
+        if p.exists() and mode=="create":raise E("exists")
+        wb(p,b);return ok({"path":str(p),"bytes":len(b),"sha256":sha(p),"worker_fallback":str(e)})
 def f_batch(o):
     fs=ck(o.get("files"),"files");out=[];bad=[]
     for i,x in enumerate(fs):
@@ -227,6 +236,9 @@ def ip(o):
         body=e.read().decode("utf-8","replace")
         try:return json.loads(body)
         except Exception:return {"status":"error","err":"HTTP","code":e.code,"body":body}
+def swop(op,p,timeout=20):
+    b=json.dumps({"op":op,"params":p or {}},ensure_ascii=False).encode();req=urllib.request.Request(SW+"/op",data=b,headers={"Content-Type":"application/json"},method="POST")
+    return json.loads(urllib.request.urlopen(req,timeout=timeout).read().decode())
 def rn(kind,o):return jq({"kind":kind,"payload":o,"ram":True})
 def sop(op,o):return ip({"op":op,"params":o})
 DIS={"ping":lambda o:ok({"server":"gandhi_control_lite","version":VERSION}),"version":lambda o:ok({"result":version_info()}),"system.version":lambda o:ok({"result":version_info()}),"message":lambda o:sop("message",o),"qc.slot.get":lambda o:sop("qc.slot.get",o),"qc.slot.process":lambda o:sop("qc.slot.process",o),"qc.slot.status":lambda o:sop("qc.slot.status",o),"qc.slot.complete":lambda o:sop("qc.slot.complete",o),"qc.reply":lambda o:sop("qc.reply",o),"done":lambda o:sop("done",o),"qc.done":lambda o:sop("qc.done",o),"qc.slot.clear":lambda o:sop("qc.slot.clear",o),"qc.create":qc.create,"qc.next":qc.next,"qc.process":qc.process,"qc.status":qc.status,"qc.complete":qc.complete,"qc.get":qc.get,"qc.list":qc.list,"qc.view":lambda o:ip({"op":"qc.view","params":o}),"qc.search":lambda o:ip({"op":"qc.search","params":o}),"qc.pin":lambda o:ip({"op":"qc.pin","params":o}),"file.write":f_write,"file.batch":f_batch,"file.read":lambda o:ip({"op":"file.read","params":o}),"file.info":lambda o:ip({"op":"file.info","params":o}),"file.search":lambda o:ip({"op":"file.search","params":o}),"file.functions":lambda o:ip({"op":"file.functions","params":o}),"memory.exportChat":qc.export,"writer.queue":jq,"writer.status":js,"writer.flush":jf,"scratch.note":lambda o:rn("scratch.note",o),"scratch.list":lambda o:ig("/scratch"),"scratch.get":lambda o:ig("/scratch/"+ck(o.get("id"),"id")),"seg.note":lambda o:rn("seg.note",o),"seg.list":lambda o:ig("/segment"),"seg.get":lambda o:ig("/segment/"+ck(o.get("id"),"id")),"daemon.op":ip}
