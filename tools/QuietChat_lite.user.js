@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.30
+// @version      0.3.31
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,8 +15,8 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.30";
-  let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false,es=null;
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.31";
+  let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false,es=null,eventCursor=0;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
     const body=JSON.stringify(payload||{});
@@ -264,16 +264,17 @@
     const longPoll=()=>{
       const onDone=()=>setTimeout(longPoll,150);
       if(typeof GM_xmlhttpRequest==="function"){
-        GM_xmlhttpRequest({method:"GET",url:API+"/events/next",timeout:4500,onload:r=>{
+        GM_xmlhttpRequest({method:"GET",url:API+"/events/next?since="+eventCursor,timeout:4500,onload:r=>{
           try{
             const d=JSON.parse(r.responseText||"{}"),x=d.result||{};
+            if(x.id)eventCursor=Math.max(eventCursor,x.id);
             if(x.event&&x.event!=="timeout")refreshPayload(x.payload||{});
           }catch{}
           onDone();
         },onerror:onDone,ontimeout:onDone});
         return;
       }
-      fetch(API+"/events/next").then(r=>r.json()).then(d=>{const x=d.result||{};if(x.event&&x.event!=="timeout")refreshPayload(x.payload||{});}).finally(onDone);
+      fetch(API+"/events/next?since="+eventCursor).then(r=>r.json()).then(d=>{const x=d.result||{};if(x.id)eventCursor=Math.max(eventCursor,x.id);if(x.event&&x.event!=="timeout")refreshPayload(x.payload||{});}).finally(onDone);
     };
     if(typeof GM_xmlhttpRequest==="function"){es={mode:"long-poll"};longPoll();return;}
     try{
