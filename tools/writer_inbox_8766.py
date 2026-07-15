@@ -2,16 +2,20 @@ import json,os,time,uuid,hashlib,gzip,threading,queue,urllib.request
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 
-VERSION="writer_inbox_8766 v0.4.3"
+VERSION="writer_inbox_8766 v0.4.4"
 QR=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
 MEM=Path(os.environ.get("MEMORY_DIR",r"D:\Projects\Chad\memory"))
 QB=os.environ.get("QUIETCHAT_BRIDGE_URL","http://127.0.0.1:8765/quietchat/api")
+QW=os.environ.get("QUIETCHAT_WRITER_URL","http://127.0.0.1:8767")
 FR=[Path(x.strip()) for x in os.environ.get("LOCAL_FILE_ALLOWED_ROOTS",r"D:\Projects\Chad;D:\Projects\Chad\local\AI_MEMORY_FIN").split(";") if x.strip()]
 Q=queue.Queue();J={};S={};G={};QC_SLOT={}
 
 def now():return time.strftime("%Y-%m-%dT%H:%M:%S%z")
 def version_info():
-    return {"name":"writer_inbox","version":VERSION,"port":8766,"features":["qc.slot","quietchat-view","quietchat-search","quietchat-pin","file-ops","scratch","segment","queue"]}
+    writer={}
+    try:writer=json.loads(urllib.request.urlopen(QW+"/version",timeout=1).read().decode())
+    except Exception as e:writer={"status":"offline","msg":str(e)}
+    return {"name":"writer_inbox","version":VERSION,"port":8766,"writer":writer,"features":["qc.slot","quietchat-view","quietchat-search","quietchat-pin","file-ops","scratch","segment","queue","writer-daemon-queue"]}
 def rd(p):return json.loads(Path(p).read_text(encoding="utf-8"))
 def wb(p,b):Path(p).parent.mkdir(parents=True,exist_ok=True);Path(p).write_bytes(b)
 def wj(p,x):Path(p).parent.mkdir(parents=True,exist_ok=True);Path(p).write_text(json.dumps(x,ensure_ascii=False,indent=2),encoding="utf-8")
@@ -22,6 +26,14 @@ def notify_ui(event,payload):
         urllib.request.urlopen(req,timeout=2).read()
     except Exception:
         pass
+def enqueue_write(path,record):
+    try:
+        b=json.dumps({"path":str(path),"record":record},ensure_ascii=False).encode()
+        req=urllib.request.Request(QW+"/queue",data=b,headers={"Content-Type":"application/json"},method="POST")
+        return json.loads(urllib.request.urlopen(req,timeout=2).read().decode())
+    except Exception:
+        rec=persist_record(path,record)
+        return {"status":"fallback","result":{"record":rec}}
 def sha(p):
     h=hashlib.sha256()
     with Path(p).open("rb") as f:
@@ -165,8 +177,8 @@ def slot_complete(p):
     def save_done():
         global QC_SLOT
         try:
-            saved=persist_record(f,r)
-            notify_ui("qc.saved",{"chat_url":saved.get("chat_url"),"chat_id":saved.get("chat_id"),"message_id":saved.get("message_id"),"state":saved.get("state"),"path":str(f),"record":saved})
+            wr=enqueue_write(f,r)
+            notify_ui("qc.saved",{"chat_url":r.get("chat_url"),"chat_id":r.get("chat_id"),"message_id":r.get("message_id"),"state":r.get("state"),"path":str(f),"record":r,"writer":wr})
             QC_SLOT={}
         except Exception as e:
             notify_ui("qc.error",{"chat_url":r.get("chat_url"),"chat_id":r.get("chat_id"),"message_id":r.get("message_id"),"error":str(e)})
