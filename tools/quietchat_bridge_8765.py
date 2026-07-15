@@ -2,7 +2,7 @@ import json,os,re,time,uuid,urllib.request,queue
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 
-VERSION="quietchat_bridge_8765 v0.4.2"
+VERSION="quietchat_bridge_8765 v0.4.3"
 ROOT=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
 WI=os.environ.get("WRITER_INBOX_URL","http://127.0.0.1:8766")
 SUBS=[]
@@ -171,6 +171,8 @@ class H(BaseHTTPRequestHandler):
                 emit(x.get("event") or "qc.updated",x.get("payload") or x)
                 y={"status":"success","subscribers":len(SUBS)}
             elif s.path.endswith("/create"):y=create(x)
+            elif s.path.endswith("/view"):
+                y=daemon_op(x.get("cmd") or "qc.view",x.get("params") or x)
             elif s.path.endswith("/scan"):y=scan(x)
             elif s.path.endswith("/get"):y=get(x)
             else:raise ValueError("bad endpoint")
