@@ -2,7 +2,7 @@ import json,os,re,time,uuid,urllib.request,queue
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 
-VERSION="quietchat_bridge_8765 v0.4.4"
+VERSION="quietchat_bridge_8765 v0.4.5"
 ROOT=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
 WI=os.environ.get("WRITER_INBOX_URL","http://127.0.0.1:8766")
 SUBS=[]
@@ -34,6 +34,7 @@ BOOTSTRAP_HELP={
         "qc.slot.get":"returns the current QuietChat RAM slot",
         "qc.slot.status":"updates status_log in the current local message.json",
         "qc.slot.complete":"writes assistant reply/summary/artifacts into message.json, then clears RAM",
+        "qc.reply":"submits an assistant reply that contains status:[DONE]",
         "qc.slot.clear":"clears the one RAM slot",
         "qc.view":"returns QuietChat messages for UI display",
         "qc.search":"searches QuietChat history",
@@ -170,6 +171,8 @@ class H(BaseHTTPRequestHandler):
                 emit(x.get("event") or "qc.updated",x.get("payload") or x)
                 y={"status":"success","subscribers":len(SUBS)}
             elif s.path.endswith("/create"):y=create(x)
+            elif s.path.endswith("/reply"):
+                y=daemon_op("qc.reply",x)
             elif s.path.endswith("/view"):
                 y=daemon_op(x.get("cmd") or "qc.view",x.get("params") or x)
             elif s.path.endswith("/scan"):y=scan(x)
