@@ -2,7 +2,7 @@ import json,os,time,uuid,hashlib,gzip,threading,queue,urllib.request
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 
-VERSION="writer_inbox_8766 v0.5.0"
+VERSION="writer_inbox_8766 v0.5.1"
 QR=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
 MEM=Path(os.environ.get("MEMORY_DIR",r"D:\Projects\Chad\memory"))
 QB=os.environ.get("QUIETCHAT_BRIDGE_URL","http://127.0.0.1:8765/quietchat/api")
@@ -257,11 +257,25 @@ def export_chat(p):
     wj(MEM/"index.json",idx)
     return {"path":str(out),"archive":str(arc),"index":str(MEM/"index.json"),"bytes":out.stat().st_size,"records":len(rows),"sha256":sha(out)}
 def file_info(p):
-    f=safe(p["path"]);z=f.stat();r={"path":str(f),"file":f.is_file(),"dir":f.is_dir(),"bytes":z.st_size,"mtime":z.st_mtime}
-    if f.is_file():r["sha256"]=sha(f)
-    return r
+    f=safe(p["path"])
+    try:
+        r=smart_op("file.info",{**p,"path":str(f)})
+        rr=r.get("result") or {}
+        rr["read_engine"]=rr.get("read_engine","smart_worker")
+        return rr
+    except Exception as e:
+        z=f.stat();r={"path":str(f),"file":f.is_file(),"dir":f.is_dir(),"bytes":z.st_size,"mtime":z.st_mtime,"read_engine":"legacy_fallback","worker_fallback":str(e)}
+        if f.is_file():r["sha256"]=sha(f)
+        return r
 def file_read(p):
-    f=safe(p["path"]);t=f.read_text(encoding="utf-8",errors="replace");return {"path":str(f),"content":t[:int(p.get("maxChars",12000))],"bytes":f.stat().st_size,"sha256":sha(f)}
+    f=safe(p["path"])
+    try:
+        r=smart_op("file.read",{**p,"path":str(f)})
+        rr=r.get("result") or {}
+        rr["read_engine"]=rr.get("read_engine","smart_worker")
+        return rr
+    except Exception as e:
+        t=f.read_text(encoding="utf-8",errors="replace");return {"path":str(f),"content":t[:int(p.get("maxChars",12000))],"bytes":f.stat().st_size,"sha256":sha(f),"read_engine":"legacy_fallback","worker_fallback":str(e)}
 def file_write(p):
     f=safe(p["path"]);content=str(p.get("content") if "content" in p else p.get("text",""));mode=str(p.get("mode") or ("upsert" if p.get("overwrite",True) else "create")).lower()
     try:
@@ -275,19 +289,33 @@ def file_write(p):
         if f.exists() and mode=="create":raise RuntimeError("exists")
         wb(f,b);return {"path":str(f),"bytes":len(b),"sha256":sha(f),"write_engine":"legacy_fallback","worker_fallback":str(e)}
 def file_search(p):
-    f=safe(p["path"]);q=str(p.get("query") or p.get("q",""));mx=int(p.get("max",50));out=[]
-    for i,l in enumerate(f.read_text(encoding="utf-8",errors="replace").splitlines(),1):
-        if q in l:
-            out.append({"line":i,"text":l[:240]})
-            if len(out)>=mx:break
-    return {"path":str(f),"query":q,"matches":out,"count":len(out)}
+    f=safe(p["path"])
+    try:
+        r=smart_op("file.search",{**p,"path":str(f)})
+        rr=r.get("result") or {}
+        rr["read_engine"]=rr.get("read_engine","smart_worker")
+        return rr
+    except Exception as e:
+        q=str(p.get("query") or p.get("q",""));mx=int(p.get("max",50));out=[]
+        for i,l in enumerate(f.read_text(encoding="utf-8",errors="replace").splitlines(),1):
+            if q in l:
+                out.append({"line":i,"text":l[:240]})
+                if len(out)>=mx:break
+        return {"path":str(f),"query":q,"matches":out,"count":len(out),"read_engine":"legacy_fallback","worker_fallback":str(e)}
 def file_funcs(p):
     import re
-    f=safe(p["path"]);a=[]
-    for i,l in enumerate(f.read_text(encoding="utf-8",errors="replace").splitlines(),1):
-        m=re.match(r"\s*(?:async\s+)?def\s+([A-Za-z_]\w*)\s*\(|\s*(?:function\s+)?([A-Za-z_$][\w$]*)\s*\(",l)
-        if m:a.append({"line":i,"name":m.group(1) or m.group(2)})
-    return {"path":str(f),"functions":a,"count":len(a)}
+    f=safe(p["path"])
+    try:
+        r=smart_op("file.functions",{**p,"path":str(f)})
+        rr=r.get("result") or {}
+        rr["read_engine"]=rr.get("read_engine","smart_worker")
+        return rr
+    except Exception as e:
+        a=[]
+        for i,l in enumerate(f.read_text(encoding="utf-8",errors="replace").splitlines(),1):
+            m=re.match(r"\s*(?:async\s+)?def\s+([A-Za-z_]\w*)\s*\(|\s*(?:function\s+)?([A-Za-z_$][\w$]*)\s*\(",l)
+            if m:a.append({"line":i,"name":m.group(1) or m.group(2)})
+        return {"path":str(f),"functions":a,"count":len(a),"read_engine":"legacy_fallback","worker_fallback":str(e)}
 def op(x):
     o=x.get("op") or x.get("operation") or x.get("kind");p=x.get("params") or x.get("payload") or {}
     if o in ("version","system.version","daemon.version"):return version_info()
