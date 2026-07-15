@@ -5,13 +5,14 @@ from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 from mcp.server.streamable_http import TransportSecuritySettings
 
-VERSION="gandhi_mcp_server_control_lite v0.4.3"
+VERSION="gandhi_mcp_server_control_lite v0.4.4"
 mcp=FastMCP("Gandhi Control Lite",host="127.0.0.1",port=int(os.environ.get("GANDHI_PORT","8001")),streamable_http_path="/mcp",transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=True,allowed_hosts=[x.strip() for x in os.environ.get("GANDHI_ALLOWED_HOSTS","127.0.0.1,localhost,perch-tripping-crushed.ngrok-free.dev").split(",") if x.strip()]))
 QR=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
 FR=[Path(x.strip()) for x in os.environ.get("LOCAL_FILE_ALLOWED_ROOTS",r"D:\Projects\Chad;D:\Projects\Chad\local\AI_MEMORY_FIN").split(";") if x.strip()]
 WQ=Path(os.environ.get("WRITER_QUEUE_DIR",r"D:\Projects\Chad\writer_queue"))
 WI=os.environ.get("WRITER_INBOX_URL","http://127.0.0.1:8766")
 SW=os.environ.get("SMART_WORKER_URL","http://127.0.0.1:8768")
+DS=os.environ.get("DEEPSEEK_MEMORY_URL","http://127.0.0.1:8769")
 CID=re.compile(r"(?i)(?:https?://[^/]+)?(?:/[^?#]*)?/c/([0-9a-f-]{20,})|^([0-9a-f-]{20,})$")
 MID=re.compile(r"^QC-[A-Za-z0-9_.-]{3,64}$")
 CMDS={
@@ -49,13 +50,20 @@ CMDS={
 "seg.list":"ramSegmentList()",
 "seg.get":"ramSegmentGet(id)",
 "daemon.op":"daemonOp(op,params)"}
+CMDS.update({
+"deepseek.version":"deepseekMemoryVersion()",
+"deepseek.extract":"deepseekMemoryExtract(chatUrl?,days?,limit?)",
+"deepseek.latest":"deepseekMemoryLatest(maxChars?)",
+"text.correct":"correctTextWithDeepSeek(text)"})
 
 class E(Exception):pass
 def n():return time.strftime("%Y-%m-%dT%H:%M:%S%z")
 def ok(x=None):return {"status":"success",**(x or {})}
 def version_info():
     daemon=ip({"op":"version","params":{}})
-    return {"name":"gandhi_control_lite","version":VERSION,"port":int(os.environ.get("GANDHI_PORT","8001")),"daemon":daemon}
+    try:deepseek=dsop("version",{},timeout=2)
+    except Exception as e:deepseek={"status":"offline","msg":str(e)}
+    return {"name":"gandhi_control_lite","version":VERSION,"port":int(os.environ.get("GANDHI_PORT","8001")),"daemon":daemon,"deepseek_memory":deepseek}
 def er(c,e):return {"status":"error","err":c,"msg":str(e),"cmds":CMDS}
 def j(p):return json.loads(Path(p).read_text(encoding="utf-8"))
 def wj(p,x):wb(p,json.dumps(x,ensure_ascii=False,indent=2).encode())
@@ -239,9 +247,12 @@ def ip(o):
 def swop(op,p,timeout=20):
     b=json.dumps({"op":op,"params":p or {}},ensure_ascii=False).encode();req=urllib.request.Request(SW+"/op",data=b,headers={"Content-Type":"application/json"},method="POST")
     return json.loads(urllib.request.urlopen(req,timeout=timeout).read().decode())
+def dsop(op,p,timeout=90):
+    b=json.dumps({"op":op,"params":p or {}},ensure_ascii=False).encode();req=urllib.request.Request(DS+"/op",data=b,headers={"Content-Type":"application/json"},method="POST")
+    return json.loads(urllib.request.urlopen(req,timeout=timeout).read().decode())
 def rn(kind,o):return jq({"kind":kind,"payload":o,"ram":True})
 def sop(op,o):return ip({"op":op,"params":o})
-DIS={"ping":lambda o:ok({"server":"gandhi_control_lite","version":VERSION}),"version":lambda o:ok({"result":version_info()}),"system.version":lambda o:ok({"result":version_info()}),"message":lambda o:sop("message",o),"qc.slot.get":lambda o:sop("qc.slot.get",o),"qc.slot.process":lambda o:sop("qc.slot.process",o),"qc.slot.status":lambda o:sop("qc.slot.status",o),"qc.slot.complete":lambda o:sop("qc.slot.complete",o),"qc.reply":lambda o:sop("qc.reply",o),"done":lambda o:sop("done",o),"qc.done":lambda o:sop("qc.done",o),"qc.slot.clear":lambda o:sop("qc.slot.clear",o),"qc.create":qc.create,"qc.next":qc.next,"qc.process":qc.process,"qc.status":qc.status,"qc.complete":qc.complete,"qc.get":qc.get,"qc.list":qc.list,"qc.view":lambda o:ip({"op":"qc.view","params":o}),"qc.search":lambda o:ip({"op":"qc.search","params":o}),"qc.pin":lambda o:ip({"op":"qc.pin","params":o}),"file.write":f_write,"file.batch":f_batch,"file.read":lambda o:ip({"op":"file.read","params":o}),"file.info":lambda o:ip({"op":"file.info","params":o}),"file.search":lambda o:ip({"op":"file.search","params":o}),"file.functions":lambda o:ip({"op":"file.functions","params":o}),"memory.exportChat":qc.export,"writer.queue":jq,"writer.status":js,"writer.flush":jf,"scratch.note":lambda o:rn("scratch.note",o),"scratch.list":lambda o:ig("/scratch"),"scratch.get":lambda o:ig("/scratch/"+ck(o.get("id"),"id")),"seg.note":lambda o:rn("seg.note",o),"seg.list":lambda o:ig("/segment"),"seg.get":lambda o:ig("/segment/"+ck(o.get("id"),"id")),"daemon.op":ip}
+DIS={"ping":lambda o:ok({"server":"gandhi_control_lite","version":VERSION}),"version":lambda o:ok({"result":version_info()}),"system.version":lambda o:ok({"result":version_info()}),"message":lambda o:sop("message",o),"qc.slot.get":lambda o:sop("qc.slot.get",o),"qc.slot.process":lambda o:sop("qc.slot.process",o),"qc.slot.status":lambda o:sop("qc.slot.status",o),"qc.slot.complete":lambda o:sop("qc.slot.complete",o),"qc.reply":lambda o:sop("qc.reply",o),"done":lambda o:sop("done",o),"qc.done":lambda o:sop("qc.done",o),"qc.slot.clear":lambda o:sop("qc.slot.clear",o),"qc.create":qc.create,"qc.next":qc.next,"qc.process":qc.process,"qc.status":qc.status,"qc.complete":qc.complete,"qc.get":qc.get,"qc.list":qc.list,"qc.view":lambda o:ip({"op":"qc.view","params":o}),"qc.search":lambda o:ip({"op":"qc.search","params":o}),"qc.pin":lambda o:ip({"op":"qc.pin","params":o}),"file.write":f_write,"file.batch":f_batch,"file.read":lambda o:ip({"op":"file.read","params":o}),"file.info":lambda o:ip({"op":"file.info","params":o}),"file.search":lambda o:ip({"op":"file.search","params":o}),"file.functions":lambda o:ip({"op":"file.functions","params":o}),"memory.exportChat":qc.export,"writer.queue":jq,"writer.status":js,"writer.flush":jf,"scratch.note":lambda o:rn("scratch.note",o),"scratch.list":lambda o:ig("/scratch"),"scratch.get":lambda o:ig("/scratch/"+ck(o.get("id"),"id")),"seg.note":lambda o:rn("seg.note",o),"seg.list":lambda o:ig("/segment"),"seg.get":lambda o:ig("/segment/"+ck(o.get("id"),"id")),"deepseek.version":lambda o:dsop("version",o,timeout=5),"deepseek.extract":lambda o:dsop("memory.extract",o,timeout=120),"deepseek.latest":lambda o:dsop("memory.latest",o,timeout=10),"text.correct":lambda o:dsop("text.correct",o,timeout=90),"daemon.op":ip}
 
 @mcp.tool()
 def MCP_Control(controlObj:dict)->dict:
