@@ -2,10 +2,10 @@ import json,os,re,time,uuid,urllib.request,queue
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 
-VERSION="quietchat_bridge_8765 v0.4.5"
+VERSION="quietchat_bridge_8765 v0.4.6"
 ROOT=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
 WI=os.environ.get("WRITER_INBOX_URL","http://127.0.0.1:8766")
-SUBS=[]
+SUBS=[];EVENTS=[];SEQ=0
 CID=re.compile(r"(?i)(?:https?://[^/]+)?(?:/[^?#]*)?/c/([0-9a-f-]{20,})|^([0-9a-f-]{20,})$")
 MID=re.compile(r"^QC-[A-Za-z0-9_.-]{3,64}$")
 BOOTSTRAP_HELP={
@@ -64,8 +64,11 @@ def mid(v=""):
 def rd(p):return json.loads(p.read_text(encoding="utf-8"))
 def wr(p,d):p.parent.mkdir(parents=True,exist_ok=True);p.write_text(json.dumps(d,ensure_ascii=False,indent=2),encoding="utf-8")
 def emit(event,payload):
+    global SEQ
     dead=[]
-    item={"event":event,"payload":payload,"created_at":now()}
+    SEQ+=1;item={"id":SEQ,"event":event,"payload":payload,"created_at":now()}
+    EVENTS.append(item)
+    if len(EVENTS)>50:del EVENTS[:-50]
     for q in list(SUBS):
         try:q.put_nowait(item)
         except Exception:dead.append(q)
@@ -129,6 +132,13 @@ class H(BaseHTTPRequestHandler):
     def do_OPTIONS(s):s.send_response(204);s.end_headers()
     def do_GET(s):
         if s.path.endswith("/events/next"):
+            import urllib.parse
+            qs=urllib.parse.parse_qs(urllib.parse.urlparse(s.path).query);since=int((qs.get("since") or ["0"])[0] or 0)
+            for old in EVENTS:
+                if old.get("id",0)>since:
+                    b=json.dumps({"status":"success","result":old},ensure_ascii=False).encode()
+                    s.send_response(200);s.send_header("content-type","application/json");s.send_header("content-length",str(len(b)));s.end_headers();s.wfile.write(b)
+                    return
             q=queue.Queue(maxsize=1);SUBS.append(q)
             try:
                 try:item=q.get(timeout=2)
