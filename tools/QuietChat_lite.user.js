@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.38
+// @version      0.3.39
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,8 +15,8 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.38";
-  let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false,es=null,eventCursor=0,latestCursor=0,refreshTimer=null,eventSlot=null,domStatusSlot="",domStatusTimer=null,domStatusUntil=0;
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.39";
+  let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false,es=null,eventCursor=0,latestCursor=0,refreshTimer=null,eventSlot=null,domStatusSlot="",domStatusTimer=null,domStatusUntil=0,domMutSlot="";
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
     const body=JSON.stringify(payload||{});
@@ -134,12 +134,29 @@
     const vals=[...document.querySelectorAll(qs)].filter(visible).map(n=>(n.innerText||n.textContent||"").trim()).map(t=>t.replace(/^\[?(pending|completed|error)\]?\s*/i,"")).filter(t=>t&&t.length<180&&re.test(t));
     return vals.at(-1)||"";
   }
+  function mutationStatus(muts){
+    const re=/\b(opening|opened|thinking|working|running|reading|writing|editing|searching|pushing|committing|fetching|loading|generating|analyzing|checking|updating|saving|calling|using|browsing|navigating|inspecting|applying|patching|installing|resolving|creating|deleting|replacing|uploading|downloading|cloning|compiling|testing|verifying|waiting|retrying|error|failed|full|mcp|github|tool|command)\b/i;
+    const vals=[];
+    for(const m of muts){
+      const nodes=[m.target,...m.addedNodes].filter(n=>n&&n.nodeType===1&&!n.closest?.(`#${ID}`));
+      for(const n of nodes){
+        const t=(n.innerText||n.textContent||"").replace(/\s+/g," ").trim();
+        if(t&&t.length<220&&re.test(t))vals.push(t);
+        const a=[n.getAttribute?.("aria-label"),n.getAttribute?.("title"),n.getAttribute?.("data-testid")].filter(Boolean).join(" ").trim();
+        if(a&&re.test(a))vals.push(a);
+      }
+    }
+    const v=vals.at(-1)||"";
+    if(v&&v!==domMutSlot){domMutSlot=v;return v;}
+    return "";
+  }
   function wireDomStatusObserver(){
-    const tick=()=>{
+    const tick=(muts=[])=>{
       clearTimeout(domStatusTimer);
-      domStatusTimer=setTimeout(()=>setDomStatus(extractDomStatus()),120);
+      const fromMutation=mutationStatus(muts);
+      domStatusTimer=setTimeout(()=>setDomStatus(fromMutation||extractDomStatus()),120);
     };
-    new MutationObserver(tick).observe(document.body,{childList:true,subtree:true,characterData:true});
+    new MutationObserver(tick).observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:["aria-label","title","data-testid","class"]});
     tick();
   }
   function chatId(){return (location.href.match(/\/c\/([0-9a-f-]{20,})/i)||[])[1]||"";}
