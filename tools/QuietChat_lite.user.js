@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.22
+// @version      0.3.23
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,7 +15,7 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.22";
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.23";
   let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
@@ -249,7 +249,7 @@
     lock(true);stat("creating...");
     try{
       const d=await req("/create",{chat_url:location.href,conversation_title:document.title||"ChatGPT",user_message:txt,metadata:{source:"qc-lite",url:location.href}});
-      ta.value="";await load(true);goNewest();sendToChat(d.trigger||`Use quietchat_process_message for ${d.message_id}.`);
+      ta.value="";await load(true);goNewest();sendToChat(d.trigger||"@mcp message");
     }catch(e){stat("send failed: "+e.message);lock(false);}
   }
   function sendToChat(t){
