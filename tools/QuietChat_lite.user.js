@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.43
+// @version      0.3.44
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,7 +15,7 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.43";
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.44";
   let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false,es=null,eventCursor=0,latestCursor=0,refreshTimer=null,eventSlot=null,domStatusSlot="",domStatusTimer=null,domStatusMsgId="",domMutSlot="";
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
@@ -232,7 +232,7 @@
     if(last.length<=win||bh<20)return;
     const hh=Math.max(108,Math.min(bh-12,Math.round(bh*.95)));
     th.style.height=hh+"px";
-    if(!force&&th.dataset.free==="1")return;
+    if(!force&&(th.dataset.free==="1"||th.dataset.bounce==="1"))return;
     th.style.top=(max?Math.round((bh-hh)*pos/max):0)+"px";
   }
   function wireFakeScroll(h){
@@ -258,7 +258,7 @@
       th.style.transition="";
       th.style.top=Math.max(0,Math.min(span,y-dy-r.top))+"px";
     };
-    const bounceThumb=()=>{const r=bar.getBoundingClientRect(),hh=th.offsetHeight,span=Math.max(0,r.height-hh);th.style.transition="top .22s cubic-bezier(.2,1.4,.35,1)";th.style.top=Math.round(span/2)+"px";setTimeout(()=>{th.dataset.free="";th.style.transition="";updateBar();},260);};
+    const bounceThumb=()=>{const r=bar.getBoundingClientRect(),hh=th.offsetHeight,span=Math.max(0,r.height-hh);th.dataset.bounce="1";th.style.transition="top .22s cubic-bezier(.2,1.4,.35,1)";th.style.top=Math.round(span/2)+"px";setTimeout(()=>{th.dataset.free="";th.dataset.bounce="";th.style.transition="";},260);};
     th.onpointerdown=e=>{drag=true;th.dataset.free="1";dy=e.clientY-th.getBoundingClientRect().top;th.setPointerCapture(e.pointerId);moveThumb(e.clientY);checkEdge(e.clientY);e.preventDefault();};
     th.onpointermove=e=>{if(!drag)return;moveThumb(e.clientY);checkEdge(e.clientY);};
     th.onpointerup=e=>{drag=false;stopEdge();try{th.releasePointerCapture(e.pointerId);}catch{};bounceThumb();};
