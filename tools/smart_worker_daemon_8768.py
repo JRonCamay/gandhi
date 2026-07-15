@@ -2,7 +2,7 @@ import hashlib, json, os, queue, shutil, tempfile, threading, time, traceback, u
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-VERSION = "smart_worker_daemon_8768 v0.2.0"
+VERSION = "smart_worker_daemon_8768 v0.2.1"
 PORT = int(os.environ.get("SMART_WORKER_PORT", "8768"))
 ROOT = Path(os.environ.get("SMART_WORKER_DIR", r"D:\Projects\Chad\local\AI_MEMORY_FIN\SMART_WORKER_DONT_DELETE"))
 MAIN = os.environ.get("WRITER_INBOX_URL", "http://127.0.0.1:8766")
@@ -394,6 +394,23 @@ def route(op, params):
     if op in ("task.result", "result"):
         job = load_job(params.get("job_id") or params.get("id"))
         return {"job": job, "result": job.get("result"), "error": job.get("error")}
+    if op in OPS:
+        job = {
+            "id": params.get("job_id") or job_id(),
+            "op": op,
+            "params": params,
+            "state": "running",
+            "created_at": now(),
+            "updated_at": now(),
+            "callback": params.get("callback") or {},
+            "status_log": [],
+        }
+        save_job(job)
+        result = execute(job)
+        job["result"] = result
+        job["finished_at"] = now()
+        emit(job, "done", f"Worker completed {op}.", {"result": result})
+        return {"job": job, "result": result}
     raise RuntimeError(f"unknown op: {op}")
 
 
