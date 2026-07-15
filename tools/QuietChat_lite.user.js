@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.37
+// @version      0.3.38
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,7 +15,7 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.37";
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.38";
   let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false,es=null,eventCursor=0,latestCursor=0,refreshTimer=null,eventSlot=null,domStatusSlot="",domStatusTimer=null,domStatusUntil=0;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
@@ -109,6 +109,8 @@
   }
   function setDomStatus(t){
     t=String(t||"").replace(/\s+/g," ").trim();
+    t=t.replace(/^\[?(pending|completed|error)\]?\s*/i,"");
+    if(/^QuietChat Lite\b/i.test(t)||/\bshown · window\b/i.test(t))t="";
     if(t.length>140)t=t.slice(0,137)+"...";
     if(!t&&Date.now()<domStatusUntil)return;
     if(domStatusSlot===t)return;
@@ -124,12 +126,12 @@
   }
   function visible(el){
     const r=el.getBoundingClientRect(),s=getComputedStyle(el);
-    return r.width>0&&r.height>0&&s.visibility!=="hidden"&&s.display!=="none";
+    return !el.closest(`#${ID}`)&&r.width>0&&r.height>0&&s.visibility!=="hidden"&&s.display!=="none";
   }
   function extractDomStatus(){
     const re=/\b(thinking|working|running|opening|opened|reading|writing|editing|searching|pushing|committing|fetching|loading|generating|analyzing|checking|updating|saving|calling|using|browsing|navigating|inspecting|applying|patching|installing|resolving|creating|deleting|replacing|uploading|downloading|cloning|compiling|testing|verifying|waiting|retrying|error|failed|full)\b/i;
     const qs='[aria-live],[role="status"],[data-testid*="status" i],[data-testid*="toast" i],[class*="status" i],[class*="text-token-text-secondary" i],main div,main span';
-    const vals=[...document.querySelectorAll(qs)].filter(visible).map(n=>(n.innerText||n.textContent||"").trim()).filter(t=>t&&t.length<180&&re.test(t));
+    const vals=[...document.querySelectorAll(qs)].filter(visible).map(n=>(n.innerText||n.textContent||"").trim()).map(t=>t.replace(/^\[?(pending|completed|error)\]?\s*/i,"")).filter(t=>t&&t.length<180&&re.test(t));
     return vals.at(-1)||"";
   }
   function wireDomStatusObserver(){
@@ -276,7 +278,7 @@
     updateNewest();
     stat(`${m.length} shown · window ${pos+1}-${Math.min(pos+win,all.length)} of ${all.length} · ${(all.at(-1)||{}).state||"ready"}`);
   }
-  function statusText(r){const l=(r.status_log||[]).at(-1),live=Date.now()<domStatusUntil?domStatusSlot:"",note=(l&&l.note)||live||"Waiting for reply.";return `[${r.state||"pending"}] ${note}`;}
+  function statusText(r){const l=(r.status_log||[]).at(-1),live=Date.now()<domStatusUntil?domStatusSlot:"";return live||(l&&l.note)||"Waiting for reply.";}
   async function savePin(el,id,side,name,msg){
     try{
       await dop("qc.pin",{chatUrl:location.href,msgId:id,side,pinName:name});
