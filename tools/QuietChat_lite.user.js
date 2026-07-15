@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.39
+// @version      0.3.40
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,8 +15,8 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.39";
-  let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false,es=null,eventCursor=0,latestCursor=0,refreshTimer=null,eventSlot=null,domStatusSlot="",domStatusTimer=null,domStatusUntil=0,domMutSlot="";
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.40";
+  let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false,es=null,eventCursor=0,latestCursor=0,refreshTimer=null,eventSlot=null,domStatusSlot="",domStatusTimer=null,domStatusMsgId="",domMutSlot="";
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
     const body=JSON.stringify(payload||{});
@@ -90,6 +90,7 @@
   }
   function upsertLocal(r){
     if(!r||!r.message_id)return;
+    if(!r.assistant_reply&&r.state!=="completed"&&r.message_id!==domStatusMsgId){domStatusSlot="";domMutSlot="";domStatusMsgId=r.message_id;}
     last=[...last.filter(x=>x.message_id!==r.message_id),r];
     toNewest=true;jump=true;render({messages:last});
   }
@@ -112,15 +113,15 @@
     t=t.replace(/^\[?(pending|completed|error)\]?\s*/i,"");
     if(/^QuietChat Lite\b/i.test(t)||/\bshown · window\b/i.test(t))t="";
     if(t.length>140)t=t.slice(0,137)+"...";
-    if(!t&&Date.now()<domStatusUntil)return;
+    if(!t)return;
     if(domStatusSlot===t)return;
     domStatusSlot=t;
-    domStatusUntil=t?Date.now()+6000:0;
     paintDomStatus();
   }
   function paintDomStatus(){
     const r=[...last].reverse().find(x=>x&&x.state!=="completed"&&!x.assistant_reply);
     if(!r||!r.message_id)return;
+    domStatusMsgId=r.message_id;
     const txt=statusText(r);
     document.querySelectorAll(`#${ID} .msg.a[data-mid="${CSS.escape(r.message_id)}"]`).forEach(el=>{el.textContent=txt;});
   }
@@ -129,13 +130,13 @@
     return !el.closest(`#${ID}`)&&r.width>0&&r.height>0&&s.visibility!=="hidden"&&s.display!=="none";
   }
   function extractDomStatus(){
-    const re=/\b(thinking|working|running|opening|opened|reading|writing|editing|searching|pushing|committing|fetching|loading|generating|analyzing|checking|updating|saving|calling|using|browsing|navigating|inspecting|applying|patching|installing|resolving|creating|deleting|replacing|uploading|downloading|cloning|compiling|testing|verifying|waiting|retrying|error|failed|full)\b/i;
+    const re=/\b(thinking|working|running|opening|opened|reading|writing|editing|searching|pushing|committing|fetching|loading|generating|analyzing|checking|updating|saving|calling|using|browsing|navigating|inspecting|applying|patching|installing|resolving|creating|deleting|replacing|uploading|downloading|cloning|compiling|testing|verifying|waiting|retrying|error|failed|full|usage|limit|quota|rate|context|unavailable|try again)\b/i;
     const qs='[aria-live],[role="status"],[data-testid*="status" i],[data-testid*="toast" i],[class*="status" i],[class*="text-token-text-secondary" i],main div,main span';
     const vals=[...document.querySelectorAll(qs)].filter(visible).map(n=>(n.innerText||n.textContent||"").trim()).map(t=>t.replace(/^\[?(pending|completed|error)\]?\s*/i,"")).filter(t=>t&&t.length<180&&re.test(t));
     return vals.at(-1)||"";
   }
   function mutationStatus(muts){
-    const re=/\b(opening|opened|thinking|working|running|reading|writing|editing|searching|pushing|committing|fetching|loading|generating|analyzing|checking|updating|saving|calling|using|browsing|navigating|inspecting|applying|patching|installing|resolving|creating|deleting|replacing|uploading|downloading|cloning|compiling|testing|verifying|waiting|retrying|error|failed|full|mcp|github|tool|command)\b/i;
+    const re=/\b(opening|opened|thinking|working|running|reading|writing|editing|searching|pushing|committing|fetching|loading|generating|analyzing|checking|updating|saving|calling|using|browsing|navigating|inspecting|applying|patching|installing|resolving|creating|deleting|replacing|uploading|downloading|cloning|compiling|testing|verifying|waiting|retrying|error|failed|full|usage|limit|quota|rate|context|unavailable|try again|mcp|github|tool|command)\b/i;
     const vals=[];
     for(const m of muts){
       const nodes=[m.target,...m.addedNodes].filter(n=>n&&n.nodeType===1&&!n.closest?.(`#${ID}`));
@@ -295,7 +296,7 @@
     updateNewest();
     stat(`${m.length} shown · window ${pos+1}-${Math.min(pos+win,all.length)} of ${all.length} · ${(all.at(-1)||{}).state||"ready"}`);
   }
-  function statusText(r){const l=(r.status_log||[]).at(-1),live=Date.now()<domStatusUntil?domStatusSlot:"";return live||(l&&l.note)||"Waiting for reply.";}
+  function statusText(r){const l=(r.status_log||[]).at(-1),live=r.message_id===domStatusMsgId?domStatusSlot:"";return live||(l&&l.note)||"Waiting for reply.";}
   async function savePin(el,id,side,name,msg){
     try{
       await dop("qc.pin",{chatUrl:location.href,msgId:id,side,pinName:name});
