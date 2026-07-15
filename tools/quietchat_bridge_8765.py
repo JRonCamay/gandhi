@@ -17,6 +17,15 @@ BOOTSTRAP_HELP={
         "If output is more than 300 lines, daemon saves it as an artifact file beside message.json.",
         "Main chat visible reply after completion should be only ✓."
     ],
+    "work_protocol":[
+        "Patch the root issue directly; do not stack workaround patches.",
+        "Before editing, identify the exact file and exact region to change.",
+        "Preserve unrelated code exactly as it is.",
+        "Use MCP/daemon tools first when practical; use GitHub connector for online repo writes if local git is uncertain.",
+        "Never claim a write, push, or fix is done until read-back or another verification confirms it.",
+        "If blocked or unsure, report the real blocker instead of inventing success.",
+        "Keep reports short: Completed, Verified, Remaining or Blocked."
+    ],
     "visible_trigger":"@mcp message",
     "mcp_commands":{
         "message":"returns the current QuietChat RAM slot",
