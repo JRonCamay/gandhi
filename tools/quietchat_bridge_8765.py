@@ -2,7 +2,7 @@ import json,os,re,time,uuid,urllib.request,queue
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 
-VERSION="quietchat_bridge_8765 v0.4.1"
+VERSION="quietchat_bridge_8765 v0.4.2"
 ROOT=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
 WI=os.environ.get("WRITER_INBOX_URL","http://127.0.0.1:8766")
 SUBS=[]
@@ -128,6 +128,17 @@ class H(BaseHTTPRequestHandler):
         s.send_header("Access-Control-Allow-Origin","*");s.send_header("Access-Control-Allow-Headers","content-type");s.send_header("Access-Control-Allow-Methods","GET,POST,OPTIONS");super().end_headers()
     def do_OPTIONS(s):s.send_response(204);s.end_headers()
     def do_GET(s):
+        if s.path.endswith("/events/next"):
+            q=queue.Queue(maxsize=1);SUBS.append(q)
+            try:
+                try:item=q.get(timeout=30)
+                except queue.Empty:item={"event":"timeout","payload":{},"created_at":now()}
+                b=json.dumps({"status":"success","result":item},ensure_ascii=False).encode()
+                s.send_response(200);s.send_header("content-type","application/json");s.send_header("content-length",str(len(b)));s.end_headers();s.wfile.write(b)
+            finally:
+                try:SUBS.remove(q)
+                except ValueError:pass
+            return
         if s.path.endswith("/events"):
             q=queue.Queue(maxsize=20);SUBS.append(q)
             s.send_response(200);s.send_header("content-type","text/event-stream");s.send_header("cache-control","no-cache");s.send_header("connection","keep-alive");s.end_headers()
