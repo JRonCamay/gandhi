@@ -1,8 +1,9 @@
-import json,os,re,time,uuid
+import json,os,re,time,uuid,urllib.request
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 
 ROOT=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\GPT_QUIETCHAT_DONT_DELETE"))
+WI=os.environ.get("WRITER_INBOX_URL","http://127.0.0.1:8766")
 CID=re.compile(r"(?i)(?:https?://[^/]+)?(?:/[^?#]*)?/c/([0-9a-f-]{20,})|^([0-9a-f-]{20,})$")
 MID=re.compile(r"^QC-[A-Za-z0-9_.-]{3,64}$")
 
@@ -21,6 +22,13 @@ def mid(v=""):
     return f"QC-{time.strftime('%H%M%S')}-{uuid.uuid4().hex[:6]}"
 def rd(p):return json.loads(p.read_text(encoding="utf-8"))
 def wr(p,d):p.parent.mkdir(parents=True,exist_ok=True);p.write_text(json.dumps(d,ensure_ascii=False,indent=2),encoding="utf-8")
+def daemon_op(op,params):
+    try:
+        b=json.dumps({"op":op,"params":params},ensure_ascii=False).encode()
+        req=urllib.request.Request(WI+"/op",data=b,headers={"Content-Type":"application/json"},method="POST")
+        return json.loads(urllib.request.urlopen(req,timeout=3).read().decode())
+    except Exception as e:
+        return {"status":"error","msg":str(e)}
 def paths(u,m=""):
     i,pg=cid(u);d=ROOT/i
     return i,pg,d,d/"chat.json",(d/"messages"/m/"message.json" if m else None)
@@ -36,11 +44,13 @@ def create(x):
     r={"schema_version":1,"chat_id":c["chat_id"],"chat_url":u,"message_id":m,"state":"pending","user_message":x.get("user_message") or x.get("message",""),"assistant_reply":"","metadata":x.get("metadata") or {},"created_at":now(),"updated_at":now(),"status_log":[]}
     if not r["user_message"].strip():raise ValueError("message required")
     wr(mp,r);c["messages"]=[z for z in c.get("messages",[]) if z.get("message_id")!=m]+[{"message_id":m,"state":"pending","created_at":r["created_at"],"updated_at":r["updated_at"]}];wr(cp,c)
+    slot=daemon_op("qc.slot.set",{"path":str(mp),"date":r["created_at"],"record":r})
     return {
         "status":"success",
         "message_id":m,
-        "trigger":"@mcp checkmessage",
-        "explicit_trigger":f"Use quietchat_process_message for {m}.",
+        "trigger":"@mcp message",
+        "explicit_trigger":"@mcp message",
+        "slot":slot,
         "record":r
     }
 def scan(x):
