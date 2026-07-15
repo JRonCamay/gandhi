@@ -1,7 +1,7 @@
-import hashlib, os, re, shutil, tempfile, time, uuid
+import base64, difflib, hashlib, json, math, os, re, shutil, tempfile, time, uuid
 from pathlib import Path
 
-VERSION = "smart_worker_ops_file v0.2.0"
+VERSION = "smart_worker_ops_file v0.3.0"
 
 
 def sha_bytes(data):
@@ -50,6 +50,108 @@ def inspect_file(path):
     if path.is_file():
         info["sha256"] = sha_file(path)
     return info
+
+
+def read_id(path, sha256):
+    seed = f"{Path(path).resolve()}:{sha256}".encode("utf-8", "replace")
+    return "READ-" + hashlib.sha256(seed).hexdigest()[:16]
+
+
+def encode_cursor(data):
+    raw = json.dumps(data, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return "READCUR-" + base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+
+
+def decode_cursor(cursor):
+    text = str(cursor or "")
+    if not text.startswith("READCUR-"):
+        raise RuntimeError("bad cursor")
+    raw = text[len("READCUR-"):]
+    raw += "=" * (-len(raw) % 4)
+    return json.loads(base64.urlsafe_b64decode(raw.encode("ascii")).decode("utf-8"))
+
+
+def similar_files(path, allowed_roots, limit=5):
+    target = Path(path)
+    parent = target.parent
+    while not parent.exists() and parent != parent.parent:
+        parent = parent.parent
+    if not parent.exists() or not any(parent == Path(r).resolve() or is_inside(parent, r) for r in allowed_roots):
+        return []
+    want = target.name.lower()
+    out = []
+    for item in parent.iterdir():
+        if item.is_dir():
+            continue
+        name = item.name.lower()
+        score = difflib.SequenceMatcher(None, want, name).ratio()
+        if target.suffix and item.suffix.lower() == target.suffix.lower():
+            score += 0.08
+        if name == want:
+            score += 0.2
+        if score >= 0.45:
+            out.append({"path": str(item), "name": item.name, "reason": "similar filename", "score": round(min(score, 1.0), 3)})
+    return sorted(out, key=lambda x: x["score"], reverse=True)[:limit]
+
+
+def missing_result(path, allowed_roots):
+    return {
+        "state": "missing",
+        "path": str(path),
+        "exists": False,
+        "suggestions": similar_files(path, allowed_roots),
+        "next_action": "If a suggestion is intended, call file.read again with that suggested path.",
+        "read_engine": "smart_worker",
+    }
+
+
+def looks_binary(path):
+    with Path(path).open("rb") as f:
+        sample = f.read(4096)
+    return b"\x00" in sample
+
+
+def language_guess(path):
+    ext = Path(path).suffix.lower().lstrip(".")
+    return {
+        "py": "python",
+        "js": "javascript",
+        "ts": "typescript",
+        "json": "json",
+        "md": "markdown",
+        "html": "html",
+        "css": "css",
+        "yml": "yaml",
+        "yaml": "yaml",
+    }.get(ext, ext or "text")
+
+
+def text_and_meta(path, encoding="utf-8"):
+    binary = looks_binary(path)
+    if binary:
+        return "", {"binary": True}
+    text = Path(path).read_text(encoding=encoding, errors="replace")
+    return text, {"binary": False, "total_chars": len(text), "line_count": len(text.splitlines())}
+
+
+def function_list_from_text(text):
+    funcs = []
+    pattern = re.compile(r"\s*(?:async\s+)?def\s+([A-Za-z_]\w*)\s*\(|\s*(?:function\s+)?([A-Za-z_$][\w$]*)\s*\(")
+    for line_no, line in enumerate(text.splitlines(), 1):
+        match = pattern.match(line)
+        if match:
+            funcs.append({"line": line_no, "name": match.group(1) or match.group(2)})
+    return funcs
+
+
+def heading_list_from_text(text, limit=30):
+    headings = []
+    for line_no, line in enumerate(text.splitlines(), 1):
+        if line.startswith("#"):
+            headings.append({"line": line_no, "text": line[:200]})
+            if len(headings) >= limit:
+                break
+    return headings
 
 
 def backup_file(path):
@@ -186,12 +288,49 @@ def run_file_info(params, *, allowed_roots=()):
 
 
 def run_file_read(params, *, allowed_roots=()):
+    if params.get("cursor"):
+        cur = decode_cursor(params.get("cursor"))
+        params = {**cur, **params}
+        params["path"] = cur["path"]
+        if params.get("next") or params.get("continue"):
+            params["part"] = int(cur.get("part", 1)) + 1
     path = safe_path(params.get("path"), allowed_roots)
+    if not path.exists():
+        return missing_result(path, allowed_roots)
     if not path.is_file():
         raise RuntimeError("not file")
     max_chars = int(params.get("maxChars") or params.get("max_chars") or 12000)
-    text = path.read_text(encoding=params.get("encoding") or "utf-8", errors="replace")
-    return {"path": str(path), "content": text[:max_chars], "bytes": path.stat().st_size, "sha256": sha_file(path), "read_engine": "smart_worker"}
+    encoding = params.get("encoding") or "utf-8"
+    sha256 = sha_file(path)
+    if params.get("sha256") and params.get("sha256") != sha256:
+        return {"state": "changed", "path": str(path), "old_sha256": params.get("sha256"), "new_sha256": sha256, "error": "file changed since cursor was created", "next_action": "Restart file.read from part 1.", "read_engine": "smart_worker"}
+    text, meta = text_and_meta(path, encoding)
+    if meta.get("binary"):
+        return {"state": "binary", "path": str(path), "bytes": path.stat().st_size, "sha256": sha256, "read_id": read_id(path, sha256), "binary": True, "content": "", "read_engine": "smart_worker"}
+    mode = str(params.get("mode") or "").lower()
+    if mode == "profile":
+        preview_chars = int(params.get("previewChars") or params.get("preview_chars") or min(max_chars, 4000))
+        return {"state": "profile", "path": str(path), "bytes": path.stat().st_size, "sha256": sha256, "read_id": read_id(path, sha256), "language": language_guess(path), "preview": text[:preview_chars], "returned_chars": min(len(text), preview_chars), "total_chars": len(text), "line_count": meta["line_count"], "binary": False, "functions": function_list_from_text(text)[:50], "headings": heading_list_from_text(text), "read_engine": "smart_worker"}
+    lines = text.splitlines()
+    start_line = params.get("startLine") or params.get("start_line")
+    end_line = params.get("endLine") or params.get("end_line")
+    if start_line or end_line:
+        start = max(1, int(start_line or 1))
+        end = min(len(lines), int(end_line or len(lines)))
+        content = "\n".join(lines[start - 1:end])
+        return {"state": "complete", "path": str(path), "content": content, "start_line": start, "end_line": end, "line_count": len(lines), "returned_chars": len(content), "total_chars": len(text), "bytes": path.stat().st_size, "sha256": sha256, "read_id": read_id(path, sha256), "truncated": False, "has_more": False, "read_engine": "smart_worker"}
+    full = bool(params.get("full_read") or params.get("allow_over_max"))
+    total = len(text)
+    total_parts = max(1, math.ceil(total / max_chars))
+    part = max(1, int(params.get("part") or 1))
+    part = min(part, total_parts)
+    start = 0 if full else (part - 1) * max_chars
+    end = total if full else min(total, start + max_chars)
+    content = text[start:end]
+    has_more = (not full) and end < total
+    state = "partial" if has_more else "complete"
+    cursor = "" if full else encode_cursor({"path": str(path), "sha256": sha256, "maxChars": max_chars, "part": part})
+    return {"state": state, "path": str(path), "content": content, "bytes": path.stat().st_size, "sha256": sha256, "read_id": read_id(path, sha256), "part": 1 if full else part, "total_parts": 1 if full else total_parts, "cursor": cursor, "has_more": has_more, "truncated": has_more, "returned_chars": len(content), "total_chars": total, "start_char": start, "end_char": end, "next_action": "Call file.read with cursor and next=true for the next part." if has_more else "", "warning": "full file returned; token-heavy" if full and total > max_chars else "", "read_engine": "smart_worker"}
 
 
 def run_file_search(params, *, allowed_roots=()):
@@ -213,10 +352,5 @@ def run_file_functions(params, *, allowed_roots=()):
     path = safe_path(params.get("path"), allowed_roots)
     if not path.is_file():
         raise RuntimeError("not file")
-    funcs = []
-    pattern = re.compile(r"\s*(?:async\s+)?def\s+([A-Za-z_]\w*)\s*\(|\s*(?:function\s+)?([A-Za-z_$][\w$]*)\s*\(")
-    for line_no, line in enumerate(path.read_text(encoding=params.get("encoding") or "utf-8", errors="replace").splitlines(), 1):
-        match = pattern.match(line)
-        if match:
-            funcs.append({"line": line_no, "name": match.group(1) or match.group(2)})
+    funcs = function_list_from_text(path.read_text(encoding=params.get("encoding") or "utf-8", errors="replace"))
     return {"path": str(path), "functions": funcs, "count": len(funcs), "read_engine": "smart_worker"}
