@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.44
+// @version      0.3.45
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,7 +15,7 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.44";
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",DS="http://127.0.0.1:8769",POS="qc-lite-pos-v1",VER="0.3.45";
   let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false,es=null,eventCursor=0,latestCursor=0,refreshTimer=null,eventSlot=null,domStatusSlot="",domStatusTimer=null,domStatusMsgId="",domMutSlot="";
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
@@ -27,6 +27,11 @@
     const body=JSON.stringify({op,params:params||{}});
     if(typeof GM_xmlhttpRequest==="function")return new Promise((ok,fail)=>GM_xmlhttpRequest({method:"POST",url:DAEMON+"/op",headers:{"Content-Type":"application/json"},data:body,timeout:12000,onload:r=>{try{const d=JSON.parse(r.responseText||"{}");if(r.status>=400||d.status==="error")fail(new Error(d.msg||d.error||"daemon error"));else ok(d.result||d);}catch(e){fail(e);}},onerror:()=>fail(new Error("daemon offline")),ontimeout:()=>fail(new Error("daemon timeout"))}));
     return fetch(DAEMON+"/op",{method:"POST",headers:{"Content-Type":"application/json"},body}).then(r=>r.json()).then(d=>d.result||d);
+  }
+  function dsm(op,params){
+    const body=JSON.stringify({op,params:params||{}});
+    if(typeof GM_xmlhttpRequest==="function")return new Promise((ok,fail)=>GM_xmlhttpRequest({method:"POST",url:DS+"/op",headers:{"Content-Type":"application/json"},data:body,timeout:12000,onload:r=>{try{const d=JSON.parse(r.responseText||"{}");if(r.status>=400||d.status==="error")fail(new Error(d.msg||d.error||"deepseek daemon error"));else ok(d.result||d);}catch(e){fail(e);}},onerror:()=>fail(new Error("deepseek daemon offline")),ontimeout:()=>fail(new Error("deepseek daemon timeout"))}));
+    return fetch(DS+"/op",{method:"POST",headers:{"Content-Type":"application/json"},body}).then(r=>r.json()).then(d=>d.result||d);
   }
   async function view(){
     try{return (await req("/view",{cmd:"qc.view",params:{chatUrl:location.href,limit:500,scanLimit:500,staleAfter:120}})).result;}
@@ -42,18 +47,19 @@
         .qcw.min{width:180px;height:48px}.qcw.min .qcb,.qcw.min .stat,.qcw.min .qcf{display:none}.qcw.min .qch{border:0}.qcw.min .qcs,.qcw.min .scan,.qcw.min .srch{display:none}
         .qch{height:48px;display:flex;align-items:center;gap:8px;padding:0 12px;background:#303030;border-bottom:1px solid #444;cursor:grab;user-select:none}
         .qch.drag{cursor:grabbing}
-        .qct{font-weight:700;flex:1}.qcs{font-size:11px;color:#aaa}
+        .qct{font-weight:700;flex:1}.qcs{font-size:11px;color:#aaa}.qmemlast{font-size:11px;color:#9ec;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
         #${ID} button{border:1px solid #555;background:#3a3a3a;color:#eee;border-radius:9px;padding:7px 10px;cursor:pointer}#${ID} button:disabled{opacity:.45;cursor:not-allowed}
         .qca{position:relative;flex:1;min-height:0;background:#242424;overflow:hidden}.qcb{position:absolute;inset:0 18px 0 0;overflow:auto;scrollbar-width:none;padding:18px 18px 104px;background:#242424}.qcb::-webkit-scrollbar{display:none}.qbar{position:absolute;right:5px;top:10px;bottom:10px;width:10px;border-radius:999px;background:#1d1d1d;border:1px solid #3f3f3f;z-index:9}.qthumb{position:absolute;left:1px;right:1px;top:0;min-height:108px;border-radius:999px;background:#777;border:1px solid #9a9a9a;box-shadow:0 2px 8px #0008;cursor:grab}.qthumb:active{cursor:grabbing;background:#8d8d8d}.msg{position:relative;max-width:88%;margin:0 0 14px;line-height:1.45;white-space:pre-wrap}.msg.a.live{padding-left:18px;color:#bfeeff;text-shadow:0 0 7px #1a9cff,0 0 16px #40c8ff;animation:qcblink 2.1s ease-in-out infinite}.msg.a.live:after{content:"";position:absolute;left:0;top:22px;width:9px;height:22px;border-radius:9px;background:#7fffe0;box-shadow:0 0 7px #7fffe0,0 0 18px #2affc9;animation:qczap .55s infinite alternate}.msg.a.live.err{color:#ffb8b8;text-shadow:none;animation:none}.msg.a.live.err:after{content:"×";top:22px;width:17px;height:17px;border-radius:99px;background:#b3261e;color:#fff;box-shadow:0 0 10px #b3261e;font:bold 13px/17px system-ui;text-align:center;animation:none}@keyframes qczap{from{opacity:.35;transform:scaleY(.55)}to{opacity:1;transform:scaleY(1.15)}}@keyframes qcblink{0%,100%{opacity:.72;color:#bfeeff}50%{opacity:1;color:#effcff;text-shadow:0 0 10px #54cfff,0 0 24px #1a9cff}}.save-x{position:absolute;right:-9px;top:-8px;width:17px;height:17px;border-radius:99px;background:#b3261e;color:#fff;font:bold 12px/17px system-ui;text-align:center;box-shadow:0 2px 8px #0009}.u{margin-left:auto;background:#3c3c3c;padding:10px 12px;border-radius:14px 14px 4px 14px}.a{margin-right:auto}.a:before{content:"QuietChat";display:block;color:#8fd;opacity:.8;font-size:11px;margin-bottom:4px}.pinrow{max-width:88%;margin:-8px 0 14px;display:flex;align-items:center;gap:7px;color:#9ee8d0;font-size:11px}.pinrow.pu{margin-left:auto;justify-content:flex-end}.pinrow.pa{margin-right:auto}.pinrow .pname{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;border:1px solid #3b7769;background:#1f3f36;border-radius:8px;padding:4px 7px}.pinb{font-size:11px!important;padding:4px 7px!important;border-radius:8px!important;background:#263f39!important;border-color:#3b7769!important;color:#bfffee!important}.pinb.on{background:#bfffee!important;border-color:#7af0cf!important;color:#17352e!important}
         .qcf{display:flex;gap:8px;padding:12px;background:#303030;border-top:1px solid #444}#${ID} textarea{flex:1;min-height:42px;max-height:150px;resize:vertical;background:#3a3a3a;color:#eee;border:1px solid #555;border-radius:12px;padding:10px;outline:none}.stat{padding:6px 12px;text-align:center;color:#aaa;font-size:11px;background:#303030;border-top:1px solid #444}.vspacer{height:0;pointer-events:none}
         .newest{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);width:38px;height:38px;border-radius:999px!important;font-size:18px;z-index:10;display:none;box-shadow:0 6px 18px #000a;background:#2f8f7a!important;border-color:#47c7a7!important}
         .qsp{position:absolute;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:20}.qsp.on{display:flex}.qspn{width:min(644px,calc(100% - 28px));height:min(506px,calc(100% - 40px));background:#292929;border:1px solid #666;border-radius:14px;box-shadow:0 18px 60px #000c;display:flex;flex-direction:column;overflow:hidden}.qsph{display:flex;gap:8px;padding:10px;background:#333;border-bottom:1px solid #444}#${ID} .qsph input{flex:1;background:#202020;color:#eee;border:1px solid #555;border-radius:9px;padding:9px;outline:none}.qspr{flex:1;overflow:auto;padding:10px;color:#bbb}.qspr .hint{font-size:12px;color:#999}.qleg{position:sticky;top:-10px;z-index:2;background:#292929;border-bottom:1px solid #444;font-size:11px;color:#aaa;padding:8px 4px 9px}.dot{display:inline-block;width:9px;height:9px;border-radius:99px;margin:0 4px 0 10px}.du{background:#263f66}.da{background:#3d3d3d}.dp{background:#285c4e}.res{padding:9px 10px;margin:0 0 7px;border:1px solid #3d3d3d;border-radius:10px;white-space:normal;overflow:hidden;cursor:pointer;line-height:1.35}.res.user{background:#24344d;border-color:#31537d}.res.assistant{background:#333}.res.summary{background:#3a3324;border-color:#6d5b2c}.res.pin,.res.pin_user,.res.pin_assistant{background:#1f3f36;border-color:#3b8d78;color:#d8fff5}.res:hover{filter:brightness(1.12)}.res mark,.msg mark,.pinrow mark{background:#2f8f7a;color:#fff;border-radius:4px;padding:0 2px}.qtt{position:fixed;z-index:2147483647;max-width:560px;max-height:360px;overflow:auto;scrollbar-width:none;background:#171717;color:#ddd;border:1px solid #666;border-radius:10px;padding:10px 12px;box-shadow:0 12px 40px #000d;font:12px/1.45 system-ui;white-space:pre-wrap;display:none;pointer-events:none}.qtt::-webkit-scrollbar{display:none}
       </style>
-      <section class=qcw><div class=qch><div><div class=qct>QuietChat Lite <span style="font-size:10px;color:#999">v${VER}</span></div><div class=qcs>daemon view · 10 sliding</div></div><button class=scan>Scan</button><button class=srch title="Search by Pin or Words" aria-label="Search by Pin or Words">⌕</button><button class=hide>Dock</button></div><div class=qca><main class=qcb></main><div class=qbar title="Drag to move through QuietChat"><div class=qthumb></div></div><button class=newest title="Newest">↓</button></div><div class=stat>ready</div><footer class=qcf><textarea placeholder="Message QuietChat..."></textarea><button class=send>Send</button></footer><div class=qsp><div class=qspn><div class=qsph><input placeholder="Search pin or words..."><button class=sx title="Close">×</button></div><div class=qspr><div class=hint>Search panel ready. Results next.</div></div></div></div><div class=qtt></div></section>`;
+      <section class=qcw><div class=qch><div><div class=qct>QuietChat Lite <span style="font-size:10px;color:#999">v${VER}</span></div><div class=qcs>daemon view · 10 sliding</div></div><button class=mem title="Insert latest DeepSeek memory summary">Memory</button><span class=qmemlast title="Last DeepSeek extraction">memory: checking...</span><button class=scan>Scan</button><button class=srch title="Search by Pin or Words" aria-label="Search by Pin or Words">⌕</button><button class=hide>Dock</button></div><div class=qca><main class=qcb></main><div class=qbar title="Drag to move through QuietChat"><div class=qthumb></div></div><button class=newest title="Newest">↓</button></div><div class=stat>ready</div><footer class=qcf><textarea placeholder="Message QuietChat..."></textarea><button class=send>Send</button></footer><div class=qsp><div class=qspn><div class=qsph><input placeholder="Search pin or words..."><button class=sx title="Close">×</button></div><div class=qspr><div class=hint>Search panel ready. Results next.</div></div></div></div><div class=qtt></div></section>`;
     document.documentElement.appendChild(h);
     place(h);
     drag(h);
     h.querySelector(".scan").onclick=()=>scanNewest();
+    h.querySelector(".mem").onclick=()=>insertLatestMemory();
     h.querySelector(".newest").onclick=()=>jumpNewest();
     h.querySelector(".srch").onclick=()=>openSearch(h);
     h.querySelector(".sx").onclick=()=>closeSearch(h);
@@ -64,6 +70,7 @@
     h.querySelector(".send").onclick=send;
     document.addEventListener("keydown",e=>{const t=h.querySelector(".qtt");if(!tipOpen||t.style.display==="none")return;const k=e.key;if(!["ArrowDown","ArrowUp","PageDown","PageUp"].includes(k))return;e.preventDefault();t.scrollTop+=k==="ArrowDown"?36:k==="ArrowUp"?-36:k==="PageDown"?180:-180;});
     scanNewest();
+    refreshMemoryLabel();
     wireEvents();
     wireDoneObserver();
     wireDomStatusObserver();
@@ -87,6 +94,34 @@
   function scheduleRefresh(ms=80){
     clearTimeout(refreshTimer);
     refreshTimer=setTimeout(()=>{toNewest=true;jump=true;load(true);},ms);
+  }
+  function fmtTime(s){
+    if(!s)return "never";
+    const d=new Date(String(s).replace(/([+-]\d{2})(\d{2})$/,"$1:$2"));
+    if(Number.isNaN(d.getTime()))return String(s);
+    return d.toLocaleString([], {month:"short",day:"2-digit",hour:"2-digit",minute:"2-digit"});
+  }
+  async function refreshMemoryLabel(){
+    const el=document.querySelector(`#${ID} .qmemlast`);
+    if(!el)return;
+    try{
+      const d=await dsm("memory.latest",{maxChars:1}),data=d.data||d.result?.data||{};
+      if(d.state==="missing"||!data.created_at){el.textContent="memory: none";el.title="No DeepSeek extraction yet";return;}
+      const mode=data.extraction_mode?` · ${data.extraction_mode}`:"";
+      el.textContent="memory: "+fmtTime(data.created_at)+mode;
+      el.title=`Last DeepSeek extraction: ${data.created_at}${mode}`;
+    }catch(e){el.textContent="memory: offline";el.title=e.message||"DeepSeek daemon offline";}
+  }
+  async function insertLatestMemory(){
+    stat("loading memory...");
+    try{
+      const d=await dsm("memory.latest",{maxChars:14000}),data=d.data||{},preview=d.preview||"";
+      if(d.state==="missing"||!preview.trim()){stat("no memory summary yet");refreshMemoryLabel();return;}
+      const title=`DeepSeek memory summary (${fmtTime(data.created_at)})`;
+      sendToChat(`${title}\n\n${preview.trim()}`);
+      stat("memory inserted");
+      refreshMemoryLabel();
+    }catch(e){stat("memory failed: "+e.message);refreshMemoryLabel();}
   }
   function upsertLocal(r){
     if(!r||!r.message_id)return;
@@ -163,12 +198,12 @@
     tick();
   }
   function chatId(){return (location.href.match(/\/c\/([0-9a-f-]{20,})/i)||[])[1]||"";}
-  function guardEvent(p){
+  function guardEvent(p,ev){
     if(eventSlot)return;
-    eventSlot=p||{};
+    eventSlot={payload:p||{},event:ev||""};
     setTimeout(()=>{
       const x=eventSlot;eventSlot=null;
-      refreshPayload(x);
+      refreshPayload(x.payload,x.event);
     },0);
   }
   async function scanNewest(){
@@ -340,11 +375,14 @@
       }
     }catch(e){stat("bridge offline: "+e.message);lock(false);}
   }
-  function refreshPayload(p){
+  function refreshPayload(p,ev){
     p=p||{};
+    const memEvent=/^memory\./.test(ev||"")||p.handoff||p.pending_summary;
+    if(memEvent)refreshMemoryLabel();
     const idOk=p.chat_id&&location.href.includes(p.chat_id);
     const urlOk=p.chat_url&&p.chat_url===location.href;
     if((p.chat_id||p.chat_url)&&!idOk&&!urlOk)return;
+    if(memEvent&&!p.record&&!p.save_state&&p.ok!==false)return;
     if(p.save_state||p.ok===false){markSave(p);if(!p.record)return;}
     if(p.record){upsertLocal(p.record);return;}
     scheduleRefresh(60);
@@ -355,9 +393,9 @@
       const c=chatId();if(!c||eventSlot)return;
       const url=API+"/events/latest?chat_id="+encodeURIComponent(c)+"&since="+latestCursor;
       if(typeof GM_xmlhttpRequest==="function"){
-        GM_xmlhttpRequest({method:"GET",url,timeout:1200,onload:r=>{try{const x=(JSON.parse(r.responseText||"{}").result)||{};if(x.id)latestCursor=Math.max(latestCursor,x.id);if(x.event&&x.event!=="empty")guardEvent(x.payload||{});}catch{}}});
+        GM_xmlhttpRequest({method:"GET",url,timeout:1200,onload:r=>{try{const x=(JSON.parse(r.responseText||"{}").result)||{};if(x.id)latestCursor=Math.max(latestCursor,x.id);if(x.event&&x.event!=="empty")guardEvent(x.payload||{},x.event);}catch{}}});
       }else{
-        fetch(url).then(r=>r.json()).then(d=>{const x=d.result||{};if(x.id)latestCursor=Math.max(latestCursor,x.id);if(x.event&&x.event!=="empty")guardEvent(x.payload||{});}).catch(()=>{});
+        fetch(url).then(r=>r.json()).then(d=>{const x=d.result||{};if(x.id)latestCursor=Math.max(latestCursor,x.id);if(x.event&&x.event!=="empty")guardEvent(x.payload||{},x.event);}).catch(()=>{});
       }
     },350);
     const longPoll=()=>{
@@ -367,13 +405,13 @@
           try{
             const d=JSON.parse(r.responseText||"{}"),x=d.result||{};
             if(x.id)eventCursor=Math.max(eventCursor,x.id);
-            if(x.event&&x.event!=="timeout")guardEvent(x.payload||{});
+            if(x.event&&x.event!=="timeout")guardEvent(x.payload||{},x.event);
           }catch{}
           onDone();
         },onerror:onDone,ontimeout:onDone});
         return;
       }
-      fetch(API+"/events/next?since="+eventCursor).then(r=>r.json()).then(d=>{const x=d.result||{};if(x.id)eventCursor=Math.max(eventCursor,x.id);if(x.event&&x.event!=="timeout")guardEvent(x.payload||{});}).finally(onDone);
+      fetch(API+"/events/next?since="+eventCursor).then(r=>r.json()).then(d=>{const x=d.result||{};if(x.id)eventCursor=Math.max(eventCursor,x.id);if(x.event&&x.event!=="timeout")guardEvent(x.payload||{},x.event);}).finally(onDone);
     };
     if(typeof GM_xmlhttpRequest==="function"){es={mode:"long-poll"};longPoll();return;}
     try{
@@ -381,7 +419,7 @@
       const refresh=e=>{
         try{
           const d=JSON.parse(e.data||"{}"),p=d.payload||{};
-          guardEvent(p);
+          guardEvent(p,d.event);
         }catch{}
       };
       es.addEventListener("qc.created",refresh);
@@ -390,6 +428,9 @@
       es.addEventListener("qc.updated",refresh);
       es.addEventListener("qc.dirty",refresh);
       es.addEventListener("qc.saved",refresh);
+      es.addEventListener("memory.extraction.queued",refresh);
+      es.addEventListener("memory.extraction.complete",refresh);
+      es.addEventListener("memory.summary.pending",refresh);
       es.onerror=()=>{try{es.close();}catch{};es={mode:"long-poll"};longPoll();};
     }catch(e){es=null;}
   }
