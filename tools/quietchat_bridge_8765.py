@@ -6,6 +6,33 @@ ROOT=Path(os.environ.get("QUIETCHAT_DIR",r"D:\Projects\Chad\local\AI_MEMORY_FIN\
 WI=os.environ.get("WRITER_INBOX_URL","http://127.0.0.1:8766")
 CID=re.compile(r"(?i)(?:https?://[^/]+)?(?:/[^?#]*)?/c/([0-9a-f-]{20,})|^([0-9a-f-]{20,})$")
 MID=re.compile(r"^QC-[A-Za-z0-9_.-]{3,64}$")
+BOOTSTRAP_HELP={
+    "purpose":"First QuietChat message for this AI chat. Read this before answering.",
+    "rules":[
+        "When main chat says @mcp message, use the returned RAM slot as the current task.",
+        "RAM slot contains path, date, and the exact message.json record.",
+        "Answer the user_message from record.",
+        "For user-facing output, complete the RAM slot instead of manually editing the UI.",
+        "Daemon writes completion back to the local message.json and clears RAM after a successful write.",
+        "If output is more than 300 lines, daemon saves it as an artifact file beside message.json.",
+        "Main chat visible reply after completion should be only ✓."
+    ],
+    "visible_trigger":"@mcp message",
+    "mcp_commands":{
+        "message":"returns the current QuietChat RAM slot",
+        "qc.slot.get":"returns the current QuietChat RAM slot",
+        "qc.slot.status":"updates status_log in the current local message.json",
+        "qc.slot.complete":"writes assistant reply/summary/artifacts into message.json, then clears RAM",
+        "qc.slot.clear":"clears the one RAM slot",
+        "qc.view":"returns QuietChat messages for UI display",
+        "qc.search":"searches QuietChat history",
+        "qc.pin":"pins a user or assistant message",
+        "file.read":"reads an allowed local file through daemon",
+        "file.write":"writes an allowed local file through daemon",
+        "daemon.op":"routes a raw daemon operation"
+    },
+    "current_limit":"One RAM slot only for now. New QuietChat messages overwrite the slot."
+}
 
 def now():return time.strftime("%Y-%m-%dT%H:%M:%S%z")
 def cid(v):
@@ -39,9 +66,13 @@ def chat(u,title=""):
     if title:r["title"]=" ".join(str(title).split())[:160]
     r["updated_at"]=now();wr(cp,r);return r
 def create(x):
-    u=x.get("chat_url","");c=chat(u,x.get("conversation_title") or x.get("title",""));m=mid(x.get("message_id",""));_,_,_,cp,mp=paths(c["chat_id"],m)
+    u=x.get("chat_url","");c=chat(u,x.get("conversation_title") or x.get("title",""));first_chat=not bool(c.get("messages"));m=mid(x.get("message_id",""));_,_,_,cp,mp=paths(c["chat_id"],m)
     if mp.exists():raise ValueError("message exists")
-    r={"schema_version":1,"chat_id":c["chat_id"],"chat_url":u,"message_id":m,"state":"pending","user_message":x.get("user_message") or x.get("message",""),"assistant_reply":"","metadata":x.get("metadata") or {},"created_at":now(),"updated_at":now(),"status_log":[]}
+    meta=x.get("metadata") or {}
+    if first_chat:
+        meta["bootstrap"]=BOOTSTRAP_HELP
+        meta["first_quietchat_message"]=True
+    r={"schema_version":1,"chat_id":c["chat_id"],"chat_url":u,"message_id":m,"state":"pending","user_message":x.get("user_message") or x.get("message",""),"assistant_reply":"","metadata":meta,"created_at":now(),"updated_at":now(),"status_log":[]}
     if not r["user_message"].strip():raise ValueError("message required")
     wr(mp,r);c["messages"]=[z for z in c.get("messages",[]) if z.get("message_id")!=m]+[{"message_id":m,"state":"pending","created_at":r["created_at"],"updated_at":r["updated_at"]}];wr(cp,c)
     slot=daemon_op("qc.slot.set",{"path":str(mp),"date":r["created_at"],"record":r})
