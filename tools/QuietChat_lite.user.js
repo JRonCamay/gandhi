@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         QuietChat Lite
 // @namespace    https://chatgpt.com/
-// @version      0.3.27
+// @version      0.3.28
 // @description  Small QuietChat UI using daemon qc.view.
 // @match        https://chatgpt.com/*
 // @match        https://chat.openai.com/*
@@ -15,7 +15,7 @@
   "use strict";
   if(window.__qcLiteV1)return;
   window.__qcLiteV1=true;
-  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.27";
+  const ID="qc-lite-root",API="http://127.0.0.1:8765/quietchat/api",DAEMON="http://127.0.0.1:8766",POS="qc-lite-pos-v1",VER="0.3.28";
   let busy=false,timer=null,pos=0,last=[],win=10,init=false,toNewest=false,rendering=false,jump=false,st=null,findText="",findMid="",tipOpen=false,findScroll=false,es=null;
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   function req(path,payload){
@@ -63,7 +63,7 @@
     h.querySelector(".hide").onclick=()=>{const w=h.querySelector(".qcw"),b=h.querySelector(".hide");w.classList.toggle("min");b.textContent=w.classList.contains("min")?"Open":"Dock";};
     h.querySelector(".send").onclick=send;
     document.addEventListener("keydown",e=>{const t=h.querySelector(".qtt");if(!tipOpen||t.style.display==="none")return;const k=e.key;if(!["ArrowDown","ArrowUp","PageDown","PageUp"].includes(k))return;e.preventDefault();t.scrollTop+=k==="ArrowDown"?36:k==="ArrowUp"?-36:k==="PageDown"?180:-180;});
-    scanNewest();
+    load(true);
     wireEvents();
     wireFakeScroll(h);
     h.querySelector(".qcb").onscroll=()=>updateNewest();
@@ -82,6 +82,11 @@
   function lock(on){busy=on;document.querySelector(`#${ID} .send`).disabled=on;}
   function hi(s,q){s=String(s||"");q=String(q||"");const l=s.toLowerCase(),x=l.indexOf(q.toLowerCase());return x<0?esc(s):esc(s.slice(0,x))+"<mark>"+esc(s.slice(x,x+q.length))+"</mark>"+esc(s.slice(x+q.length));}
   function jumpNewest(){toNewest=true;jump=true;load(true);}
+  function upsertLocal(r){
+    if(!r||!r.message_id)return;
+    last=[...last.filter(x=>x.message_id!==r.message_id),r];
+    toNewest=true;jump=true;render({messages:last});
+  }
   async function scanNewest(){
     toNewest=true;jump=true;stat("scanning...");
     try{
@@ -203,8 +208,7 @@
     else if(findMid&&findScroll){findScroll=false;setTimeout(()=>box.querySelector(`[data-mid="${CSS.escape(findMid)}"] mark`)?.scrollIntoView({block:"center"}),30);}
     jump=false;
     setTimeout(()=>{rendering=false;},120);
-    const locked=["pending","running"].includes((all.at(-1)||{}).state);
-    lock(locked);
+    lock(false);
     updateBar();
     updateNewest();
     stat(`${m.length} shown · window ${pos+1}-${Math.min(pos+win,all.length)} of ${all.length} · ${(all.at(-1)||{}).state||"ready"}`);
@@ -258,7 +262,7 @@
     const longPoll=()=>{
       const onDone=()=>setTimeout(longPoll,150);
       if(typeof GM_xmlhttpRequest==="function"){
-        GM_xmlhttpRequest({method:"GET",url:API+"/events/next",timeout:35000,onload:r=>{
+        GM_xmlhttpRequest({method:"GET",url:API+"/events/next",timeout:4500,onload:r=>{
           try{
             const d=JSON.parse(r.responseText||"{}"),x=d.result||{};
             if(x.event&&x.event!=="timeout")refreshPayload(x.payload||{});
@@ -288,10 +292,14 @@
     if(busy)return;
     const ta=document.querySelector(`#${ID} textarea`),txt=ta.value.trim();
     if(!txt)return;
-    lock(true);stat("creating...");
+    const temp={message_id:"QC-TEMP-"+Date.now().toString(36),state:"pending",user_message:txt,assistant_reply:"",created_at:new Date().toISOString(),updated_at:new Date().toISOString(),status_log:[{state:"pending",note:"Sending to assistant.",created_at:new Date().toISOString()}]};
+    ta.value="";upsertLocal(temp);lock(true);stat("sending...");
     try{
       const d=await req("/create",{chat_url:location.href,conversation_title:document.title||"ChatGPT",user_message:txt,metadata:{source:"qc-lite",url:location.href}});
-      ta.value="";await load(true);goNewest();sendToChat(d.trigger||"@mcp message");
+      last=last.filter(x=>x.message_id!==temp.message_id);
+      upsertLocal(d.record);
+      lock(false);
+      sendToChat(d.trigger||"@mcp message");
     }catch(e){stat("send failed: "+e.message);lock(false);}
   }
   function sendToChat(t){
